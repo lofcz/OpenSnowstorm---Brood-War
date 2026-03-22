@@ -77,6 +77,11 @@ struct main_t {
 	perf::frame_timer sim_timer;
 	bool live_result_reported = false;
 
+	// Campaign state preserved across mission transitions.
+	std::string current_map_file; // path of the currently loaded map (native only)
+	int campaign_local_race = 5;
+	bool campaign_fog_of_war = true;
+
 	a_map<int, std::unique_ptr<saved_state>> saved_states;
 	std::unique_ptr<saved_state> quicksave_slot;
 
@@ -105,6 +110,44 @@ struct main_t {
 		ui.reset();
 		live_result_reported = false;
 	}
+
+#ifndef EMSCRIPTEN
+	// Locate the next campaign map file given the scenario name set by the
+	// Set Next Scenario trigger action.  Searches in:
+	//   1. The same directory as the current map (with .scx / .scm extension)
+	//   2. A "campaign/" subdirectory relative to the current map directory
+	//   3. The scenario name as-is (may already be a full path or have extension)
+	std::string find_next_campaign_map(const std::string& scenario_name) const {
+		if (scenario_name.empty()) return {};
+
+		// Extract the directory portion of the current map file.
+		std::string dir;
+		size_t sep = current_map_file.find_last_of("/\\");
+		if (sep != std::string::npos) dir = current_map_file.substr(0, sep + 1);
+
+		static const char* const extensions[] = {".scx", ".SCX", ".scm", ".SCM", nullptr};
+		for (int i = 0; extensions[i]; ++i) {
+			// Same directory as current map.
+			std::string p = dir + scenario_name + extensions[i];
+			{
+				std::ifstream f(p, std::ios::binary);
+				if (f.good()) return p;
+			}
+			// campaign/ subdirectory.
+			std::string p2 = dir + "campaign/" + scenario_name + extensions[i];
+			{
+				std::ifstream f(p2, std::ios::binary);
+				if (f.good()) return p2;
+			}
+		}
+		// Try the scenario name verbatim (already has extension, or is a path).
+		{
+			std::ifstream f(scenario_name, std::ios::binary);
+			if (f.good()) return scenario_name;
+		}
+		return {};
+	}
+#endif
 
 	void update() {
 		auto now = clock.now();
@@ -209,6 +252,18 @@ struct main_t {
 					log("single-player: victory at frame %d\n", ui.st.current_frame);
 					if (!ui.pending_next_scenario.empty()) {
 						log("single-player: next scenario -> '%s'\n", ui.pending_next_scenario.c_str());
+#ifndef EMSCRIPTEN
+						// For native builds: try to locate the next map file on disk.
+						std::string next_map = find_next_campaign_map(ui.pending_next_scenario);
+						if (!next_map.empty()) {
+							log("campaign: next map found at '%s'\n", next_map.c_str());
+							log("campaign: relaunch with --map \"%s\" to continue\n", next_map.c_str());
+						} else {
+							log("campaign: next map '%s' not found beside current map\n",
+							    ui.pending_next_scenario.c_str());
+						}
+						ui.push_hud_message(a_string("Next: ") + ui.pending_next_scenario, 12 * 24);
+#endif
 					}
 				} else if (ui.player_defeated(ui.local_player_id)) {
 					live_result_reported = true;
@@ -435,6 +490,11 @@ extern "C" double replay_get_value(int index) {
 		if (local < 0 || local >= 12) return 0;
 		return (double)m->ui.st.players[local].victory_state;
 	}
+	// 9: 1 if victory was recorded AND a next-scenario name is pending (JS campaign
+	//    transition ready); 0 otherwise.  JS should read 7 for the scenario name,
+	//    call load_map_data with the new map bytes, then clear via set_value(7,0).
+	case 9:
+		return (m->live_result_reported && !m->ui.pending_next_scenario.empty()) ? 1 : 0;
 	default:
 		return 0;
 	}
@@ -2077,6 +2137,9 @@ int main(int argc, char** argv) {
 		ui.local_player_id = selected_local;
 		ui.enemy_player_id = selected_enemy;
 		ui.replay_frame = ui.st.current_frame;
+		m.current_map_file = map_file;
+		m.campaign_fog_of_war = map_fog_of_war;
+		m.campaign_local_race = local_race;
 		const char* game_mode_name = selected_game_type_melee ? "melee" : "ums";
 		const char* mode_origin = map_game_type == map_game_type_t::auto_detect ? " (auto)" : "";
 		if (selected_enemy == -1) {

@@ -18611,6 +18611,58 @@ struct state_functions {
 		return r;
 	}
 
+	// Helper: count units of type uid owned by player p directly (no group expansion).
+	int trigger_own_unit_count(int p, int uid, bool completed_only) const {
+		int cnt = 0;
+		if (p < 0 || p >= (int)st.player_units.size()) return 0;
+		if (completed_only) {
+			if (uid == 229) cnt = st.completed_unit_counts[p][UnitTypes::Terran_Marine] * 0; // placeholder; sum below
+			// Use the per-player per-type arrays already on state if available; fall back to
+			// iterating player_units for correctness (mirrors trigger_command_count logic).
+		}
+		// Iterate the player's unit list directly so we share the same counting rules as
+		// trigger_command_count, but for a single concrete player rather than a group.
+		for (const unit_t* u : ptr(st.player_units.at((size_t)p))) {
+			if (ut_turret(u)) continue;
+			if (unit_dying(u)) continue;
+			if (completed_only && !u_completed(u)) continue;
+			if (uid == 229) { ++cnt; continue; }
+			if (uid == 230) { if (u->unit_type->group_flags & GroupFlags::Men)      ++cnt; continue; }
+			if (uid == 231) { if (u->unit_type->group_flags & GroupFlags::Building) ++cnt; continue; }
+			if (uid == 232) { if (u->unit_type->group_flags & GroupFlags::Factory)  ++cnt; continue; }
+			if ((int)u->unit_type->id == uid) ++cnt;
+		}
+		return cnt;
+	}
+
+	// Helper: score value for player p (mirrors the score condition logic).
+	int trigger_player_score(int p, int score_type) const {
+		if (p < 0 || p >= 12) return 0;
+		switch (score_type) {
+		case 0: case 1: case 3: return st.unit_score[p];
+		case 2:                 return st.building_score[p];
+		default:                return 0;
+		}
+	}
+
+	// Helper: kill count for player p of unit type uid.
+	int trigger_player_kills(int p, int uid) const {
+		if (p < 0 || p >= 12) return 0;
+		int cnt = 0;
+		if (uid >= 0 && uid < 228) return st.unit_deaths[(size_t)p][(size_t)uid];
+		if (uid == 229) { for (size_t i = 0; i < 228; ++i) cnt += st.unit_deaths[(size_t)p][i]; }
+		return cnt;
+	}
+
+	// Helper: resource count for player p (extra_n: 0=minerals, 1=gas, 2=both).
+	int trigger_player_resources(int p, int res_type) const {
+		if (p < 0 || p >= 8) return 0;
+		int v = 0;
+		if (res_type == 0 || res_type == 2) v += st.current_minerals[p];
+		if (res_type == 1 || res_type == 2) v += st.current_gas[p];
+		return v;
+	}
+
 	bool test_trigger_condition(const trigger::condition& c, int owner) const {
 		switch (c.type) {
 		case 1: // countdown timer
@@ -18633,15 +18685,68 @@ struct state_functions {
 			{
 				int total = 0;
 				for (int p : trigger_players(owner, c.group)) {
-					if (p < 0 || p >= 12) continue;
-					int uid = c.unit_id;
-					if (uid >= 0 && uid < 228) {
-						total += st.unit_deaths[(size_t)p][(size_t)uid];
-					} else if (uid == 229) { // any unit
-						for (size_t i = 0; i < 228; ++i) total += st.unit_deaths[(size_t)p][i];
-					}
+					total += trigger_player_kills(p, c.unit_id);
 				}
 				return trigger_count_comparison(c, total);
+			}
+		case 6: // command the most – owner has strictly more units than any other active player
+			{
+				bool completed_only = (c.num_n != 1);
+				int own = trigger_own_unit_count(owner, c.unit_id, completed_only);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_own_unit_count(p, c.unit_id, completed_only) >= own) return false;
+				}
+				return true;
+			}
+		case 7: // commands the most at (location)
+			{
+				if (c.location <= 0 || (size_t)c.location > st.locations.size()) return false;
+				bool completed_only = (c.num_n != 1);
+				auto lc = trigger_bring_count(st.locations.at((size_t)c.location - 1));
+				int own = trigger_command_count(lc, owner, 13 /*current player*/, c.unit_id, completed_only);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_command_count(lc, p, 13, c.unit_id, completed_only) >= own) return false;
+				}
+				return true;
+			}
+		case 8: // most kills – owner has killed more of unit_id than any other active player
+			{
+				int own = trigger_player_kills(owner, c.unit_id);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_player_kills(p, c.unit_id) >= own) return false;
+				}
+				return true;
+			}
+		case 9: // highest score – owner has a strictly higher score than any other active player
+			{
+				int own = trigger_player_score(owner, c.extra_n);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_player_score(p, c.extra_n) >= own) return false;
+				}
+				return true;
+			}
+		case 10: // most resources – owner has strictly more resources than any other active player
+			{
+				int own = trigger_player_resources(owner, c.extra_n);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_player_resources(p, c.extra_n) >= own) return false;
+				}
+				return true;
 			}
 		case 11: // switch state
 			{
@@ -18653,8 +18758,8 @@ struct state_functions {
 				if (c.num_n == 3) return !is_set;
 				return false;
 			}
-		case 12: // elapsed time
-			return trigger_count_comparison(c, st.current_frame);
+		case 12: // elapsed time – c.count_n is in game-seconds; 24 frames = 1 game-second
+			return trigger_count_comparison(c, st.current_frame / 24);
 		case 13: // mission brief – condition never true outside briefing
 			return false;
 		case 14: // opponents
@@ -18663,15 +18768,68 @@ struct state_functions {
 			{
 				int total = 0;
 				for (int p : trigger_players(owner, c.group)) {
-					if (p < 0 || p >= 12) continue;
-					int uid = c.unit_id;
-					if (uid >= 0 && uid < 228) {
-						total += st.unit_deaths[(size_t)p][(size_t)uid];
-					} else if (uid == 229) { // any unit
-						for (size_t i = 0; i < 228; ++i) total += st.unit_deaths[(size_t)p][i];
-					}
+					total += trigger_player_kills(p, c.unit_id);
 				}
 				return trigger_count_comparison(c, total);
+			}
+		case 16: // command the least – owner has strictly fewer units than every other active player
+			{
+				bool completed_only = (c.num_n != 1);
+				int own = trigger_own_unit_count(owner, c.unit_id, completed_only);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_own_unit_count(p, c.unit_id, completed_only) <= own) return false;
+				}
+				return true;
+			}
+		case 17: // commands the least at (location)
+			{
+				if (c.location <= 0 || (size_t)c.location > st.locations.size()) return false;
+				bool completed_only = (c.num_n != 1);
+				auto lc = trigger_bring_count(st.locations.at((size_t)c.location - 1));
+				int own = trigger_command_count(lc, owner, 13, c.unit_id, completed_only);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_command_count(lc, p, 13, c.unit_id, completed_only) <= own) return false;
+				}
+				return true;
+			}
+		case 18: // least kills – owner has fewer kills than every other active player
+			{
+				int own = trigger_player_kills(owner, c.unit_id);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_player_kills(p, c.unit_id) <= own) return false;
+				}
+				return true;
+			}
+		case 19: // lowest score – owner has a strictly lower score than every other active player
+			{
+				int own = trigger_player_score(owner, c.extra_n);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_player_score(p, c.extra_n) <= own) return false;
+				}
+				return true;
+			}
+		case 20: // least resources – owner has strictly fewer resources than every other active player
+			{
+				int own = trigger_player_resources(owner, c.extra_n);
+				for (int p = 0; p < 8; ++p) {
+					if (p == owner) continue;
+					if (!player_slot_active(p)) continue;
+					if (!trigger_players_pred(owner, c.group, p)) continue;
+					if (trigger_player_resources(p, c.extra_n) <= own) return false;
+				}
+				return true;
 			}
 		case 21: // score
 			{
@@ -19185,6 +19343,23 @@ struct state_functions {
 				xy pos = (loc.area.from + loc.area.to) / 2;
 				for (int i = 0; i != a.num_n; ++i) {
 					trigger_create_unit(ut, pos, p);
+				}
+			}
+			return true;
+		case 45: // set deaths – directly modify unit-death counters (used by campaign scripting)
+			// a.group_n = player group, a.extra_n = unit type ID, a.group2_n = count,
+			// a.num_n: 7 = Set, 8 = Add, 9 = Subtract
+			for (int p : trigger_players(owner, a.group_n)) {
+				if (p < 0 || p >= 12) continue;
+				int uid = a.extra_n;
+				if (uid < 0 || uid >= 228) continue;
+				int val = a.group2_n;
+				if (a.num_n == 7)      st.unit_deaths[(size_t)p][(size_t)uid] = val;
+				else if (a.num_n == 8) st.unit_deaths[(size_t)p][(size_t)uid] += val;
+				else if (a.num_n == 9) {
+					st.unit_deaths[(size_t)p][(size_t)uid] -= val;
+					if (st.unit_deaths[(size_t)p][(size_t)uid] < 0)
+						st.unit_deaths[(size_t)p][(size_t)uid] = 0;
 				}
 			}
 			return true;

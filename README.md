@@ -49,22 +49,47 @@ OpenSnowstorm has the same ambition for **StarCraft: Brood War**:
 
 ### Campaign playability snapshot ("somewhat playable")
 
-Current rough estimate: **~35% of the way** to a "somewhat playable" campaign loop.
+Current rough estimate: **~45% of the way** to a "somewhat playable" campaign loop.
 
 What is already in place:
 - Deterministic simulation, replay, sync, and map boot/run paths are working.
 - Interactive map mode supports practical moment-to-moment unit control and command issuing.
 - Local-vision/fog rendering is wired for non-observer gameplay.
+- Trigger system covers all basic mission-logic condition and action types:
+  - All conditions: countdown timer, command, bring, accumulate resources, kills/deaths, switch,
+    elapsed time (now correctly in game-seconds), opponents, score, always/never, and the
+    ranking conditions (command/kills/score/resources most/least among a player group).
+  - All action types for mission flow: victory/defeat, pause/unpause, display text, center view,
+    set objectives, create/kill/remove/give units, set resources, set switch, set countdown timer,
+    order units, set next scenario, set deaths (action 45), and more.
+- Virtual trigger callbacks wired to the UI: pause/unpause, text messages, center-view, victory/defeat
+  auto-pause with "Mission accomplished." / "Mission failed." HUD banners.
+- In-memory quicksave (F5) and quickload (F8) allow mid-mission checkpoints.
+- Native builds detect and log the next mission map path at victory, showing a "Next: <name>" HUD.
+- Browser build exposes `replay_get_value(7)` (pending next-scenario name) and
+  `replay_get_value(9)` (transition-ready flag) for JS-side campaign orchestration.
 
-What still blocks a minimally playable campaign experience:
-- Full StarEdit trigger/event coverage (mission logic completeness).
-- Briefing and mission flow frontend (enter mission, debrief, next mission progression).
-- Campaign save/load UX and persistence paths.
-- Remaining presentation parity gaps (sound/music/UI polish expected by campaign players).
+What still blocks a fully reliable campaign experience:
+- **No persistent save/load** — quicksave is in-memory only; closing the window loses all progress.
+  File-backed save requires serializing the full simulation state (intrusive lists, pools, counters),
+  which needs a dedicated serialization layer not yet built.
+- **No automated mission-to-mission transition** — native builds log the next map path but require
+  a manual relaunch; the browser build exposes JS hooks but needs an external campaign orchestration
+  layer (map list, file loader, UI shell) to chain missions automatically.
+- **No briefing/debrief screen** — the engine has no briefing mode; mission text surfaces via
+  HUD banners only.
+- **Incomplete AI scripting** — AI script trigger action (15) handles shared-vision tags but ignores
+  all other script IDs; computer opponents use no scripted build orders.
+- **Sound / music** — SFX and soundtrack are absent; unit voices, ambient, and mission triggers
+  that fire WAV play actions are silently skipped.
+- **Renderer gaps** — no hardware-accelerated backend; large maps and many units strain the
+  software renderer.
 
 Practical interpretation:
-- **Today:** good for sandbox/skirmish-style map sessions and engine validation.
-- **Next milestone for "somewhat playable campaign":** trigger completeness + basic campaign flow shell (briefing -> mission -> success/fail -> next mission) + saves.
+- **Today:** individual campaign missions can be loaded and played to completion when triggers
+  fire correctly, but there is no save persistence and no automatic mission chaining.
+- **Next milestone for "reliably completable campaign":** file-backed save/load + automated
+  mission chain transitions (native and browser) + basic briefing screen stub.
 
 ---
 
