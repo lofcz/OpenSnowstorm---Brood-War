@@ -3811,6 +3811,16 @@ struct ui_functions: ui_util_functions {
 	void reset() {
 		apm = {};
 		replay_frame = 0;
+		is_paused = false;
+		is_replay_mode = false;
+		is_live_game_mode = false;
+		local_player_id = -1;
+		enemy_player_id = -1;
+		quicksave_pending = false;
+		quickload_pending = false;
+		pending_next_scenario.clear();
+		hud_next_slot = 0;
+		for (auto& v : hud_messages) v = {};
 		auto& game = *st.game;
 		st = state();
 		game = game_state();

@@ -65,7 +65,8 @@ What is already in place:
 - Virtual trigger callbacks wired to the UI: pause/unpause, text messages, center-view, victory/defeat
   auto-pause with "Mission accomplished." / "Mission failed." HUD banners.
 - In-memory quicksave (F5) and quickload (F8) allow mid-mission checkpoints.
-- Native builds detect and log the next mission map path at victory, showing a "Next: <name>" HUD.
+- Native builds now auto-resolve and load the next mission map at victory when a
+  `Set Next Scenario` trigger points to a map beside the current mission.
 - Browser build exposes `replay_get_value(7)` (pending next-scenario name) and
   `replay_get_value(9)` (transition-ready flag) for JS-side campaign orchestration.
 
@@ -73,9 +74,9 @@ What still blocks a fully reliable campaign experience:
 - **No persistent save/load** — quicksave is in-memory only; closing the window loses all progress.
   File-backed save requires serializing the full simulation state (intrusive lists, pools, counters),
   which needs a dedicated serialization layer not yet built.
-- **No automated mission-to-mission transition** — native builds log the next map path but require
-  a manual relaunch; the browser build exposes JS hooks but needs an external campaign orchestration
-  layer (map list, file loader, UI shell) to chain missions automatically.
+- **No browser-side mission chaining yet** — native builds now transition automatically when the
+  next map can be resolved on disk, but the browser build still only exposes JS hooks and needs an
+  external campaign orchestration layer (map list, file loader, UI shell) to chain missions.
 - **No briefing/debrief screen** — the engine has no briefing mode; mission text surfaces via
   HUD banners only.
 - **Incomplete AI scripting** — AI script trigger action (15) handles shared-vision tags but ignores
@@ -86,10 +87,11 @@ What still blocks a fully reliable campaign experience:
   software renderer.
 
 Practical interpretation:
-- **Today:** individual campaign missions can be loaded and played to completion when triggers
-  fire correctly, but there is no save persistence and no automatic mission chaining.
-- **Next milestone for "reliably completable campaign":** file-backed save/load + automated
-  mission chain transitions (native and browser) + basic briefing screen stub.
+- **Today:** native builds can chain adjacent campaign missions automatically when triggers fire
+  correctly, but there is still no persistent save/load and the browser build still needs an
+  external campaign shell.
+- **Next milestone for "reliably completable campaign":** file-backed save/load + browser/native
+  campaign shell polish + basic briefing screen stub.
 
 ---
 
