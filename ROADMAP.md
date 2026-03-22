@@ -104,7 +104,7 @@ Concretely, "success" means:
 - **Campaign progress estimate (current)**
   - Roughly **~35% complete** toward a "somewhat playable" campaign experience.
   - Interpreting "somewhat playable" as: a user can start a campaign mission chain, play through core objectives, and progress with basic save/load.
-  - Biggest remaining critical path items: trigger/event completeness, briefing/debrief flow, and campaign persistence UX.
+  - Biggest remaining critical path items: briefing/debrief flow, campaign persistence UX, and browser campaign-shell UX.
 - **Campaign engine**
   - Trigger system completeness (all StarEdit triggers)
   - Briefing room support

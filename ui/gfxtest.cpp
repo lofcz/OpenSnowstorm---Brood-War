@@ -63,6 +63,12 @@ struct saved_state {
 	std::array<apm_t, 12> apm;
 };
 
+enum class map_game_type_t {
+	auto_detect,
+	melee,
+	ums
+};
+
 struct main_t {
 	ui_functions ui;
 
@@ -79,7 +85,11 @@ struct main_t {
 
 	// Campaign state preserved across mission transitions.
 	std::string current_map_file; // path of the currently loaded map (native only)
+	int campaign_local_player_slot = -1;
+	int campaign_enemy_player_slot = -1;
+	map_game_type_t campaign_game_type = map_game_type_t::auto_detect;
 	int campaign_local_race = 5;
+	int campaign_enemy_race = 5;
 	bool campaign_fog_of_war = true;
 
 	a_map<int, std::unique_ptr<saved_state>> saved_states;
@@ -107,8 +117,234 @@ struct main_t {
 
 	void reset() {
 		saved_states.clear();
+		quicksave_slot.reset();
 		ui.reset();
 		live_result_reported = false;
+	}
+
+	void load_single_player_map(const std::string& map_file) {
+		reset();
+		ui.is_replay_mode = false;
+		ui.is_live_game_mode = true;
+		ui.default_enforce_local_visibility = campaign_fog_of_war;
+		ui.enforce_local_visibility = campaign_fog_of_war;
+
+		int selected_local = -1;
+		int selected_enemy = -1;
+		bool selected_game_type_melee = false;
+
+		game_load_functions load_funcs(ui.st);
+		load_funcs.load_map_file(map_file, [&]() {
+			auto is_melee_pickable = [&](int controller) {
+				return controller == player_t::controller_open || controller == player_t::controller_computer;
+			};
+			auto is_ums_local_pickable = [&](int controller) {
+				return controller == player_t::controller_occupied ||
+					controller == player_t::controller_computer_game ||
+					controller == player_t::controller_open ||
+					controller == player_t::controller_computer;
+			};
+			auto is_ums_enemy_pickable = [&](int controller) {
+				return controller == player_t::controller_occupied ||
+					controller == player_t::controller_computer_game ||
+					controller == player_t::controller_computer ||
+					controller == player_t::controller_open ||
+					controller == player_t::controller_rescue_passive ||
+					controller == player_t::controller_unused_rescue_active ||
+					controller == player_t::controller_neutral;
+			};
+
+			static_vector<size_t, 12> melee_slots;
+			static_vector<size_t, 12> ums_local_slots;
+			static_vector<size_t, 12> ums_enemy_slots;
+			for (size_t i = 0; i != 8; ++i) {
+				int controller = ui.st.players[i].controller;
+				if (is_melee_pickable(controller)) melee_slots.push_back(i);
+				if (is_ums_local_pickable(controller)) ums_local_slots.push_back(i);
+				if (is_ums_enemy_pickable(controller)) ums_enemy_slots.push_back(i);
+			}
+
+			auto contains_slot = [&](const auto& slots, int slot) {
+				for (size_t v : slots) {
+					if ((int)v == slot) return true;
+				}
+				return false;
+			};
+
+			bool game_type_melee = false;
+			if (campaign_game_type == map_game_type_t::melee) {
+				game_type_melee = true;
+			} else if (campaign_game_type == map_game_type_t::ums) {
+				game_type_melee = false;
+			} else {
+				bool has_authored_campaign_slots = false;
+				for (size_t v : ums_local_slots) {
+					int controller = ui.st.players[v].controller;
+					if (controller == player_t::controller_occupied || controller == player_t::controller_computer_game) {
+						has_authored_campaign_slots = true;
+						break;
+					}
+				}
+				game_type_melee = !has_authored_campaign_slots;
+			}
+
+			selected_game_type_melee = game_type_melee;
+
+			if (game_type_melee) {
+				if (melee_slots.size() < 2) {
+					error("%s: melee mode requires at least two open/computer slots; try --game-type ums for authored UMS/campaign layouts", map_file.c_str());
+				}
+
+				selected_local = campaign_local_player_slot == -1 ? (int)melee_slots.front() : campaign_local_player_slot;
+				if (!contains_slot(melee_slots, selected_local)) {
+					error("%s: requested local slot %d is not an open/computer slot in melee mode", map_file.c_str(), selected_local);
+				}
+
+				selected_enemy = campaign_enemy_player_slot;
+				if (selected_enemy == -1) {
+					for (size_t v : melee_slots) {
+						if ((int)v != selected_local) {
+							selected_enemy = (int)v;
+							break;
+						}
+					}
+				}
+				if (selected_enemy == -1 || selected_enemy == selected_local || !contains_slot(melee_slots, selected_enemy)) {
+					error("%s: unable to pick a valid enemy slot in melee mode (local=%d enemy=%d)", map_file.c_str(), selected_local, selected_enemy);
+				}
+
+				for (size_t v : melee_slots) ui.st.players[v].controller = player_t::controller_closed;
+				ui.st.players[(size_t)selected_local].controller = player_t::controller_occupied;
+				ui.st.players[(size_t)selected_enemy].controller = player_t::controller_computer_game;
+			} else {
+				if (ums_local_slots.empty()) {
+					error("%s: no suitable UMS local slot found (need occupied/computer_game/open/computer in slots 0-7)", map_file.c_str());
+				}
+
+				if (campaign_local_player_slot != -1) {
+					if (!contains_slot(ums_local_slots, campaign_local_player_slot)) {
+						error("%s: requested local slot %d is not UMS-pickable (expected occupied/computer_game/open/computer)", map_file.c_str(), campaign_local_player_slot);
+					}
+					selected_local = campaign_local_player_slot;
+				} else {
+					selected_local = -1;
+					for (size_t v : ums_local_slots) {
+						if (ui.st.players[v].controller == player_t::controller_occupied) {
+							selected_local = (int)v;
+							break;
+						}
+					}
+					if (selected_local == -1) {
+						for (size_t v : ums_local_slots) {
+							if (ui.st.players[v].controller == player_t::controller_computer_game) {
+								selected_local = (int)v;
+								break;
+							}
+						}
+					}
+					if (selected_local == -1) selected_local = (int)ums_local_slots.front();
+				}
+
+				auto& local_player = ui.st.players.at((size_t)selected_local);
+				if (local_player.controller == player_t::controller_open ||
+				    local_player.controller == player_t::controller_computer ||
+				    local_player.controller == player_t::controller_computer_game) {
+					local_player.controller = player_t::controller_occupied;
+				}
+
+				if (campaign_enemy_player_slot != -1) {
+					if (campaign_enemy_player_slot == selected_local) {
+						error("%s: --enemy-player slot %d must be different from local slot %d", map_file.c_str(), campaign_enemy_player_slot, selected_local);
+					}
+					if (!contains_slot(ums_enemy_slots, campaign_enemy_player_slot)) {
+						error("%s: requested enemy slot %d is not UMS-pickable", map_file.c_str(), campaign_enemy_player_slot);
+					}
+					selected_enemy = campaign_enemy_player_slot;
+				} else {
+					selected_enemy = -1;
+					for (size_t v : ums_enemy_slots) {
+						if ((int)v != selected_local && ui.st.players[v].controller == player_t::controller_computer_game) {
+							selected_enemy = (int)v;
+							break;
+						}
+					}
+					if (selected_enemy == -1) {
+						for (size_t v : ums_enemy_slots) {
+							if ((int)v != selected_local && ui.st.players[v].controller == player_t::controller_occupied) {
+								selected_enemy = (int)v;
+								break;
+							}
+						}
+					}
+					if (selected_enemy == -1) {
+						for (size_t v : ums_enemy_slots) {
+							if ((int)v != selected_local) {
+								selected_enemy = (int)v;
+								break;
+							}
+						}
+					}
+				}
+
+				if (selected_enemy != -1) {
+					auto& enemy_player = ui.st.players.at((size_t)selected_enemy);
+					if (enemy_player.controller == player_t::controller_open ||
+					    enemy_player.controller == player_t::controller_computer) {
+						enemy_player.controller = player_t::controller_computer_game;
+					}
+				}
+			}
+
+			auto& local_player = ui.st.players.at((size_t)selected_local);
+			if ((int)local_player.race == 5) local_player.race = (race_t)campaign_local_race;
+			if (selected_enemy != -1) {
+				auto& enemy_player = ui.st.players.at((size_t)selected_enemy);
+				if ((int)enemy_player.race == 5) enemy_player.race = (race_t)campaign_enemy_race;
+			}
+
+			uint32_t race_seed = (uint32_t)std::chrono::high_resolution_clock::now().time_since_epoch().count();
+			auto roll_race = [&]() {
+				race_seed = race_seed * 22695477u + 1u;
+				return (int)((race_seed >> 16) % 3u);
+			};
+			for (auto& v : ui.st.players) {
+				if (v.controller == player_t::controller_occupied || v.controller == player_t::controller_computer_game) {
+					if ((int)v.race > 2) v.race = (race_t)roll_race();
+				}
+			}
+
+			if (game_type_melee) {
+				load_funcs.setup_info.victory_condition = 1;
+				load_funcs.setup_info.starting_units = 1;
+			}
+
+			ui.st.lcg_rand_state = race_seed;
+		});
+
+		ui.local_player_id = selected_local;
+		ui.enemy_player_id = selected_enemy;
+		ui.replay_frame = ui.st.current_frame;
+		ui.set_image_data();
+		current_map_file = map_file;
+
+		const char* game_mode_name = selected_game_type_melee ? "melee" : "ums";
+		const char* mode_origin = campaign_game_type == map_game_type_t::auto_detect ? " (auto)" : "";
+		if (selected_enemy == -1) {
+			log("single-player: map='%s' local_slot=%d enemy_slot=none mode=%s%s fog=%s\n",
+				map_file.c_str(),
+				selected_local,
+				game_mode_name,
+				mode_origin,
+				campaign_fog_of_war ? "on" : "off");
+		} else {
+			log("single-player: map='%s' local_slot=%d enemy_slot=%d mode=%s%s fog=%s\n",
+				map_file.c_str(),
+				selected_local,
+				selected_enemy,
+				game_mode_name,
+				mode_origin,
+				campaign_fog_of_war ? "on" : "off");
+		}
 	}
 
 #ifndef EMSCRIPTEN
@@ -253,16 +489,18 @@ struct main_t {
 					if (!ui.pending_next_scenario.empty()) {
 						log("single-player: next scenario -> '%s'\n", ui.pending_next_scenario.c_str());
 #ifndef EMSCRIPTEN
-						// For native builds: try to locate the next map file on disk.
 						std::string next_map = find_next_campaign_map(ui.pending_next_scenario);
 						if (!next_map.empty()) {
-							log("campaign: next map found at '%s'\n", next_map.c_str());
-							log("campaign: relaunch with --map \"%s\" to continue\n", next_map.c_str());
+							log("campaign: advancing to '%s'\n", next_map.c_str());
+							load_single_player_map(next_map);
+							log("campaign: mission transition complete\n");
 						} else {
 							log("campaign: next map '%s' not found beside current map\n",
 							    ui.pending_next_scenario.c_str());
+							log("campaign: relaunch with --map \"%s\" to continue once the file is available\n",
+							    ui.pending_next_scenario.c_str());
+							ui.push_hud_message(a_string("Next: ") + ui.pending_next_scenario, 12 * 24);
 						}
-						ui.push_hud_message(a_string("Next: ") + ui.pending_next_scenario, 12 * 24);
 #endif
 					}
 				} else if (ui.player_defeated(ui.local_player_id)) {
@@ -1669,11 +1907,6 @@ int main(int argc, char** argv) {
 	bool validate_replay = false;
 	bool headless = false;
 	bool show_help = false;
-	enum class map_game_type_t {
-		auto_detect,
-		melee,
-		ums,
-	};
 	map_game_type_t map_game_type = map_game_type_t::auto_detect;
 	bool debug_overlay = false;
 	bool map_fog_of_war = true;
@@ -1937,227 +2170,13 @@ int main(int argc, char** argv) {
 
 #ifndef EMSCRIPTEN
 	if (map_file) {
-		ui.is_replay_mode = false;
-		ui.is_live_game_mode = true;
-		ui.default_enforce_local_visibility = map_fog_of_war;
-		ui.enforce_local_visibility = map_fog_of_war;
-
-		int selected_local = -1;
-		int selected_enemy = -1;
-		bool selected_game_type_melee = false;
-
-		game_load_functions load_funcs(ui.st);
-		load_funcs.load_map_file(map_file, [&]() {
-			auto is_melee_pickable = [&](int controller) {
-				return controller == player_t::controller_open || controller == player_t::controller_computer;
-			};
-			auto is_ums_local_pickable = [&](int controller) {
-				return controller == player_t::controller_occupied ||
-					controller == player_t::controller_computer_game ||
-					controller == player_t::controller_open ||
-					controller == player_t::controller_computer;
-			};
-			auto is_ums_enemy_pickable = [&](int controller) {
-				return controller == player_t::controller_occupied ||
-					controller == player_t::controller_computer_game ||
-					controller == player_t::controller_computer ||
-					controller == player_t::controller_open ||
-					controller == player_t::controller_rescue_passive ||
-					controller == player_t::controller_unused_rescue_active ||
-					controller == player_t::controller_neutral;
-			};
-
-			static_vector<size_t, 12> melee_slots;
-			static_vector<size_t, 12> ums_local_slots;
-			static_vector<size_t, 12> ums_enemy_slots;
-			for (size_t i = 0; i != 8; ++i) {
-				int controller = ui.st.players[i].controller;
-				if (is_melee_pickable(controller)) melee_slots.push_back(i);
-				if (is_ums_local_pickable(controller)) ums_local_slots.push_back(i);
-				if (is_ums_enemy_pickable(controller)) ums_enemy_slots.push_back(i);
-			}
-
-			auto contains_slot = [&](const auto& slots, int slot) {
-				for (size_t v : slots) {
-					if ((int)v == slot) return true;
-				}
-				return false;
-			};
-
-			bool game_type_melee = false;
-			if (map_game_type == map_game_type_t::melee) {
-				game_type_melee = true;
-			} else if (map_game_type == map_game_type_t::ums) {
-				game_type_melee = false;
-			} else {
-				bool has_authored_campaign_slots = false;
-				for (size_t v : ums_local_slots) {
-					int controller = ui.st.players[v].controller;
-					if (controller == player_t::controller_occupied || controller == player_t::controller_computer_game) {
-						has_authored_campaign_slots = true;
-						break;
-					}
-				}
-				game_type_melee = !has_authored_campaign_slots;
-			}
-
-			selected_game_type_melee = game_type_melee;
-
-			if (game_type_melee) {
-				if (melee_slots.size() < 2) {
-					error("%s: melee mode requires at least two open/computer slots; try --game-type ums for authored UMS/campaign layouts", map_file);
-				}
-
-				selected_local = local_player_slot == -1 ? (int)melee_slots.front() : local_player_slot;
-				if (!contains_slot(melee_slots, selected_local)) {
-					error("%s: requested local slot %d is not an open/computer slot in melee mode", map_file, selected_local);
-				}
-
-				selected_enemy = enemy_player_slot;
-				if (selected_enemy == -1) {
-					for (size_t v : melee_slots) {
-						if ((int)v != selected_local) {
-							selected_enemy = (int)v;
-							break;
-						}
-					}
-				}
-				if (selected_enemy == -1 || selected_enemy == selected_local || !contains_slot(melee_slots, selected_enemy)) {
-					error("%s: unable to pick a valid enemy slot in melee mode (local=%d enemy=%d)", map_file, selected_local, selected_enemy);
-				}
-
-				for (size_t v : melee_slots) ui.st.players[v].controller = player_t::controller_closed;
-				ui.st.players[(size_t)selected_local].controller = player_t::controller_occupied;
-				ui.st.players[(size_t)selected_enemy].controller = player_t::controller_computer_game;
-			} else {
-				if (ums_local_slots.empty()) {
-					error("%s: no suitable UMS local slot found (need occupied/computer_game/open/computer in slots 0-7)", map_file);
-				}
-
-				if (local_player_slot != -1) {
-					if (!contains_slot(ums_local_slots, local_player_slot)) {
-						error("%s: requested local slot %d is not UMS-pickable (expected occupied/computer_game/open/computer)", map_file, local_player_slot);
-					}
-					selected_local = local_player_slot;
-				} else {
-					selected_local = -1;
-					for (size_t v : ums_local_slots) {
-						if (ui.st.players[v].controller == player_t::controller_occupied) {
-							selected_local = (int)v;
-							break;
-						}
-					}
-					if (selected_local == -1) {
-						for (size_t v : ums_local_slots) {
-							if (ui.st.players[v].controller == player_t::controller_computer_game) {
-								selected_local = (int)v;
-								break;
-							}
-						}
-					}
-					if (selected_local == -1) selected_local = (int)ums_local_slots.front();
-				}
-
-				auto& local_player = ui.st.players.at((size_t)selected_local);
-				if (local_player.controller == player_t::controller_open ||
-				    local_player.controller == player_t::controller_computer ||
-				    local_player.controller == player_t::controller_computer_game) {
-					local_player.controller = player_t::controller_occupied;
-				}
-
-				if (enemy_player_slot != -1) {
-					if (enemy_player_slot == selected_local) {
-						error("%s: --enemy-player slot %d must be different from local slot %d", map_file, enemy_player_slot, selected_local);
-					}
-					if (!contains_slot(ums_enemy_slots, enemy_player_slot)) {
-						error("%s: requested enemy slot %d is not UMS-pickable", map_file, enemy_player_slot);
-					}
-					selected_enemy = enemy_player_slot;
-				} else {
-					selected_enemy = -1;
-					for (size_t v : ums_enemy_slots) {
-						if ((int)v != selected_local && ui.st.players[v].controller == player_t::controller_computer_game) {
-							selected_enemy = (int)v;
-							break;
-						}
-					}
-					if (selected_enemy == -1) {
-						for (size_t v : ums_enemy_slots) {
-							if ((int)v != selected_local && ui.st.players[v].controller == player_t::controller_occupied) {
-								selected_enemy = (int)v;
-								break;
-							}
-						}
-					}
-					if (selected_enemy == -1) {
-						for (size_t v : ums_enemy_slots) {
-							if ((int)v != selected_local) {
-								selected_enemy = (int)v;
-								break;
-							}
-						}
-					}
-				}
-
-				if (selected_enemy != -1) {
-					auto& enemy_player = ui.st.players.at((size_t)selected_enemy);
-					if (enemy_player.controller == player_t::controller_open ||
-					    enemy_player.controller == player_t::controller_computer) {
-						enemy_player.controller = player_t::controller_computer_game;
-					}
-				}
-			}
-
-			auto& local_player = ui.st.players.at((size_t)selected_local);
-			if ((int)local_player.race == 5) local_player.race = (race_t)local_race;
-			if (selected_enemy != -1) {
-				auto& enemy_player = ui.st.players.at((size_t)selected_enemy);
-				if ((int)enemy_player.race == 5) enemy_player.race = (race_t)enemy_race;
-			}
-
-			uint32_t race_seed = (uint32_t)std::chrono::high_resolution_clock::now().time_since_epoch().count();
-			auto roll_race = [&]() {
-				race_seed = race_seed * 22695477u + 1u;
-				return (int)((race_seed >> 16) % 3u);
-			};
-			for (auto& v : ui.st.players) {
-				if (v.controller == player_t::controller_occupied || v.controller == player_t::controller_computer_game) {
-					if ((int)v.race > 2) v.race = (race_t)roll_race();
-				}
-			}
-
-			if (game_type_melee) {
-				load_funcs.setup_info.victory_condition = 1;
-				load_funcs.setup_info.starting_units = 1;
-			}
-
-			ui.st.lcg_rand_state = race_seed;
-		});
-
-		ui.local_player_id = selected_local;
-		ui.enemy_player_id = selected_enemy;
-		ui.replay_frame = ui.st.current_frame;
-		m.current_map_file = map_file;
+		m.campaign_local_player_slot = local_player_slot;
+		m.campaign_enemy_player_slot = enemy_player_slot;
+		m.campaign_game_type = map_game_type;
 		m.campaign_fog_of_war = map_fog_of_war;
 		m.campaign_local_race = local_race;
-		const char* game_mode_name = selected_game_type_melee ? "melee" : "ums";
-		const char* mode_origin = map_game_type == map_game_type_t::auto_detect ? " (auto)" : "";
-		if (selected_enemy == -1) {
-			log("single-player: map='%s' local_slot=%d enemy_slot=none mode=%s%s fog=%s\n",
-				map_file,
-				selected_local,
-				game_mode_name,
-				mode_origin,
-				map_fog_of_war ? "on" : "off");
-		} else {
-			log("single-player: map='%s' local_slot=%d enemy_slot=%d mode=%s%s fog=%s\n",
-				map_file,
-				selected_local,
-				selected_enemy,
-				game_mode_name,
-				mode_origin,
-				map_fog_of_war ? "on" : "off");
-		}
+		m.campaign_enemy_race = enemy_race;
+		m.load_single_player_map(map_file);
 	} else {
 		ui.is_replay_mode = true;
 		ui.is_live_game_mode = false;
@@ -2211,10 +2230,22 @@ int main(int argc, char** argv) {
 			const int frame_limit = headless_map_frame_limit > 0 ? headless_map_frame_limit : 72000;
 			log("single-player headless: stepping until local victory/defeat (limit=%d)\n", frame_limit);
 			bool result_found = false;
-			while (ui.st.current_frame < frame_limit) {
+			int stepped_frames = 0;
+			while (stepped_frames < frame_limit) {
 				ui.state_functions::next_frame();
+				++stepped_frames;
 				if (ui.has_local_player()) {
 					if (ui.player_won(ui.local_player_id)) {
+						if (!ui.pending_next_scenario.empty()) {
+							std::string next_map = m.find_next_campaign_map(ui.pending_next_scenario);
+							if (!next_map.empty()) {
+								log("single-player headless: campaign advance -> '%s'\n", next_map.c_str());
+								m.load_single_player_map(next_map);
+								continue;
+							}
+							log("single-player headless: next map '%s' not found beside current map\n",
+							    ui.pending_next_scenario.c_str());
+						}
 						log("single-player headless: PASS (victory at frame %d)\n", ui.st.current_frame);
 						result_found = true;
 						break;
