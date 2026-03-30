@@ -3,7 +3,7 @@
 OpenSnowstorm is an **open-source, community-driven engine reimplementation** of StarCraft: Brood War — aiming to be for StarCraft what [OpenMW](https://openmw.org) is for Morrowind: a clean-room, modern, free-software engine that can run the original game's content with full fidelity, and ultimately exceed the original in moddability, platform support, and long-term preservation.
 
 > **Current state:** The engine simulation, replay, sync, and BWAPI-compatible integration layers are functional.  
-> A first interactive **single-player map client foundation** now exists in `gfxtest` (`--map ...`).  
+> `gfxtest` now boots into an interactive **startup frontend shell** when launched without `--map` / `--replay`, and the single-player map client foundation remains available via `--map ...`.  
 > A complete client experience (campaign frontend, lobby, matchmaking, full UX parity) remains on the long-term roadmap.  
 > Contributors at all levels are welcome.
 
@@ -43,6 +43,7 @@ OpenSnowstorm has the same ambition for **StarCraft: Brood War**:
 | Headless / benchmark mode | Added (see `--bench`, `--headless`) |
 | Replay validation sanity check | Added (see `--validate-replay`) |
 | Replay hash fixtures (record/verify) | Added (see `--record-hashes`, `--verify-hashes`) |
+| Interactive startup frontend shell | Added (discovers maps/replays and launches them) |
 | Single-player map mode (`gfxtest --map`) | Added (foundation slice) |
 | Automated determinism test suite | Planned (Phase 0) |
 | Full game client (lobby, matchmaking) | Long-term roadmap |
@@ -170,6 +171,9 @@ cmake --build build/ui -j
 ### Single-player map mode (foundation)
 
 ```bash
+# Launch the interactive frontend shell (default interactive startup)
+./build/gfxtest
+
 # Interactive single-player game on a map (requires your own game data files + map file)
 ./build/gfxtest --map maps/YourMap.scx --game-type melee --local-race terran --enemy-race zerg
 ```

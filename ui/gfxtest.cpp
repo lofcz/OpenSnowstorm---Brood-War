@@ -28,6 +28,9 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#else
+#include <dirent.h>
+#include <sys/stat.h>
 #endif
 
 #include "../perf_metrics.h"
@@ -149,6 +152,355 @@ bool default_replay_exists() {
 	return file_exists("maps/p49.rep");
 }
 
+enum class startup_content_kind {
+	map,
+	replay
+};
+
+struct startup_entry {
+	startup_content_kind kind = startup_content_kind::map;
+	std::string path;
+	std::string title;
+	std::string subtitle;
+};
+
+std::string lowercase_copy(std::string value) {
+	for (char& c : value) c = (char)std::tolower((unsigned char)c);
+	return value;
+}
+
+std::string uppercase_copy(std::string value) {
+	for (char& c : value) c = (char)std::toupper((unsigned char)c);
+	return value;
+}
+
+std::string canonicalize_path_for_compare(std::string path) {
+	for (char& c : path) {
+		if (c == '\\') c = '/';
+	}
+	return lowercase_copy(std::move(path));
+}
+
+std::string path_basename(const std::string& path) {
+	size_t pos = path.find_last_of("/\\");
+	if (pos == std::string::npos) return path;
+	return path.substr(pos + 1);
+}
+
+std::string strip_extension(const std::string& path) {
+	size_t pos = path.find_last_of('.');
+	if (pos == std::string::npos) return path;
+	return path.substr(0, pos);
+}
+
+std::string shorten_middle(const std::string& text, size_t max_chars) {
+	if (text.size() <= max_chars) return text;
+	if (max_chars <= 3) return text.substr(0, max_chars);
+	size_t head = (max_chars - 3) / 2;
+	size_t tail = max_chars - 3 - head;
+	return text.substr(0, head) + "..." + text.substr(text.size() - tail);
+}
+
+bool has_extension_ci(const std::string& path, const char* extension) {
+	std::string lower_path = lowercase_copy(path);
+	std::string lower_ext = lowercase_copy(extension);
+	if (lower_path.size() < lower_ext.size()) return false;
+	return lower_path.compare(lower_path.size() - lower_ext.size(), lower_ext.size(), lower_ext) == 0;
+}
+
+std::string make_startup_title(startup_content_kind kind, const std::string& path) {
+	std::string stem = strip_extension(path_basename(path));
+	if (stem.empty()) stem = path;
+	for (char& c : stem) {
+		if (c == '_' || c == '-') c = ' ';
+	}
+	std::string lower_path = lowercase_copy(path);
+	if (kind == startup_content_kind::replay) return "Replay  " + stem;
+	if (lower_path.find("campaign") != std::string::npos || lower_path.find("broodwar") != std::string::npos) {
+		return "Campaign  " + stem;
+	}
+	return "Map  " + stem;
+}
+
+bool startup_entry_exists(const std::vector<startup_entry>& entries, const std::string& path) {
+	std::string normalized = canonicalize_path_for_compare(path);
+	for (const startup_entry& entry : entries) {
+		if (canonicalize_path_for_compare(entry.path) == normalized) return true;
+	}
+	return false;
+}
+
+void push_startup_entry(std::vector<startup_entry>& entries, startup_content_kind kind, const std::string& path) {
+	if (path.empty() || startup_entry_exists(entries, path)) return;
+	startup_entry entry;
+	entry.kind = kind;
+	entry.path = path;
+	entry.title = make_startup_title(kind, path);
+	entry.subtitle = shorten_middle(path, 72);
+	entries.push_back(std::move(entry));
+}
+
+struct directory_entry_info {
+	std::string path;
+	bool is_directory = false;
+};
+
+std::vector<directory_entry_info> list_directory_entries(const std::string& dir) {
+	std::vector<directory_entry_info> result;
+#ifdef _WIN32
+	std::string pattern = join_path(dir, "*");
+	WIN32_FIND_DATAA find_data;
+	HANDLE h = FindFirstFileA(pattern.c_str(), &find_data);
+	if (h == INVALID_HANDLE_VALUE) return result;
+	do {
+		const char* name = find_data.cFileName;
+		if (!name || strcmp(name, ".") == 0 || strcmp(name, "..") == 0) continue;
+		directory_entry_info entry;
+		entry.path = join_path(dir, name);
+		entry.is_directory = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+		result.push_back(std::move(entry));
+	} while (FindNextFileA(h, &find_data));
+	FindClose(h);
+#else
+	DIR* dp = opendir(dir.c_str());
+	if (!dp) return result;
+	while (dirent* dent = readdir(dp)) {
+		const char* name = dent->d_name;
+		if (!name || strcmp(name, ".") == 0 || strcmp(name, "..") == 0) continue;
+		directory_entry_info entry;
+		entry.path = join_path(dir, name);
+		bool is_directory = false;
+#ifdef DT_DIR
+		if (dent->d_type == DT_DIR) {
+			is_directory = true;
+		} else if (dent->d_type == DT_UNKNOWN) {
+			struct stat st;
+			if (stat(entry.path.c_str(), &st) == 0) is_directory = S_ISDIR(st.st_mode);
+		}
+#else
+		struct stat st;
+		if (stat(entry.path.c_str(), &st) == 0) is_directory = S_ISDIR(st.st_mode);
+#endif
+		entry.is_directory = is_directory;
+		result.push_back(std::move(entry));
+	}
+	closedir(dp);
+#endif
+	std::sort(result.begin(), result.end(), [](const directory_entry_info& a, const directory_entry_info& b) {
+		return canonicalize_path_for_compare(a.path) < canonicalize_path_for_compare(b.path);
+	});
+	return result;
+}
+
+void scan_startup_directory(
+	const std::string& dir,
+	int depth,
+	int max_depth,
+	std::vector<startup_entry>& out,
+	size_t max_entries
+) {
+	if (dir.empty() || depth > max_depth || out.size() >= max_entries) return;
+	for (const directory_entry_info& entry : list_directory_entries(dir)) {
+		if (out.size() >= max_entries) break;
+		if (entry.is_directory) {
+			scan_startup_directory(entry.path, depth + 1, max_depth, out, max_entries);
+			continue;
+		}
+		if (has_extension_ci(entry.path, ".scx") || has_extension_ci(entry.path, ".scm")) {
+			push_startup_entry(out, startup_content_kind::map, entry.path);
+		} else if (has_extension_ci(entry.path, ".rep")) {
+			push_startup_entry(out, startup_content_kind::replay, entry.path);
+		}
+	}
+}
+
+int startup_entry_priority(const startup_entry& entry) {
+	std::string lower = lowercase_copy(entry.path);
+	bool campaign_like = lower.find("campaign") != std::string::npos || lower.find("broodwar") != std::string::npos;
+	if (entry.kind == startup_content_kind::map && campaign_like) return 0;
+	if (entry.kind == startup_content_kind::map) return 20;
+	if (lower.find("p49.rep") != std::string::npos) return 60;
+	return 40;
+}
+
+std::vector<startup_entry> discover_startup_entries(const std::string& data_dir) {
+	std::vector<startup_entry> entries;
+	push_startup_entry(entries, startup_content_kind::replay, "maps/p49.rep");
+
+	std::vector<std::string> candidate_dirs;
+	push_unique_dir(candidate_dirs, "maps");
+	push_unique_dir(candidate_dirs, "Maps");
+	if (!data_dir.empty()) {
+		push_unique_dir(candidate_dirs, data_dir);
+		push_unique_dir(candidate_dirs, join_path(data_dir, "maps"));
+		push_unique_dir(candidate_dirs, join_path(data_dir, "Maps"));
+	}
+	std::string exe_dir = executable_directory();
+	if (!exe_dir.empty()) {
+		push_unique_dir(candidate_dirs, exe_dir);
+		push_unique_dir(candidate_dirs, join_path(exe_dir, "maps"));
+		push_unique_dir(candidate_dirs, join_path(exe_dir, "Maps"));
+	}
+
+	for (const std::string& dir : candidate_dirs) {
+		scan_startup_directory(dir, 0, 3, entries, 6);
+		if (entries.size() >= 6) break;
+	}
+
+	std::sort(entries.begin(), entries.end(), [](const startup_entry& a, const startup_entry& b) {
+		int ap = startup_entry_priority(a);
+		int bp = startup_entry_priority(b);
+		if (ap != bp) return ap < bp;
+		return canonicalize_path_for_compare(a.title) < canonicalize_path_for_compare(b.title);
+	});
+	if (entries.size() > 6) entries.resize(6);
+	return entries;
+}
+
+constexpr uint32_t rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) {
+	return (uint32_t)r | ((uint32_t)g << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24);
+}
+
+const std::array<uint8_t, 7>& glyph_rows(char c) {
+	static const std::array<uint8_t, 7> space = {{0, 0, 0, 0, 0, 0, 0}};
+	static const std::array<uint8_t, 7> dash = {{0, 0, 0, 31, 0, 0, 0}};
+	static const std::array<uint8_t, 7> dot = {{0, 0, 0, 0, 0, 12, 12}};
+	static const std::array<uint8_t, 7> colon = {{0, 12, 12, 0, 12, 12, 0}};
+	static const std::array<uint8_t, 7> slash = {{1, 2, 4, 8, 16, 0, 0}};
+	static const std::array<uint8_t, 7> underscore = {{0, 0, 0, 0, 0, 0, 31}};
+	static const std::array<uint8_t, 7> left_paren = {{2, 4, 8, 8, 8, 4, 2}};
+	static const std::array<uint8_t, 7> right_paren = {{8, 4, 2, 2, 2, 4, 8}};
+	static const std::array<uint8_t, 7> question = {{14, 17, 1, 2, 4, 0, 4}};
+	static const std::array<uint8_t, 7> zero = {{14, 17, 19, 21, 25, 17, 14}};
+	static const std::array<uint8_t, 7> one = {{4, 12, 4, 4, 4, 4, 14}};
+	static const std::array<uint8_t, 7> two = {{14, 17, 1, 2, 4, 8, 31}};
+	static const std::array<uint8_t, 7> three = {{30, 1, 1, 14, 1, 1, 30}};
+	static const std::array<uint8_t, 7> four = {{2, 6, 10, 18, 31, 2, 2}};
+	static const std::array<uint8_t, 7> five = {{31, 16, 16, 30, 1, 1, 30}};
+	static const std::array<uint8_t, 7> six = {{14, 16, 16, 30, 17, 17, 14}};
+	static const std::array<uint8_t, 7> seven = {{31, 1, 2, 4, 8, 8, 8}};
+	static const std::array<uint8_t, 7> eight = {{14, 17, 17, 14, 17, 17, 14}};
+	static const std::array<uint8_t, 7> nine = {{14, 17, 17, 15, 1, 1, 14}};
+	static const std::array<uint8_t, 7> A = {{14, 17, 17, 31, 17, 17, 17}};
+	static const std::array<uint8_t, 7> B = {{30, 17, 17, 30, 17, 17, 30}};
+	static const std::array<uint8_t, 7> C = {{14, 17, 16, 16, 16, 17, 14}};
+	static const std::array<uint8_t, 7> D = {{30, 17, 17, 17, 17, 17, 30}};
+	static const std::array<uint8_t, 7> E = {{31, 16, 16, 30, 16, 16, 31}};
+	static const std::array<uint8_t, 7> F = {{31, 16, 16, 30, 16, 16, 16}};
+	static const std::array<uint8_t, 7> G = {{14, 17, 16, 23, 17, 17, 14}};
+	static const std::array<uint8_t, 7> H = {{17, 17, 17, 31, 17, 17, 17}};
+	static const std::array<uint8_t, 7> I = {{14, 4, 4, 4, 4, 4, 14}};
+	static const std::array<uint8_t, 7> J = {{1, 1, 1, 1, 17, 17, 14}};
+	static const std::array<uint8_t, 7> K = {{17, 18, 20, 24, 20, 18, 17}};
+	static const std::array<uint8_t, 7> L = {{16, 16, 16, 16, 16, 16, 31}};
+	static const std::array<uint8_t, 7> M = {{17, 27, 21, 17, 17, 17, 17}};
+	static const std::array<uint8_t, 7> N = {{17, 25, 21, 19, 17, 17, 17}};
+	static const std::array<uint8_t, 7> O = {{14, 17, 17, 17, 17, 17, 14}};
+	static const std::array<uint8_t, 7> P = {{30, 17, 17, 30, 16, 16, 16}};
+	static const std::array<uint8_t, 7> Q = {{14, 17, 17, 17, 21, 18, 13}};
+	static const std::array<uint8_t, 7> R = {{30, 17, 17, 30, 20, 18, 17}};
+	static const std::array<uint8_t, 7> S = {{15, 16, 16, 14, 1, 1, 30}};
+	static const std::array<uint8_t, 7> T = {{31, 4, 4, 4, 4, 4, 4}};
+	static const std::array<uint8_t, 7> U = {{17, 17, 17, 17, 17, 17, 14}};
+	static const std::array<uint8_t, 7> V = {{17, 17, 17, 17, 17, 10, 4}};
+	static const std::array<uint8_t, 7> W = {{17, 17, 17, 17, 21, 27, 17}};
+	static const std::array<uint8_t, 7> X = {{17, 17, 10, 4, 10, 17, 17}};
+	static const std::array<uint8_t, 7> Y = {{17, 17, 10, 4, 4, 4, 4}};
+	static const std::array<uint8_t, 7> Z = {{31, 1, 2, 4, 8, 16, 31}};
+	switch ((char)std::toupper((unsigned char)c)) {
+	case ' ': return space;
+	case '-': return dash;
+	case '.': return dot;
+	case ':': return colon;
+	case '/': return slash;
+	case '\\': return slash;
+	case '_': return underscore;
+	case '(': return left_paren;
+	case ')': return right_paren;
+	case '0': return zero;
+	case '1': return one;
+	case '2': return two;
+	case '3': return three;
+	case '4': return four;
+	case '5': return five;
+	case '6': return six;
+	case '7': return seven;
+	case '8': return eight;
+	case '9': return nine;
+	case 'A': return A;
+	case 'B': return B;
+	case 'C': return C;
+	case 'D': return D;
+	case 'E': return E;
+	case 'F': return F;
+	case 'G': return G;
+	case 'H': return H;
+	case 'I': return I;
+	case 'J': return J;
+	case 'K': return K;
+	case 'L': return L;
+	case 'M': return M;
+	case 'N': return N;
+	case 'O': return O;
+	case 'P': return P;
+	case 'Q': return Q;
+	case 'R': return R;
+	case 'S': return S;
+	case 'T': return T;
+	case 'U': return U;
+	case 'V': return V;
+	case 'W': return W;
+	case 'X': return X;
+	case 'Y': return Y;
+	case 'Z': return Z;
+	default: return question;
+	}
+}
+
+void fill_rgba_rect(uint32_t* pixels, int pitch, int width, int height, int x, int y, int w, int h, uint32_t color) {
+	if (!pixels || w <= 0 || h <= 0) return;
+	int x0 = std::max(0, x);
+	int y0 = std::max(0, y);
+	int x1 = std::min(width, x + w);
+	int y1 = std::min(height, y + h);
+	if (x0 >= x1 || y0 >= y1) return;
+	for (int py = y0; py < y1; ++py) {
+		uint32_t* row = pixels + py * pitch;
+		for (int px = x0; px < x1; ++px) {
+			row[px] = color;
+		}
+	}
+}
+
+void draw_rgba_frame(uint32_t* pixels, int pitch, int width, int height, int x, int y, int w, int h, int thickness, uint32_t color) {
+	fill_rgba_rect(pixels, pitch, width, height, x, y, w, thickness, color);
+	fill_rgba_rect(pixels, pitch, width, height, x, y + h - thickness, w, thickness, color);
+	fill_rgba_rect(pixels, pitch, width, height, x, y, thickness, h, color);
+	fill_rgba_rect(pixels, pitch, width, height, x + w - thickness, y, thickness, h, color);
+}
+
+int text_pixel_width(const std::string& text, int scale) {
+	if (text.empty()) return 0;
+	return (int)text.size() * 6 * scale - scale;
+}
+
+void draw_rgba_text(uint32_t* pixels, int pitch, int width, int height, int x, int y, const std::string& text, int scale, uint32_t color) {
+	if (!pixels || scale <= 0) return;
+	int cursor_x = x;
+	for (char c : text) {
+		const auto& rows = glyph_rows(c);
+		for (int row = 0; row < 7; ++row) {
+			uint8_t bits = rows[(size_t)row];
+			for (int col = 0; col < 5; ++col) {
+				if (bits & (1 << (4 - col))) {
+					fill_rgba_rect(pixels, pitch, width, height, cursor_x + col * scale, y + row * scale, scale, scale, color);
+				}
+			}
+		}
+		cursor_x += 6 * scale;
+	}
+}
+
 }
 
 namespace bwgame {
@@ -215,6 +567,11 @@ struct main_t {
 
 	a_map<int, std::unique_ptr<saved_state>> saved_states;
 	std::unique_ptr<saved_state> quicksave_slot;
+	bool frontend_active = false;
+	std::vector<startup_entry> frontend_entries;
+	int frontend_selected_index = 0;
+	std::string frontend_status_message;
+	std::unique_ptr<native_window_drawing::surface> frontend_surface;
 
 	void save_replay_state_if_missing(int frame) {
 		auto i = saved_states.find(frame);
@@ -241,6 +598,211 @@ struct main_t {
 		quicksave_slot.reset();
 		ui.reset();
 		live_result_reported = false;
+		current_map_file.clear();
+	}
+
+	void center_view_on_loaded_content() {
+		int map_w = (int)ui.game_st.map_width;
+		int map_h = (int)ui.game_st.map_height;
+		if (map_w <= 0 || map_h <= 0) {
+			ui.screen_pos = {};
+			return;
+		}
+		ui.screen_pos = {
+			map_w / 2 - (int)ui.view_width / 2,
+			map_h / 2 - (int)ui.view_height / 2
+		};
+		if (ui.screen_pos.x < 0) ui.screen_pos.x = 0;
+		if (ui.screen_pos.y < 0) ui.screen_pos.y = 0;
+	}
+
+	void load_replay_session(const std::string& replay_file) {
+		reset();
+		ui.is_replay_mode = true;
+		ui.is_live_game_mode = false;
+		ui.default_enforce_local_visibility = false;
+		ui.enforce_local_visibility = false;
+		ui.local_player_id = -1;
+		ui.enemy_player_id = -1;
+		ui.load_replay_file(replay_file.c_str());
+		log("replay: file='%s'\n", replay_file.c_str());
+	}
+
+	void enable_frontend(std::vector<startup_entry> entries) {
+		frontend_entries = std::move(entries);
+		frontend_active = true;
+		frontend_selected_index = frontend_entries.empty() ? -1 : 0;
+		frontend_status_message = frontend_entries.empty()
+			? "NO MAPS OR REPLAYS WERE DISCOVERED. PASS --MAP OR --REPLAY."
+			: "PRESS ENTER OR CLICK TO LAUNCH.";
+		frontend_surface.reset();
+		log("frontend: startup shell active (%d entries)\n", (int)frontend_entries.size());
+		for (size_t i = 0; i < frontend_entries.size(); ++i) {
+			log("frontend: [%d] %s -> %s\n", (int)i + 1, frontend_entries[i].title.c_str(), frontend_entries[i].path.c_str());
+		}
+	}
+
+	rect frontend_entry_rect(size_t index) const {
+		int box_w = std::min<int>((int)ui.screen_width - 120, 900);
+		if (box_w < 320) box_w = std::max<int>((int)ui.screen_width - 40, 200);
+		int box_h = 64;
+		int gap = 12;
+		int total_h = (int)frontend_entries.size() * box_h + std::max<int>(0, (int)frontend_entries.size() - 1) * gap;
+		int start_y = std::max(190, ((int)ui.screen_height - total_h) / 2 + 40);
+		int x = ((int)ui.screen_width - box_w) / 2;
+		int y = start_y + (int)index * (box_h + gap);
+		return rect{xy(x, y), xy(x + box_w, y + box_h)};
+	}
+
+	void launch_frontend_entry(size_t index) {
+		if (index >= frontend_entries.size()) return;
+		const startup_entry& entry = frontend_entries[index];
+		try {
+			if (entry.kind == startup_content_kind::map) {
+				load_single_player_map(entry.path);
+			} else {
+				load_replay_session(entry.path);
+			}
+			ui.set_image_data();
+			center_view_on_loaded_content();
+			frontend_active = false;
+			frontend_surface.reset();
+			log("frontend: launched %s\n", entry.path.c_str());
+		} catch (const std::exception& e) {
+			frontend_status_message = uppercase_copy(std::string("LAUNCH FAILED: ") + e.what());
+			log("frontend: failed to launch '%s': %s\n", entry.path.c_str(), e.what());
+		}
+	}
+
+	void render_frontend() {
+		if (!ui.wnd) return;
+		if (!frontend_surface || frontend_surface->w != (int)ui.screen_width || frontend_surface->h != (int)ui.screen_height) {
+			frontend_surface = native_window_drawing::create_rgba_surface((int)ui.screen_width, (int)ui.screen_height);
+		}
+
+		uint32_t* pixels = (uint32_t*)frontend_surface->lock();
+		int pitch = frontend_surface->pitch / 4;
+		int width = frontend_surface->w;
+		int height = frontend_surface->h;
+
+		for (int y = 0; y < height; ++y) {
+			uint8_t r = (uint8_t)(6 + (20 * y) / std::max(1, height));
+			uint8_t g = (uint8_t)(10 + (28 * y) / std::max(1, height));
+			uint8_t b = (uint8_t)(20 + (58 * y) / std::max(1, height));
+			uint32_t color = rgba32(r, g, b, 255);
+			uint32_t* row = pixels + y * pitch;
+			for (int x = 0; x < width; ++x) row[x] = color;
+		}
+		for (int y = 0; y < height; y += 4) {
+			fill_rgba_rect(pixels, pitch, width, height, 0, y, width, 1, rgba32(0, 0, 0, 28));
+		}
+		for (int i = 0; i < 96; ++i) {
+			uint32_t seed = (uint32_t)(i * 1103515245u + 12345u + width * 31 + height * 17);
+			int star_x = (int)(seed % (uint32_t)std::max(1, width));
+			int star_y = (int)((seed / 97u) % (uint32_t)std::max(1, height));
+			uint8_t shade = (uint8_t)(140 + seed % 100u);
+			fill_rgba_rect(pixels, pitch, width, height, star_x, star_y, 2, 2, rgba32(shade, shade, 255, 255));
+		}
+
+		fill_rgba_rect(pixels, pitch, width, height, 40, 36, width - 80, height - 72, rgba32(5, 8, 18, 220));
+		draw_rgba_frame(pixels, pitch, width, height, 40, 36, width - 80, height - 72, 2, rgba32(171, 124, 48, 255));
+
+		std::string title = "OPENSNOWSTORM";
+		std::string subtitle = "BROOD WAR STARTUP";
+		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(title, 4)) / 2, 62, title, 4, rgba32(255, 220, 132, 255));
+		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(subtitle, 2)) / 2, 106, subtitle, 2, rgba32(216, 180, 104, 255));
+
+		std::string hint = frontend_entries.empty()
+			? "ADD .SCX .SCM OR .REP FILES BESIDE THE DATA INSTALL OR PASS --MAP."
+			: "UP DOWN OR CLICK TO CHOOSE. ENTER TO LAUNCH.";
+		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(hint, 1)) / 2, 138, hint, 1, rgba32(176, 188, 208, 255));
+
+		for (size_t i = 0; i < frontend_entries.size(); ++i) {
+			rect box = frontend_entry_rect(i);
+			bool selected = (int)i == frontend_selected_index;
+			uint32_t fill = selected ? rgba32(60, 36, 10, 230) : rgba32(16, 20, 32, 220);
+			uint32_t frame = selected ? rgba32(255, 210, 96, 255) : rgba32(90, 104, 128, 255);
+			fill_rgba_rect(pixels, pitch, width, height, box.from.x, box.from.y, box.to.x - box.from.x, box.to.y - box.from.y, fill);
+			draw_rgba_frame(pixels, pitch, width, height, box.from.x, box.from.y, box.to.x - box.from.x, box.to.y - box.from.y, 2, frame);
+
+			std::string index_text = std::to_string((int)i + 1);
+			draw_rgba_text(pixels, pitch, width, height, box.from.x + 14, box.from.y + 18, index_text, 2, selected ? rgba32(255, 232, 160, 255) : rgba32(170, 184, 208, 255));
+			draw_rgba_text(pixels, pitch, width, height, box.from.x + 48, box.from.y + 12, uppercase_copy(frontend_entries[i].title), 2, selected ? rgba32(255, 232, 160, 255) : rgba32(214, 220, 232, 255));
+			draw_rgba_text(pixels, pitch, width, height, box.from.x + 48, box.from.y + 38, uppercase_copy(shorten_middle(frontend_entries[i].subtitle, 52)), 1, rgba32(142, 154, 178, 255));
+		}
+
+		if (!frontend_status_message.empty()) {
+			std::string status = uppercase_copy(shorten_middle(frontend_status_message, 88));
+			draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(status, 1)) / 2, height - 76, status, 1, rgba32(255, 194, 112, 255));
+		}
+		std::string footer = "F3 DEBUG OVERLAY   ESC CLOSE";
+		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(footer, 1)) / 2, height - 52, footer, 1, rgba32(112, 132, 164, 255));
+
+		frontend_surface->unlock();
+
+		auto window_surface = native_window_drawing::get_window_surface(&ui.wnd);
+		frontend_surface->blit(&*window_surface, 0, 0);
+		ui.wnd.update_surface();
+	}
+
+	void update_frontend() {
+		if (!ui.wnd) return;
+		native_window::event_t e;
+		while (ui.wnd.peek_message(e)) {
+			switch (e.type) {
+			case native_window::event_t::type_quit:
+				std::exit(0);
+				break;
+			case native_window::event_t::type_resize:
+				ui.resize(e.width, e.height);
+				frontend_surface.reset();
+				break;
+			case native_window::event_t::type_mouse_motion:
+				for (size_t i = 0; i < frontend_entries.size(); ++i) {
+					rect box = frontend_entry_rect(i);
+					if (e.mouse_x >= box.from.x && e.mouse_x < box.to.x && e.mouse_y >= box.from.y && e.mouse_y < box.to.y) {
+						frontend_selected_index = (int)i;
+						break;
+					}
+				}
+				break;
+			case native_window::event_t::type_mouse_button_down:
+				if (e.button == 1) {
+					for (size_t i = 0; i < frontend_entries.size(); ++i) {
+						rect box = frontend_entry_rect(i);
+						if (e.mouse_x >= box.from.x && e.mouse_x < box.to.x && e.mouse_y >= box.from.y && e.mouse_y < box.to.y) {
+							frontend_selected_index = (int)i;
+							launch_frontend_entry(i);
+							break;
+						}
+					}
+				}
+				break;
+			case native_window::event_t::type_key_down:
+				if (e.sym == 27) {
+					std::exit(0);
+				} else if (e.scancode == 60) {
+					ui.show_debug_overlay = !ui.show_debug_overlay;
+				} else if (!frontend_entries.empty()) {
+					if (e.scancode == 82 || e.sym == 'w') {
+						frontend_selected_index = (frontend_selected_index + (int)frontend_entries.size() - 1) % (int)frontend_entries.size();
+					} else if (e.scancode == 81 || e.sym == 's') {
+						frontend_selected_index = (frontend_selected_index + 1) % (int)frontend_entries.size();
+					} else if (e.sym == '\r' || e.sym == ' ' || e.scancode == 40 || e.scancode == 88) {
+						launch_frontend_entry((size_t)frontend_selected_index);
+					} else if (e.sym >= '1' && e.sym <= '9') {
+						int requested = e.sym - '1';
+						if (requested >= 0 && requested < (int)frontend_entries.size()) launch_frontend_entry((size_t)requested);
+					}
+				}
+				break;
+			default:
+				break;
+			}
+			if (!frontend_active) return;
+		}
+		if (!frontend_active) return;
+		render_frontend();
 	}
 
 	void load_single_player_map(const std::string& map_file) {
@@ -508,6 +1070,11 @@ struct main_t {
 
 	void update() {
 		auto now = clock.now();
+
+		if (frontend_active) {
+			update_frontend();
+			return;
+		}
 
 		auto tick_speed = std::chrono::milliseconds((fp8::integer(42) / ui.game_speed).integer_part());
 
@@ -1759,6 +2326,7 @@ static void print_usage(const char* argv0) {
 	log(
 		"usage:\n"
 		"  %s [--replay <file.rep>] [--data-dir <path>] [--headless]\n"
+		"  %s                              (interactive startup frontend)\n"
 		"  %s --map <file.scx|file.scm> [--local-player <0-7>] [--enemy-player <0-7>]\n"
 		"     [--data-dir <path>]\n"
 		"     [--game-type <auto|melee|ums>] [--local-race <zerg|terran|protoss|random>]\n"
@@ -1773,6 +2341,7 @@ static void print_usage(const char* argv0) {
 		"note: --game-type auto (default) selects ums for authored/campaign-like slots, else melee.\n"
 		"      --game-type ums preserves authored slot topology by default.\n"
 		"      data files are auto-discovered from common locations, or pass --data-dir explicitly.\n"
+		"      interactive launches without --map/--replay now open a startup shell instead of forcing maps/p49.rep.\n"
 		"\n"
 		"single-player controls (map mode):\n"
 		"  left drag/select    left click command panel (multi tactical + single-unit production/abilities)   middle drag camera\n"
@@ -1802,7 +2371,7 @@ static void print_usage(const char* argv0) {
 		"  Arbiter: recall, stasis field\n"
 		"  Dark Archon: mind control, feedback, maelstrom\n"
 		"  Corsair: disruption web\n",
-		argv0, argv0, argv0, argv0, argv0, argv0);
+		argv0, argv0, argv0, argv0, argv0, argv0, argv0);
 }
 
 static int parse_slot_or_error(const char* value, const char* flag_name) {
@@ -2252,7 +2821,8 @@ int main(int argc, char** argv) {
 			return run_bench(bench_frames, replay_file);
 		}
 
-		if (!map_file && !replay_file && !default_replay_exists()) {
+		bool use_frontend = !headless && !map_file && !replay_file;
+		if (!use_frontend && !map_file && !replay_file && !default_replay_exists()) {
 			error("no startup content available: 'maps/p49.rep' was not found. Pass --map <file.scx|file.scm> or --replay <file.rep>.");
 		}
 
@@ -2296,25 +2866,23 @@ int main(int argc, char** argv) {
 			m.campaign_local_race = local_race;
 			m.campaign_enemy_race = enemy_race;
 			m.load_single_player_map(map_file);
+		} else if (replay_file) {
+			m.load_replay_session(replay_file);
+		} else if (!headless) {
+			m.enable_frontend(discover_startup_entries(g_data_dir));
 		} else {
-			ui.is_replay_mode = true;
-			ui.is_live_game_mode = false;
-			ui.default_enforce_local_visibility = false;
-			ui.enforce_local_visibility = false;
-			ui.local_player_id = -1;
-			ui.enemy_player_id = -1;
-			ui.load_replay_file(replay_file ? replay_file : "maps/p49.rep");
-			log("replay: file='%s'\n", replay_file ? replay_file : "maps/p49.rep");
+			m.load_replay_session("maps/p49.rep");
 		}
 #endif
 
 		auto& wnd = ui.wnd;
-		wnd.create("test", 0, 0, screen_width, screen_height);
+		wnd.create("OpenSnowstorm - Brood War", 0, 0, screen_width, screen_height);
 
 		ui.resize(screen_width, screen_height);
-		ui.screen_pos = {(int)ui.game_st.map_width / 2 - (int)screen_width / 2, (int)ui.game_st.map_height / 2 - (int)screen_height / 2};
-
-		ui.set_image_data();
+		if (!m.frontend_active) {
+			m.center_view_on_loaded_content();
+			ui.set_image_data();
+		}
 		ui.show_debug_overlay = debug_overlay;
 
 		log("loaded in %dms\n", std::chrono::duration_cast<std::chrono::milliseconds>(clock.now() - start).count());
