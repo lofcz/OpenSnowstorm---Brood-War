@@ -18,9 +18,17 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <array>
 #include <cctype>
 #include <cerrno>
 #include <limits>
+#include <algorithm>
+
+#ifdef _WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 
 #include "../perf_metrics.h"
 
@@ -29,6 +37,119 @@ using namespace bwgame;
 using ui::log;
 
 FILE* log_file = nullptr;
+
+namespace {
+
+std::string g_data_dir;
+
+bool file_exists(const std::string& path) {
+	FILE* f = fopen(path.c_str(), "rb");
+	if (!f) return false;
+	fclose(f);
+	return true;
+}
+
+std::string normalize_dir_path(std::string path) {
+	while (!path.empty() && (path.back() == '/' || path.back() == '\\')) path.pop_back();
+	return path;
+}
+
+void push_unique_dir(std::vector<std::string>& dst, std::string path) {
+	path = normalize_dir_path(std::move(path));
+	if (path.empty()) path = ".";
+	if (std::find(dst.begin(), dst.end(), path) == dst.end()) dst.push_back(std::move(path));
+}
+
+std::string join_path(std::string base, const char* leaf) {
+	if (base.empty() || base == ".") return leaf;
+	char last = base.back();
+	if (last != '/' && last != '\\') base += '/';
+	base += leaf;
+	return base;
+}
+
+std::string executable_directory() {
+#ifdef _WIN32
+	char buffer[MAX_PATH];
+	DWORD n = GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+	if (n == 0 || n >= MAX_PATH) return {};
+	std::string path(buffer, n);
+	size_t pos = path.find_last_of("\\/");
+	if (pos == std::string::npos) return {};
+	return path.substr(0, pos);
+#else
+	return {};
+#endif
+}
+
+bool has_required_mpqs(const std::string& dir) {
+	return file_exists(join_path(dir, "StarDat.mpq")) &&
+	       file_exists(join_path(dir, "BrooDat.mpq")) &&
+	       file_exists(join_path(dir, "Patch_rt.mpq"));
+}
+
+std::string describe_required_mpqs(const std::string& dir) {
+	return format("expected '%s', '%s', and '%s'",
+		join_path(dir, "StarDat.mpq").c_str(),
+		join_path(dir, "BrooDat.mpq").c_str(),
+		join_path(dir, "Patch_rt.mpq").c_str()).c_str();
+}
+
+std::string resolve_data_dir_or_throw(const char* argv0, const char* explicit_data_dir) {
+	std::vector<std::string> candidates;
+	if (explicit_data_dir && explicit_data_dir[0] != '\0') push_unique_dir(candidates, explicit_data_dir);
+
+	if (const char* env_dir = std::getenv("OPENSNOWSTORM_DATA_DIR")) {
+		if (*env_dir) push_unique_dir(candidates, env_dir);
+	}
+
+	push_unique_dir(candidates, ".");
+	push_unique_dir(candidates, "data");
+
+	std::string exe_dir = executable_directory();
+	if (!exe_dir.empty()) {
+		push_unique_dir(candidates, exe_dir);
+		push_unique_dir(candidates, join_path(exe_dir, "data"));
+	}
+
+#ifdef _WIN32
+	push_unique_dir(candidates, "C:/StarCraft");
+	push_unique_dir(candidates, "C:/Program Files (x86)/StarCraft");
+	push_unique_dir(candidates, "C:/Program Files/StarCraft");
+	push_unique_dir(candidates, "D:/Games/StarCraft");
+	push_unique_dir(candidates, "D:/Games/Starcraft");
+#endif
+
+	for (const std::string& dir : candidates) {
+		if (has_required_mpqs(dir)) return dir == "." ? std::string() : dir;
+	}
+
+	if (explicit_data_dir && explicit_data_dir[0] != '\0') {
+		error("Brood War data directory '%s' is incomplete; %s",
+			explicit_data_dir,
+			describe_required_mpqs(explicit_data_dir).c_str());
+	}
+
+	std::ostringstream oss;
+	oss << "unable to locate Brood War data files. Searched:";
+	for (const std::string& dir : candidates) {
+		oss << "\n  - " << dir;
+	}
+	oss << "\nPass --data-dir <path> or set OPENSNOWSTORM_DATA_DIR to a folder containing "
+	       "StarDat.mpq, BrooDat.mpq, and Patch_rt.mpq.";
+	error("%s", oss.str().c_str());
+	return {};
+}
+
+auto make_load_data_file() {
+	return data_loading::data_files_directory(g_data_dir);
+}
+
+bool default_replay_exists() {
+	return file_exists("maps/p49.rep");
+}
+
+}
 
 namespace bwgame {
 
@@ -1637,19 +1758,21 @@ static int run_bench(int bench_frames, const char* replay_file) {
 static void print_usage(const char* argv0) {
 	log(
 		"usage:\n"
-		"  %s [--replay <file.rep>] [--headless]\n"
+		"  %s [--replay <file.rep>] [--data-dir <path>] [--headless]\n"
 		"  %s --map <file.scx|file.scm> [--local-player <0-7>] [--enemy-player <0-7>]\n"
+		"     [--data-dir <path>]\n"
 		"     [--game-type <auto|melee|ums>] [--local-race <zerg|terran|protoss|random>]\n"
 		"     [--enemy-race <zerg|terran|protoss|random>] [--fog|--no-fog] [--headless]\n"
 		"     [--headless-map [<frame-limit>]]  (headless smoke test; default limit 72000)\n"
 		"     [--debug-overlay]  (show frame/fps/speed overlay on startup; also toggled by F3)\n"
-		"  %s --bench <frames> [--replay <file.rep>]\n"
-		"  %s --validate-replay [--replay <file.rep>]\n"
-		"  %s --record-hashes <fixture.txt> [--hash-interval <n>] [--replay <file.rep>]\n"
-		"  %s --verify-hashes <fixture.txt> [--replay <file.rep>]\n"
+		"  %s --bench <frames> [--replay <file.rep>] [--data-dir <path>]\n"
+		"  %s --validate-replay [--replay <file.rep>] [--data-dir <path>]\n"
+		"  %s --record-hashes <fixture.txt> [--hash-interval <n>] [--replay <file.rep>] [--data-dir <path>]\n"
+		"  %s --verify-hashes <fixture.txt> [--replay <file.rep>] [--data-dir <path>]\n"
 		"\n"
 		"note: --game-type auto (default) selects ums for authored/campaign-like slots, else melee.\n"
 		"      --game-type ums preserves authored slot topology by default.\n"
+		"      data files are auto-discovered from common locations, or pass --data-dir explicitly.\n"
 		"\n"
 		"single-player controls (map mode):\n"
 		"  left drag/select    left click command panel (multi tactical + single-unit production/abilities)   middle drag camera\n"
@@ -1738,7 +1861,7 @@ static int run_gen_test_replay(
 	log("gen-test-replay: map='%s' output='%s' frames=%d\n", map_file, output_rep, frames);
 
 	try {
-		auto load_data_file = data_loading::data_files_directory("");
+		auto load_data_file = make_load_data_file();
 
 		// Set up the game state and load the map.
 		game_player player(load_data_file);
@@ -1897,308 +2020,304 @@ int main(int argc, char** argv) {
 	log("v25\n");
 
 #ifndef EMSCRIPTEN
-	// Argument parsing
-	const char* replay_file = nullptr;
-	const char* map_file = nullptr;
-	int bench_frames = 0;
-	const char* verify_hashes_file = nullptr;
-	const char* record_hashes_file = nullptr;
-	int hash_interval = 240;
-	bool validate_replay = false;
-	bool headless = false;
-	bool show_help = false;
-	map_game_type_t map_game_type = map_game_type_t::auto_detect;
-	bool debug_overlay = false;
-	bool map_fog_of_war = true;
-	int local_player_slot = -1;
-	int enemy_player_slot = -1;
-	int local_race = 5;
-	int enemy_race = 5;
-	int headless_map_frame_limit = 0;
-	const char* gen_test_replay_file = nullptr;
-	int gen_test_replay_frames = 240;
+	try {
+		// Argument parsing
+		const char* replay_file = nullptr;
+		const char* map_file = nullptr;
+		const char* data_dir_arg = nullptr;
+		int bench_frames = 0;
+		const char* verify_hashes_file = nullptr;
+		const char* record_hashes_file = nullptr;
+		int hash_interval = 240;
+		bool validate_replay = false;
+		bool headless = false;
+		bool show_help = false;
+		map_game_type_t map_game_type = map_game_type_t::auto_detect;
+		bool debug_overlay = false;
+		bool map_fog_of_war = true;
+		int local_player_slot = -1;
+		int enemy_player_slot = -1;
+		int local_race = 5;
+		int enemy_race = 5;
+		int headless_map_frame_limit = 0;
+		const char* gen_test_replay_file = nullptr;
+		int gen_test_replay_frames = 240;
 
-	for (int i = 1; i < argc; ++i) {
-		if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
-			show_help = true;
-		} else if (strcmp(argv[i], "--bench") == 0 && i + 1 < argc) {
-			bench_frames = atoi(argv[++i]);
-		} else if (strcmp(argv[i], "--map") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --map requires a map file path\n");
-				return 2;
-			}
-			map_file = argv[++i];
-		} else if (strcmp(argv[i], "--local-player") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --local-player requires a slot index (0-7)\n");
-				return 2;
-			}
-			try {
+		for (int i = 1; i < argc; ++i) {
+			if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+				show_help = true;
+			} else if (strcmp(argv[i], "--bench") == 0 && i + 1 < argc) {
+				bench_frames = atoi(argv[++i]);
+			} else if (strcmp(argv[i], "--data-dir") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --data-dir requires a directory path\n");
+					return 2;
+				}
+				data_dir_arg = argv[++i];
+			} else if (strcmp(argv[i], "--map") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --map requires a map file path\n");
+					return 2;
+				}
+				map_file = argv[++i];
+			} else if (strcmp(argv[i], "--local-player") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --local-player requires a slot index (0-7)\n");
+					return 2;
+				}
 				local_player_slot = parse_slot_or_error(argv[++i], "--local-player");
-			} catch (const exception& e) {
-				log("error: %s\n", e.what());
-				return 2;
-			}
-		} else if (strcmp(argv[i], "--enemy-player") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --enemy-player requires a slot index (0-7)\n");
-				return 2;
-			}
-			try {
+			} else if (strcmp(argv[i], "--enemy-player") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --enemy-player requires a slot index (0-7)\n");
+					return 2;
+				}
 				enemy_player_slot = parse_slot_or_error(argv[++i], "--enemy-player");
-			} catch (const exception& e) {
-				log("error: %s\n", e.what());
-				return 2;
-			}
-		} else if (strcmp(argv[i], "--game-type") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --game-type requires value auto|melee|ums\n");
-				return 2;
-			}
-			std::string v = argv[++i];
-			for (char& c : v) c = (char)std::tolower((unsigned char)c);
-			if (v == "auto") map_game_type = map_game_type_t::auto_detect;
-			else if (v == "melee") map_game_type = map_game_type_t::melee;
-			else if (v == "ums" || v == "use_map_settings") map_game_type = map_game_type_t::ums;
-			else {
-				log("error: invalid --game-type value '%s' (expected auto|melee|ums)\n", argv[i]);
-				return 2;
-			}
-		} else if (strcmp(argv[i], "--local-race") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --local-race requires value zerg|terran|protoss|random\n");
-				return 2;
-			}
-			try {
+			} else if (strcmp(argv[i], "--game-type") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --game-type requires value auto|melee|ums\n");
+					return 2;
+				}
+				std::string v = argv[++i];
+				for (char& c : v) c = (char)std::tolower((unsigned char)c);
+				if (v == "auto") map_game_type = map_game_type_t::auto_detect;
+				else if (v == "melee") map_game_type = map_game_type_t::melee;
+				else if (v == "ums" || v == "use_map_settings") map_game_type = map_game_type_t::ums;
+				else {
+					log("error: invalid --game-type value '%s' (expected auto|melee|ums)\n", argv[i]);
+					return 2;
+				}
+			} else if (strcmp(argv[i], "--local-race") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --local-race requires value zerg|terran|protoss|random\n");
+					return 2;
+				}
 				local_race = parse_race_or_error(argv[++i], "--local-race");
-			} catch (const exception& e) {
-				log("error: %s\n", e.what());
-				return 2;
-			}
-		} else if (strcmp(argv[i], "--enemy-race") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --enemy-race requires value zerg|terran|protoss|random\n");
-				return 2;
-			}
-			try {
+			} else if (strcmp(argv[i], "--enemy-race") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --enemy-race requires value zerg|terran|protoss|random\n");
+					return 2;
+				}
 				enemy_race = parse_race_or_error(argv[++i], "--enemy-race");
-			} catch (const exception& e) {
-				log("error: %s\n", e.what());
-				return 2;
-			}
-		} else if (strcmp(argv[i], "--fog") == 0) {
-			map_fog_of_war = true;
-		} else if (strcmp(argv[i], "--no-fog") == 0) {
-			map_fog_of_war = false;
-		} else if (strcmp(argv[i], "--debug-overlay") == 0) {
-			debug_overlay = true;
-		} else if (strcmp(argv[i], "--validate-replay") == 0) {
-			validate_replay = true;
-		} else if (strcmp(argv[i], "--verify-hashes") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --verify-hashes requires a fixture file path\n");
-				return 2;
-			}
-			verify_hashes_file = argv[++i];
-		} else if (strcmp(argv[i], "--record-hashes") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --record-hashes requires an output fixture file path\n");
-				return 2;
-			}
-			record_hashes_file = argv[++i];
-		} else if (strcmp(argv[i], "--gen-test-replay") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --gen-test-replay requires an output replay file path\n");
-				return 2;
-			}
-			gen_test_replay_file = argv[++i];
-		} else if (strcmp(argv[i], "--frames") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --frames requires a positive integer\n");
-				return 2;
-			}
-			errno = 0;
-			char* end = nullptr;
-			long v = std::strtol(argv[++i], &end, 10);
-			if (errno != 0 || end == argv[i] || *end != '\0' || v <= 0 || v > std::numeric_limits<int>::max()) {
-				log("error: invalid --frames value '%s' (expected positive integer)\n", argv[i]);
-				return 2;
-			}
-			gen_test_replay_frames = (int)v;
-		} else if (strcmp(argv[i], "--hash-interval") == 0) {
-			if (i + 1 >= argc) {
-				log("error: --hash-interval requires a positive integer\n");
-				return 2;
-			}
-			errno = 0;
-			char* end = nullptr;
-			long v = std::strtol(argv[++i], &end, 10);
-			if (errno != 0 || end == argv[i] || *end != '\0' || v <= 0 || v > std::numeric_limits<int>::max()) {
-				log("error: invalid --hash-interval value '%s' (expected positive integer)\n", argv[i]);
-				return 2;
-			}
-			hash_interval = (int)v;
-		} else if (strcmp(argv[i], "--headless") == 0) {
-			headless = true;
-		} else if (strcmp(argv[i], "--headless-map") == 0) {
-			headless = true;
-			if (i + 1 < argc) {
+			} else if (strcmp(argv[i], "--fog") == 0) {
+				map_fog_of_war = true;
+			} else if (strcmp(argv[i], "--no-fog") == 0) {
+				map_fog_of_war = false;
+			} else if (strcmp(argv[i], "--debug-overlay") == 0) {
+				debug_overlay = true;
+			} else if (strcmp(argv[i], "--validate-replay") == 0) {
+				validate_replay = true;
+			} else if (strcmp(argv[i], "--verify-hashes") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --verify-hashes requires a fixture file path\n");
+					return 2;
+				}
+				verify_hashes_file = argv[++i];
+			} else if (strcmp(argv[i], "--record-hashes") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --record-hashes requires an output fixture file path\n");
+					return 2;
+				}
+				record_hashes_file = argv[++i];
+			} else if (strcmp(argv[i], "--gen-test-replay") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --gen-test-replay requires an output replay file path\n");
+					return 2;
+				}
+				gen_test_replay_file = argv[++i];
+			} else if (strcmp(argv[i], "--frames") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --frames requires a positive integer\n");
+					return 2;
+				}
 				errno = 0;
 				char* end = nullptr;
-				long v = std::strtol(argv[i + 1], &end, 10);
-				if (errno == 0 && end != argv[i + 1] && *end == '\0' && v > 0) {
-					headless_map_frame_limit = (int)v;
-					++i;
-				} else {
-					// Treat as a flag with no argument (use default limit).
-					headless_map_frame_limit = 0;
+				long v = std::strtol(argv[++i], &end, 10);
+				if (errno != 0 || end == argv[i] || *end != '\0' || v <= 0 || v > std::numeric_limits<int>::max()) {
+					log("error: invalid --frames value '%s' (expected positive integer)\n", argv[i]);
+					return 2;
 				}
+				gen_test_replay_frames = (int)v;
+			} else if (strcmp(argv[i], "--hash-interval") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --hash-interval requires a positive integer\n");
+					return 2;
+				}
+				errno = 0;
+				char* end = nullptr;
+				long v = std::strtol(argv[++i], &end, 10);
+				if (errno != 0 || end == argv[i] || *end != '\0' || v <= 0 || v > std::numeric_limits<int>::max()) {
+					log("error: invalid --hash-interval value '%s' (expected positive integer)\n", argv[i]);
+					return 2;
+				}
+				hash_interval = (int)v;
+			} else if (strcmp(argv[i], "--headless") == 0) {
+				headless = true;
+			} else if (strcmp(argv[i], "--headless-map") == 0) {
+				headless = true;
+				if (i + 1 < argc) {
+					errno = 0;
+					char* end = nullptr;
+					long v = std::strtol(argv[i + 1], &end, 10);
+					if (errno == 0 && end != argv[i + 1] && *end == '\0' && v > 0) {
+						headless_map_frame_limit = (int)v;
+						++i;
+					} else {
+						headless_map_frame_limit = 0;
+					}
+				}
+			} else if (strcmp(argv[i], "--replay") == 0 && i + 1 < argc) {
+				replay_file = argv[++i];
+			} else if (argv[i][0] == '-') {
+				log("error: unknown option '%s'\n", argv[i]);
+				return 2;
+			} else if (argv[i][0] != '-') {
+				replay_file = argv[i];
 			}
-		} else if (strcmp(argv[i], "--replay") == 0 && i + 1 < argc) {
-			replay_file = argv[++i];
-		} else if (argv[i][0] == '-') {
-			log("error: unknown option '%s'\n", argv[i]);
-			return 2;
-		} else if (argv[i][0] != '-') {
-			replay_file = argv[i];
 		}
-	}
 
-	if (show_help) {
-		print_usage(argv[0]);
-		return 0;
-	}
+		if (show_help) {
+			print_usage(argv[0]);
+			return 0;
+		}
 
-	if (bench_frames > 0 && validate_replay) {
-		log("error: --bench and --validate-replay cannot be used together\n");
-		return 2;
-	}
-	if (bench_frames > 0 && verify_hashes_file) {
-		log("error: --bench and --verify-hashes cannot be used together\n");
-		return 2;
-	}
-	if (bench_frames > 0 && record_hashes_file) {
-		log("error: --bench and --record-hashes cannot be used together\n");
-		return 2;
-	}
-	if (validate_replay && verify_hashes_file) {
-		log("error: --validate-replay and --verify-hashes cannot be used together\n");
-		return 2;
-	}
-	if (validate_replay && record_hashes_file) {
-		log("error: --validate-replay and --record-hashes cannot be used together\n");
-		return 2;
-	}
-	if (verify_hashes_file && record_hashes_file) {
-		log("error: --verify-hashes and --record-hashes cannot be used together\n");
-		return 2;
-	}
-	if (map_file && replay_file) {
-		log("error: --map cannot be used with --replay/positional replay file\n");
-		return 2;
-	}
-	if (map_file && bench_frames > 0) {
-		log("error: --map and --bench cannot be used together\n");
-		return 2;
-	}
-	if (map_file && validate_replay) {
-		log("error: --map and --validate-replay cannot be used together\n");
-		return 2;
-	}
-	if (map_file && verify_hashes_file) {
-		log("error: --map and --verify-hashes cannot be used together\n");
-		return 2;
-	}
-	if (map_file && record_hashes_file) {
-		log("error: --map and --record-hashes cannot be used together\n");
-		return 2;
-	}
-	if ((local_player_slot != -1 || enemy_player_slot != -1 || local_race != 5 || enemy_race != 5 || map_game_type != map_game_type_t::auto_detect || !map_fog_of_war) && !map_file) {
-		log("error: --map is required when using single-player map options\n");
-		return 2;
-	}
-	if (local_player_slot != -1 && enemy_player_slot != -1 && local_player_slot == enemy_player_slot) {
-		log("error: --local-player and --enemy-player must be different slots\n");
-		return 2;
-	}
-	if (record_hashes_file) {
-		return run_record_hashes(replay_file, record_hashes_file, hash_interval);
-	}
-	if (verify_hashes_file) {
-		return run_verify_hashes(replay_file, verify_hashes_file);
-	}
-	if (validate_replay) {
-		return run_validate_replay(replay_file);
-	}
-	if (gen_test_replay_file) {
-		return run_gen_test_replay(map_file, gen_test_replay_file, record_hashes_file, gen_test_replay_frames, hash_interval);
-	}
-	if (bench_frames > 0) {
-		return run_bench(bench_frames, replay_file);
-	}
+		if (bench_frames > 0 && validate_replay) {
+			log("error: --bench and --validate-replay cannot be used together\n");
+			return 2;
+		}
+		if (bench_frames > 0 && verify_hashes_file) {
+			log("error: --bench and --verify-hashes cannot be used together\n");
+			return 2;
+		}
+		if (bench_frames > 0 && record_hashes_file) {
+			log("error: --bench and --record-hashes cannot be used together\n");
+			return 2;
+		}
+		if (validate_replay && verify_hashes_file) {
+			log("error: --validate-replay and --verify-hashes cannot be used together\n");
+			return 2;
+		}
+		if (validate_replay && record_hashes_file) {
+			log("error: --validate-replay and --record-hashes cannot be used together\n");
+			return 2;
+		}
+		if (verify_hashes_file && record_hashes_file) {
+			log("error: --verify-hashes and --record-hashes cannot be used together\n");
+			return 2;
+		}
+		if (map_file && replay_file) {
+			log("error: --map cannot be used with --replay/positional replay file\n");
+			return 2;
+		}
+		if (map_file && bench_frames > 0) {
+			log("error: --map and --bench cannot be used together\n");
+			return 2;
+		}
+		if (map_file && validate_replay) {
+			log("error: --map and --validate-replay cannot be used together\n");
+			return 2;
+		}
+		if (map_file && verify_hashes_file) {
+			log("error: --map and --verify-hashes cannot be used together\n");
+			return 2;
+		}
+		if (map_file && record_hashes_file) {
+			log("error: --map and --record-hashes cannot be used together\n");
+			return 2;
+		}
+		if ((local_player_slot != -1 || enemy_player_slot != -1 || local_race != 5 || enemy_race != 5 || map_game_type != map_game_type_t::auto_detect || !map_fog_of_war) && !map_file) {
+			log("error: --map is required when using single-player map options\n");
+			return 2;
+		}
+		if (local_player_slot != -1 && enemy_player_slot != -1 && local_player_slot == enemy_player_slot) {
+			log("error: --local-player and --enemy-player must be different slots\n");
+			return 2;
+		}
+
+		g_data_dir = resolve_data_dir_or_throw(argv[0], data_dir_arg);
+		log("data dir: %s\n", g_data_dir.empty() ? "." : g_data_dir.c_str());
+
+		if (record_hashes_file) {
+			return run_record_hashes(replay_file, record_hashes_file, hash_interval);
+		}
+		if (verify_hashes_file) {
+			return run_verify_hashes(replay_file, verify_hashes_file);
+		}
+		if (validate_replay) {
+			return run_validate_replay(replay_file);
+		}
+		if (gen_test_replay_file) {
+			return run_gen_test_replay(map_file, gen_test_replay_file, record_hashes_file, gen_test_replay_frames, hash_interval);
+		}
+		if (bench_frames > 0) {
+			return run_bench(bench_frames, replay_file);
+		}
+
+		if (!map_file && !replay_file && !default_replay_exists()) {
+			error("no startup content available: 'maps/p49.rep' was not found. Pass --map <file.scx|file.scm> or --replay <file.rep>.");
+		}
+
 #endif
 
-	size_t screen_width = 1280;
-	size_t screen_height = 800;
+		size_t screen_width = 1280;
+		size_t screen_height = 800;
 
-	std::chrono::high_resolution_clock clock;
-	auto start = clock.now();
+		std::chrono::high_resolution_clock clock;
+		auto start = clock.now();
 
 #ifdef EMSCRIPTEN
-	if (current_width != -1) {
-		screen_width = current_width;
-		screen_height = current_height;
-	}
-	auto load_data_file = data_loading::data_files_directory<data_loading::data_files_loader<data_loading::mpq_file<data_loading::js_file_reader<>>>>("");
+		if (current_width != -1) {
+			screen_width = current_width;
+			screen_height = current_height;
+		}
+		auto load_data_file = data_loading::data_files_directory<data_loading::data_files_loader<data_loading::mpq_file<data_loading::js_file_reader<>>>>("");
 #else
-	auto load_data_file = data_loading::data_files_directory("");
+		auto load_data_file = make_load_data_file();
 #endif
 
-	game_player player(load_data_file);
+		game_player player(load_data_file);
 
-	main_t m(std::move(player));
-	auto& ui = m.ui;
+		main_t m(std::move(player));
+		auto& ui = m.ui;
 
-	m.ui.load_all_image_data(load_data_file);
+		m.ui.load_all_image_data(load_data_file);
 
-	ui.load_data_file = [&](a_vector<uint8_t>& data, a_string filename) {
-		load_data_file(data, std::move(filename));
-	};
+		ui.load_data_file = [&](a_vector<uint8_t>& data, a_string filename) {
+			load_data_file(data, std::move(filename));
+		};
 
-	ui.init();
+		ui.init();
 
 #ifndef EMSCRIPTEN
-	if (map_file) {
-		m.campaign_local_player_slot = local_player_slot;
-		m.campaign_enemy_player_slot = enemy_player_slot;
-		m.campaign_game_type = map_game_type;
-		m.campaign_fog_of_war = map_fog_of_war;
-		m.campaign_local_race = local_race;
-		m.campaign_enemy_race = enemy_race;
-		m.load_single_player_map(map_file);
-	} else {
-		ui.is_replay_mode = true;
-		ui.is_live_game_mode = false;
-		ui.default_enforce_local_visibility = false;
-		ui.enforce_local_visibility = false;
-		ui.local_player_id = -1;
-		ui.enemy_player_id = -1;
-		ui.load_replay_file(replay_file ? replay_file : "maps/p49.rep");
-		log("replay: file='%s'\n", replay_file ? replay_file : "maps/p49.rep");
-	}
+		if (map_file) {
+			m.campaign_local_player_slot = local_player_slot;
+			m.campaign_enemy_player_slot = enemy_player_slot;
+			m.campaign_game_type = map_game_type;
+			m.campaign_fog_of_war = map_fog_of_war;
+			m.campaign_local_race = local_race;
+			m.campaign_enemy_race = enemy_race;
+			m.load_single_player_map(map_file);
+		} else {
+			ui.is_replay_mode = true;
+			ui.is_live_game_mode = false;
+			ui.default_enforce_local_visibility = false;
+			ui.enforce_local_visibility = false;
+			ui.local_player_id = -1;
+			ui.enemy_player_id = -1;
+			ui.load_replay_file(replay_file ? replay_file : "maps/p49.rep");
+			log("replay: file='%s'\n", replay_file ? replay_file : "maps/p49.rep");
+		}
 #endif
 
-	auto& wnd = ui.wnd;
-	wnd.create("test", 0, 0, screen_width, screen_height);
+		auto& wnd = ui.wnd;
+		wnd.create("test", 0, 0, screen_width, screen_height);
 
-	ui.resize(screen_width, screen_height);
-	ui.screen_pos = {(int)ui.game_st.map_width / 2 - (int)screen_width / 2, (int)ui.game_st.map_height / 2 - (int)screen_height / 2};
+		ui.resize(screen_width, screen_height);
+		ui.screen_pos = {(int)ui.game_st.map_width / 2 - (int)screen_width / 2, (int)ui.game_st.map_height / 2 - (int)screen_height / 2};
 
-	ui.set_image_data();
-	ui.show_debug_overlay = debug_overlay;
+		ui.set_image_data();
+		ui.show_debug_overlay = debug_overlay;
 
-	log("loaded in %dms\n", std::chrono::duration_cast<std::chrono::milliseconds>(clock.now() - start).count());
+		log("loaded in %dms\n", std::chrono::duration_cast<std::chrono::milliseconds>(clock.now() - start).count());
 
 	//set_malloc_fail_handler(malloc_fail_handler);
 
@@ -2277,7 +2396,14 @@ int main(int argc, char** argv) {
 		}
 	}
 #endif
-	::g_m = nullptr;
+		::g_m = nullptr;
 
-	return 0;
+		return 0;
+	} catch (const std::exception& e) {
+		log("error: %s\n", e.what());
+		return 1;
+	} catch (...) {
+		log("error: unknown exception\n");
+		return 1;
+	}
 }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 
 option(OPENBW_ENABLE_UI "Enables support for the graphical user interface, requires SDL2")
 
@@ -31,3 +31,7 @@ add_library(mini-openbwapi ${mini-openbwapi_srcs})
 target_link_libraries(mini-openbwapi
 	${SDL2_LIBRARY}
 )
+
+if (MSVC)
+	target_compile_options(mini-openbwapi PRIVATE /bigobj)
+endif()

@@ -12775,6 +12775,7 @@ struct state_functions {
 	void player_left(int owner) {
 		auto& p = st.players.at(owner);
 		st.running_triggers[owner].clear();
+		st.running_briefing_triggers[owner].clear();
 		if (p.victory_state) return;
 		p.victory_state = 2;
 		on_victory_state(owner, 2);
@@ -12784,6 +12785,7 @@ struct state_functions {
 	void player_dropped(int owner) {
 		auto& p = st.players.at(owner);
 		st.running_triggers[owner].clear();
+		st.running_briefing_triggers[owner].clear();
 		if (p.victory_state) return;
 		p.victory_state = 1;
 		on_victory_state(owner, 1);
@@ -12852,7 +12854,8 @@ struct state_functions {
 
 		bool any_triggers_executed = false;
 		for (int i : active_players()) {
-			for (auto& rt : st.running_triggers[i]) {
+			auto& active_triggers = st.is_mission_briefing ? st.running_briefing_triggers[i] : st.running_triggers[i];
+			for (auto& rt : active_triggers) {
 				if (rt.flags & 8) continue;
 				auto& t = *rt.t;
 				bool execute_now = true;
@@ -12906,6 +12909,7 @@ struct state_functions {
 				}
 				if (s && s != 4) {
 					st.running_triggers[i].clear();
+					st.running_briefing_triggers[i].clear();
 				}
 			}
 		}
@@ -18761,7 +18765,7 @@ struct state_functions {
 		case 12: // elapsed time – c.count_n is in game-seconds; 24 frames = 1 game-second
 			return trigger_count_comparison(c, st.current_frame / 24);
 		case 13: // mission brief – condition never true outside briefing
-			return false;
+			return st.is_mission_briefing;
 		case 14: // opponents
 			return trigger_count_comparison(c, trigger_opponent_count(owner, c.group));
 		case 15: // deaths (units of this type owned by player group have died)
@@ -21886,10 +21890,10 @@ struct game_load_functions : state_functions {
 			}
 		};
 
-		tag_funcs["TRIG"] = [&](data_reader_le r) {
+		auto parse_triggers = [&](data_reader_le r, a_vector<trigger>& out_triggers, std::array<a_vector<running_trigger>, 8>& out_running) {
 			while (r.left()) {
-				game_st.triggers.emplace_back();
-				auto& t = game_st.triggers.back();
+				out_triggers.emplace_back();
+				auto& t = out_triggers.back();
 				for (size_t i = 0; i != 16; ++i) {
 					auto& c = t.conditions[i];
 					c.location = r.get<uint32_t>();
@@ -21924,18 +21928,26 @@ struct game_load_functions : state_functions {
 					t.enabled[i] = r.get<uint8_t>() != 0;
 					if (!enabled_for_any && t.enabled[i]) enabled_for_any = true;
 				}
-				if (!enabled_for_any) game_st.triggers.pop_back();
+				if (!enabled_for_any) out_triggers.pop_back();
 			}
-			for (auto& t : game_st.triggers) {
+			for (auto& t : out_triggers) {
 				for (int i = 0; i != 8; ++i) {
 					if (st.players[i].controller != player_t::controller_occupied) continue;
 					if (!t.enabled[i] && !t.enabled.at(17 + st.players[i].force) && !t.enabled[17]) continue;
-					st.running_triggers[i].emplace_back();
-					auto& rt = st.running_triggers[i].back();
+					out_running[i].emplace_back();
+					auto& rt = out_running[i].back();
 					rt.t = &t;
 					rt.flags = t.execution_flags;
 				}
 			}
+		};
+
+		tag_funcs["TRIG"] = [&](data_reader_le r) {
+			parse_triggers(r, game_st.triggers, st.running_triggers);
+		};
+
+		tag_funcs["MBRF"] = [&](data_reader_le r) {
+			parse_triggers(r, game_st.briefing_triggers, st.running_briefing_triggers);
 		};
 
 		tag_funcs["COLR"] = [&](data_reader_le r) {
@@ -22009,7 +22021,8 @@ struct game_load_functions : state_functions {
 					{"UNIT", true},
 					{"UPRP", true},
 					{"MRGN", true},
-					{"TRIG", true}
+					{"TRIG", true},
+					{"MBRF", false}
 				});
 			} else {
 				read_chunks({
@@ -22036,6 +22049,7 @@ struct game_load_functions : state_functions {
 					{"UPRP", true},
 					{"MRGN", true},
 					{"TRIG", true},
+					{"MBRF", false},
 					{"COLR", true},
 				});
 			} else {

@@ -1,3836 +1,4747 @@
-#include "common.h"
 #include "../bwgame.h"
 #include "../replay.h"
-
+#include "common.h"
+#include "native_sound.h"
 #include "native_window.h"
 #include "native_window_drawing.h"
-#include "native_sound.h"
+#include <chrono>
+#include <thread>
+
 
 namespace bwgame {
 
 struct vr4_entry {
-	using bitmap_t = std::conditional<is_native_fast_int<uint64_t>::value, uint64_t, uint32_t>::type;
-	std::array<bitmap_t, 64 / sizeof(bitmap_t)> bitmap;
-	std::array<bitmap_t, 64 / sizeof(bitmap_t)> inverted_bitmap;
+  using bitmap_t = std::conditional<is_native_fast_int<uint64_t>::value,
+                                    uint64_t, uint32_t>::type;
+  std::array<bitmap_t, 64 / sizeof(bitmap_t)> bitmap;
+  std::array<bitmap_t, 64 / sizeof(bitmap_t)> inverted_bitmap;
 };
 struct vx4_entry {
-	std::array<uint16_t, 16> images;
+  std::array<uint16_t, 16> images;
 };
 
 struct pcx_image {
-	size_t width;
-	size_t height;
-	a_vector<uint8_t> data;
+  size_t width;
+  size_t height;
+  a_vector<uint8_t> data;
 };
 
 struct tileset_image_data {
-	a_vector<uint8_t> wpe;
-	a_vector<vr4_entry> vr4;
-	a_vector<vx4_entry> vx4;
-	pcx_image dark_pcx;
-	std::array<pcx_image, 7> light_pcx;
-	grp_t creep_grp;
-	int resource_minimap_color;
-	std::array<uint8_t, 256> cloak_fade_selector;
+  a_vector<uint8_t> wpe;
+  a_vector<vr4_entry> vr4;
+  a_vector<vx4_entry> vx4;
+  pcx_image dark_pcx;
+  std::array<pcx_image, 7> light_pcx;
+  grp_t creep_grp;
+  int resource_minimap_color;
+  std::array<uint8_t, 256> cloak_fade_selector;
 };
 
 struct image_data {
-	std::array<std::array<uint8_t, 8>, 16> player_unit_colors;
-	std::array<uint8_t, 16> player_minimap_colors;
-	std::array<uint8_t, 24> selection_colors;
-	std::array<uint8_t, 24> hp_bar_colors;
-	std::array<int, 0x100> creep_edge_frame_index{};
+  std::array<std::array<uint8_t, 8>, 16> player_unit_colors;
+  std::array<uint8_t, 16> player_minimap_colors;
+  std::array<uint8_t, 24> selection_colors;
+  std::array<uint8_t, 24> hp_bar_colors;
+  std::array<int, 0x100> creep_edge_frame_index{};
 };
 
-template<typename data_T>
-pcx_image load_pcx_data(const data_T& data) {
-	data_loading::data_reader_le r(data.data(), data.data() + data.size());
-	auto base_r = r;
-	auto id = r.get<uint8_t>();
-	if (id != 0x0a) error("pcx: invalid identifier %#x", id);
-	r.get<uint8_t>(); // version
-	auto encoding = r.get<uint8_t>(); // encoding
-	auto bpp = r.get<uint8_t>(); // bpp
-	auto offset_x = r.get<uint16_t>();
-	auto offset_y = r.get<uint16_t>();
-	auto last_x = r.get<uint16_t>();
-	auto last_y = r.get<uint16_t>();
+template <typename data_T> pcx_image load_pcx_data(const data_T &data) {
+  data_loading::data_reader_le r(data.data(), data.data() + data.size());
+  auto base_r = r;
+  auto id = r.get<uint8_t>();
+  if (id != 0x0a)
+    error("pcx: invalid identifier %#x", id);
+  r.get<uint8_t>();                 // version
+  auto encoding = r.get<uint8_t>(); // encoding
+  auto bpp = r.get<uint8_t>();      // bpp
+  auto offset_x = r.get<uint16_t>();
+  auto offset_y = r.get<uint16_t>();
+  auto last_x = r.get<uint16_t>();
+  auto last_y = r.get<uint16_t>();
 
-	if (encoding != 1) error("pcx: invalid encoding %#x", encoding);
-	if (bpp != 8) error("pcx: bpp is %d, expected 8", bpp);
+  if (encoding != 1)
+    error("pcx: invalid encoding %#x", encoding);
+  if (bpp != 8)
+    error("pcx: bpp is %d, expected 8", bpp);
 
-	if (offset_x != 0 || offset_y != 0) error("pcx: offset %d %d, expected 0 0", offset_x, offset_y);
+  if (offset_x != 0 || offset_y != 0)
+    error("pcx: offset %d %d, expected 0 0", offset_x, offset_y);
 
-	r.skip(2 + 2 + 48 + 1);
+  r.skip(2 + 2 + 48 + 1);
 
-	auto bit_planes = r.get<uint8_t>();
-	auto bytes_per_line = r.get<uint16_t>();
+  auto bit_planes = r.get<uint8_t>();
+  auto bytes_per_line = r.get<uint16_t>();
 
-	size_t width = last_x + 1;
-	size_t height = last_y + 1;
+  size_t width = last_x + 1;
+  size_t height = last_y + 1;
 
-	pcx_image pcx;
-	pcx.width = width;
-	pcx.height = height;
+  pcx_image pcx;
+  pcx.width = width;
+  pcx.height = height;
 
-	pcx.data.resize(width * height);
+  pcx.data.resize(width * height);
 
-	r = base_r;
-	r.skip(128);
+  r = base_r;
+  r.skip(128);
 
-	auto padding = bytes_per_line * bit_planes - width;
-	if (padding != 0) error("pcx: padding not supported");
+  auto padding = bytes_per_line * bit_planes - width;
+  if (padding != 0)
+    error("pcx: padding not supported");
 
-	uint8_t* dst = pcx.data.data();
-	uint8_t* dst_end = pcx.data.data() + pcx.data.size();
+  uint8_t *dst = pcx.data.data();
+  uint8_t *dst_end = pcx.data.data() + pcx.data.size();
 
-	while (dst != dst_end) {
-		auto v = r.get<uint8_t>();
-		if ((v & 0xc0) == 0xc0) {
-			v &= 0x3f;
-			auto c = r.get<uint8_t>();
-			for (; v; --v) {
-				if (dst == dst_end) error("pcx: failed to decode");
-				*dst++ = c;
-			}
-		} else {
-			*dst = v;
-			++dst;
-		}
-	}
+  while (dst != dst_end) {
+    auto v = r.get<uint8_t>();
+    if ((v & 0xc0) == 0xc0) {
+      v &= 0x3f;
+      auto c = r.get<uint8_t>();
+      for (; v; --v) {
+        if (dst == dst_end)
+          error("pcx: failed to decode");
+        *dst++ = c;
+      }
+    } else {
+      *dst = v;
+      ++dst;
+    }
+  }
 
-	return pcx;
+  return pcx;
 }
 
-static inline std::unique_ptr<native_window_drawing::surface> flip_image(native_window_drawing::surface* src) {
-	auto tmp = native_window_drawing::create_rgba_surface(src->w, src->h);
-	src->blit(&*tmp, 0, 0);
-	void* ptr = tmp->lock();
-	uint32_t* pixels = (uint32_t*)ptr;
-	for (size_t y = 0; y != (size_t)tmp->h; ++y) {
-		for (size_t x = 0; x != (size_t)tmp->w / 2; ++x) {
-			std::swap(pixels[x], pixels[tmp->w - 1 - x]);
-		}
-		pixels += tmp->pitch / 4;
-	}
-	tmp->unlock();
-	return tmp;
+static inline std::unique_ptr<native_window_drawing::surface>
+flip_image(native_window_drawing::surface *src) {
+  auto tmp = native_window_drawing::create_rgba_surface(src->w, src->h);
+  src->blit(&*tmp, 0, 0);
+  void *ptr = tmp->lock();
+  uint32_t *pixels = (uint32_t *)ptr;
+  for (size_t y = 0; y != (size_t)tmp->h; ++y) {
+    for (size_t x = 0; x != (size_t)tmp->w / 2; ++x) {
+      std::swap(pixels[x], pixels[tmp->w - 1 - x]);
+    }
+    pixels += tmp->pitch / 4;
+  }
+  tmp->unlock();
+  return tmp;
 }
 
-template<typename load_data_file_F>
-void load_image_data(image_data& img, load_data_file_F&& load_data_file) {
+template <typename load_data_file_F>
+void load_image_data(image_data &img, load_data_file_F &&load_data_file) {
 
-	std::array<int, 0x100> creep_edge_neighbors_index{};
-	std::array<int, 128> creep_edge_neighbors_index_n{};
+  std::array<int, 0x100> creep_edge_neighbors_index{};
+  std::array<int, 128> creep_edge_neighbors_index_n{};
 
-	for (size_t i = 0; i != 0x100; ++i) {
-		int v = 0;
-		if (i & 2) v |= 0x10;
-		if (i & 8) v |= 0x24;
-		if (i & 0x10) v |= 9;
-		if (i & 0x40) v |= 2;
-		if ((i & 0xc0) == 0xc0) v |= 1;
-		if ((i & 0x60) == 0x60) v |= 4;
-		if ((i & 3) == 3) v |= 0x20;
-		if ((i & 6) == 6) v |= 8;
-		if ((v & 0x21) == 0x21) v |= 0x40;
-		if ((v & 0xc) == 0xc) v |= 0x40;
-		creep_edge_neighbors_index[i] = v;
-	}
+  for (size_t i = 0; i != 0x100; ++i) {
+    int v = 0;
+    if (i & 2)
+      v |= 0x10;
+    if (i & 8)
+      v |= 0x24;
+    if (i & 0x10)
+      v |= 9;
+    if (i & 0x40)
+      v |= 2;
+    if ((i & 0xc0) == 0xc0)
+      v |= 1;
+    if ((i & 0x60) == 0x60)
+      v |= 4;
+    if ((i & 3) == 3)
+      v |= 0x20;
+    if ((i & 6) == 6)
+      v |= 8;
+    if ((v & 0x21) == 0x21)
+      v |= 0x40;
+    if ((v & 0xc) == 0xc)
+      v |= 0x40;
+    creep_edge_neighbors_index[i] = v;
+  }
 
-	int n = 0;
-	for (int i = 0; i != 128; ++i) {
-		auto it = std::find(creep_edge_neighbors_index.begin(), creep_edge_neighbors_index.end(), i);
-		if (it == creep_edge_neighbors_index.end()) continue;
-		creep_edge_neighbors_index_n[i] = n;
-		++n;
-	}
+  int n = 0;
+  for (int i = 0; i != 128; ++i) {
+    auto it = std::find(creep_edge_neighbors_index.begin(),
+                        creep_edge_neighbors_index.end(), i);
+    if (it == creep_edge_neighbors_index.end())
+      continue;
+    creep_edge_neighbors_index_n[i] = n;
+    ++n;
+  }
 
-	for (size_t i = 0; i != 0x100; ++i) {
-		img.creep_edge_frame_index[i] = creep_edge_neighbors_index_n[creep_edge_neighbors_index[i]];
-	}
+  for (size_t i = 0; i != 0x100; ++i) {
+    img.creep_edge_frame_index[i] =
+        creep_edge_neighbors_index_n[creep_edge_neighbors_index[i]];
+  }
 
-	a_vector<uint8_t> tmp_data;
-	auto load_pcx_file = [&](a_string filename) {
-		load_data_file(tmp_data, std::move(filename));
-		return load_pcx_data(tmp_data);
-	};
+  a_vector<uint8_t> tmp_data;
+  auto load_pcx_file = [&](a_string filename) {
+    load_data_file(tmp_data, std::move(filename));
+    return load_pcx_data(tmp_data);
+  };
 
-	auto tunit_pcx = load_pcx_file("game/tunit.pcx");
-	if (tunit_pcx.width != 128 || tunit_pcx.height != 1) error("tunit.pcx dimensions are %dx%d (128x1 required)", tunit_pcx.width, tunit_pcx.height);
-	for (size_t i = 0; i != 16; ++i) {
-		for (size_t i2 = 0; i2 != 8; ++i2) {
-			img.player_unit_colors[i][i2] = tunit_pcx.data[i * 8 + i2];
-		}
-	}
-	auto tminimap_pcx = load_pcx_file("game/tminimap.pcx");
-	if (tminimap_pcx.width != 16 || tminimap_pcx.height != 1) error("tminimap.pcx dimensions are %dx%d (16x1 required)", tminimap_pcx.width, tminimap_pcx.height);
-	for (size_t i = 0; i != 16; ++i) {
-		img.player_minimap_colors[i] = tminimap_pcx.data[i];
-	}
-	auto tselect_pcx = load_pcx_file("game/tselect.pcx");
-	if (tselect_pcx.width != 24 || tselect_pcx.height != 1) error("tselect.pcx dimensions are %dx%d (24x1 required)", tselect_pcx.width, tselect_pcx.height);
-	for (size_t i = 0; i != 24; ++i) {
-		img.selection_colors[i] = tselect_pcx.data[i];
-	}
-	auto thpbar_pcx = load_pcx_file("game/thpbar.pcx");
-	if (thpbar_pcx.width != 19 || thpbar_pcx.height != 1) error("thpbar.pcx dimensions are %dx%d (19x1 required)", thpbar_pcx.width, thpbar_pcx.height);
-	for (size_t i = 0; i != 19; ++i) {
-		img.hp_bar_colors[i] = thpbar_pcx.data[i];
-	}
-
+  auto tunit_pcx = load_pcx_file("game/tunit.pcx");
+  if (tunit_pcx.width != 128 || tunit_pcx.height != 1)
+    error("tunit.pcx dimensions are %dx%d (128x1 required)", tunit_pcx.width,
+          tunit_pcx.height);
+  for (size_t i = 0; i != 16; ++i) {
+    for (size_t i2 = 0; i2 != 8; ++i2) {
+      img.player_unit_colors[i][i2] = tunit_pcx.data[i * 8 + i2];
+    }
+  }
+  auto tminimap_pcx = load_pcx_file("game/tminimap.pcx");
+  if (tminimap_pcx.width != 16 || tminimap_pcx.height != 1)
+    error("tminimap.pcx dimensions are %dx%d (16x1 required)",
+          tminimap_pcx.width, tminimap_pcx.height);
+  for (size_t i = 0; i != 16; ++i) {
+    img.player_minimap_colors[i] = tminimap_pcx.data[i];
+  }
+  auto tselect_pcx = load_pcx_file("game/tselect.pcx");
+  if (tselect_pcx.width != 24 || tselect_pcx.height != 1)
+    error("tselect.pcx dimensions are %dx%d (24x1 required)", tselect_pcx.width,
+          tselect_pcx.height);
+  for (size_t i = 0; i != 24; ++i) {
+    img.selection_colors[i] = tselect_pcx.data[i];
+  }
+  auto thpbar_pcx = load_pcx_file("game/thpbar.pcx");
+  if (thpbar_pcx.width != 19 || thpbar_pcx.height != 1)
+    error("thpbar.pcx dimensions are %dx%d (19x1 required)", thpbar_pcx.width,
+          thpbar_pcx.height);
+  for (size_t i = 0; i != 19; ++i) {
+    img.hp_bar_colors[i] = thpbar_pcx.data[i];
+  }
 }
 
-template<typename load_data_file_F>
-void load_tileset_image_data(tileset_image_data& img, size_t tileset_index, load_data_file_F&& load_data_file) {
-	using namespace data_loading;
+template <typename load_data_file_F>
+void load_tileset_image_data(tileset_image_data &img, size_t tileset_index,
+                             load_data_file_F &&load_data_file) {
+  using namespace data_loading;
 
-	std::array<const char*, 8> tileset_names = {
-		"badlands", "platform", "install", "AshWorld", "Jungle", "Desert", "Ice", "Twilight"
-	};
+  std::array<const char *, 8> tileset_names = {
+      "badlands", "platform", "install", "AshWorld",
+      "Jungle",   "Desert",   "Ice",     "Twilight"};
 
-	a_vector<uint8_t> vr4_data;
-	a_vector<uint8_t> vx4_data;
+  a_vector<uint8_t> vr4_data;
+  a_vector<uint8_t> vx4_data;
 
-	const char* tileset_name = tileset_names.at(tileset_index);
+  const char *tileset_name = tileset_names.at(tileset_index);
 
-	load_data_file(vr4_data, format("Tileset/%s.vr4", tileset_name));
-	load_data_file(vx4_data, format("Tileset/%s.vx4", tileset_name));
-	load_data_file(img.wpe, format("Tileset/%s.wpe", tileset_name));
+  load_data_file(vr4_data, format("Tileset/%s.vr4", tileset_name));
+  load_data_file(vx4_data, format("Tileset/%s.vx4", tileset_name));
+  load_data_file(img.wpe, format("Tileset/%s.wpe", tileset_name));
 
-	a_vector<uint8_t> grp_data;
-	load_data_file(grp_data, format("Tileset/%s.grp", tileset_name));
-	img.creep_grp = read_grp(data_loading::data_reader_le(grp_data.data(), grp_data.data() + grp_data.size()));
+  a_vector<uint8_t> grp_data;
+  load_data_file(grp_data, format("Tileset/%s.grp", tileset_name));
+  img.creep_grp = read_grp(data_loading::data_reader_le(
+      grp_data.data(), grp_data.data() + grp_data.size()));
 
-	data_reader<true, false> vr4_r(vr4_data.data(), nullptr);
-	img.vr4.resize(vr4_data.size() / 64);
-	for (size_t i = 0; i != img.vr4.size(); ++i) {
-		for (size_t i2 = 0; i2 != 8; ++i2) {
-			auto r2 = vr4_r;
-			auto v = vr4_r.get<uint64_t, true>();
-			auto iv = r2.get<uint64_t, false>();
-			size_t n = 8 / sizeof(vr4_entry::bitmap_t);
-			for (size_t i3 = 0; i3 != n; ++i3) {
-				img.vr4[i].bitmap[i2 * n + i3] = (vr4_entry::bitmap_t)v;
-				img.vr4[i].inverted_bitmap[i2 * n + i3] = (vr4_entry::bitmap_t)iv;
-				v >>= n == 1 ? 0 : 8 * sizeof(vr4_entry::bitmap_t);
-				iv >>= n == 1 ? 0 : 8 * sizeof(vr4_entry::bitmap_t);
-			}
-		}
-	}
-	data_reader<true, false> vx4_r(vx4_data.data(), vx4_data.data() + vx4_data.size());
-	img.vx4.resize(vx4_data.size() / 32);
-	for (size_t i = 0; i != img.vx4.size(); ++i) {
-		for (size_t i2 = 0; i2 != 16; ++i2) {
-			img.vx4[i].images[i2] = vx4_r.get<uint16_t>();
-		}
-	}
+  data_reader<true, false> vr4_r(vr4_data.data(), nullptr);
+  img.vr4.resize(vr4_data.size() / 64);
+  for (size_t i = 0; i != img.vr4.size(); ++i) {
+    for (size_t i2 = 0; i2 != 8; ++i2) {
+      auto r2 = vr4_r;
+      auto v = vr4_r.get<uint64_t, true>();
+      auto iv = r2.get<uint64_t, false>();
+      size_t n = 8 / sizeof(vr4_entry::bitmap_t);
+      for (size_t i3 = 0; i3 != n; ++i3) {
+        img.vr4[i].bitmap[i2 * n + i3] = (vr4_entry::bitmap_t)v;
+        img.vr4[i].inverted_bitmap[i2 * n + i3] = (vr4_entry::bitmap_t)iv;
+        v >>= n == 1 ? 0 : 8 * sizeof(vr4_entry::bitmap_t);
+        iv >>= n == 1 ? 0 : 8 * sizeof(vr4_entry::bitmap_t);
+      }
+    }
+  }
+  data_reader<true, false> vx4_r(vx4_data.data(),
+                                 vx4_data.data() + vx4_data.size());
+  img.vx4.resize(vx4_data.size() / 32);
+  for (size_t i = 0; i != img.vx4.size(); ++i) {
+    for (size_t i2 = 0; i2 != 16; ++i2) {
+      img.vx4[i].images[i2] = vx4_r.get<uint16_t>();
+    }
+  }
 
-	a_vector<uint8_t> tmp_data;
-	auto load_pcx_file = [&](a_string filename) {
-		load_data_file(tmp_data, std::move(filename));
-		return load_pcx_data(tmp_data);
-	};
+  a_vector<uint8_t> tmp_data;
+  auto load_pcx_file = [&](a_string filename) {
+    load_data_file(tmp_data, std::move(filename));
+    return load_pcx_data(tmp_data);
+  };
 
-	img.dark_pcx = load_pcx_file(format("Tileset/%s/dark.pcx", tileset_name));
-	if (img.dark_pcx.width != 256 || img.dark_pcx.height != 32) error("invalid dark.pcx");
-	for (size_t x = 0; x != 256; ++x) {
-		img.dark_pcx.data[256 * 31 + x] = (uint8_t)x;
-	}
+  img.dark_pcx = load_pcx_file(format("Tileset/%s/dark.pcx", tileset_name));
+  if (img.dark_pcx.width != 256 || img.dark_pcx.height != 32)
+    error("invalid dark.pcx");
+  for (size_t x = 0; x != 256; ++x) {
+    img.dark_pcx.data[256 * 31 + x] = (uint8_t)x;
+  }
 
-	std::array<const char*, 7> light_names = {"ofire", "gfire", "bfire", "bexpl", "trans50", "red", "green"};
-	for (size_t i = 0; i != 7; ++i) {
-		img.light_pcx[i] = load_pcx_file(format("Tileset/%s/%s.pcx", tileset_name, light_names[i]));
-	}
+  std::array<const char *, 7> light_names = {
+      "ofire", "gfire", "bfire", "bexpl", "trans50", "red", "green"};
+  for (size_t i = 0; i != 7; ++i) {
+    img.light_pcx[i] = load_pcx_file(
+        format("Tileset/%s/%s.pcx", tileset_name, light_names[i]));
+  }
 
-	if (img.wpe.size() != 256 * 4) error("wpe size invalid (%d)", img.wpe.size());
+  if (img.wpe.size() != 256 * 4)
+    error("wpe size invalid (%d)", img.wpe.size());
 
-	auto get_nearest_color = [&](int r, int g, int b) {
-		size_t best_index = -1;
-		int best_score{};
-		for (size_t i = 0; i != 256; ++i) {
-			int dr = r - img.wpe[4 * i + 0];
-			int dg = g - img.wpe[4 * i + 1];
-			int db = b - img.wpe[4 * i + 2];
-			int score = dr * dr + dg * dg + db * db;
-			if (best_index == (size_t)-1 || score < best_score) {
-				best_index = i;
-				best_score = score;
-			}
-		}
-		return best_index;
-	};
-	img.resource_minimap_color = get_nearest_color(0, 255, 255);
+  auto get_nearest_color = [&](int r, int g, int b) {
+    size_t best_index = -1;
+    int best_score{};
+    for (size_t i = 0; i != 256; ++i) {
+      int dr = r - img.wpe[4 * i + 0];
+      int dg = g - img.wpe[4 * i + 1];
+      int db = b - img.wpe[4 * i + 2];
+      int score = dr * dr + dg * dg + db * db;
+      if (best_index == (size_t)-1 || score < best_score) {
+        best_index = i;
+        best_score = score;
+      }
+    }
+    return best_index;
+  };
+  img.resource_minimap_color = get_nearest_color(0, 255, 255);
 
-	for (size_t i = 0; i != 256; ++i) {
-		int r = img.wpe[4 * i + 0];
-		int g = img.wpe[4 * i + 1];
-		int b = img.wpe[4 * i + 2];
-		int strength = (r * 28 + g * 77 + b * 151 + 4096) / 8192;
-		img.cloak_fade_selector[i] = strength;
-	}
-
+  for (size_t i = 0; i != 256; ++i) {
+    int r = img.wpe[4 * i + 0];
+    int g = img.wpe[4 * i + 1];
+    int b = img.wpe[4 * i + 2];
+    int strength = (r * 28 + g * 77 + b * 151 + 4096) / 8192;
+    img.cloak_fade_selector[i] = strength;
+  }
 }
 
-template<bool bounds_check>
-void draw_tile(tileset_image_data& img, size_t megatile_index, uint8_t* dst, size_t pitch, size_t offset_x, size_t offset_y, size_t width, size_t height) {
-	auto* images = &img.vx4.at(megatile_index).images[0];
-	size_t x = 0;
-	size_t y = 0;
-	for (size_t image_iy = 0; image_iy != 4; ++image_iy) {
-		for (size_t image_ix = 0; image_ix != 4; ++image_ix) {
-			auto image_index = *images;
-			bool inverted = (image_index & 1) == 1;
-			auto* bitmap = inverted ? &img.vr4.at(image_index / 2).inverted_bitmap[0] : &img.vr4.at(image_index / 2).bitmap[0];
+template <bool bounds_check>
+void draw_tile(tileset_image_data &img, size_t megatile_index, uint8_t *dst,
+               size_t pitch, size_t offset_x, size_t offset_y, size_t width,
+               size_t height) {
+  auto *images = &img.vx4.at(megatile_index).images[0];
+  size_t x = 0;
+  size_t y = 0;
+  for (size_t image_iy = 0; image_iy != 4; ++image_iy) {
+    for (size_t image_ix = 0; image_ix != 4; ++image_ix) {
+      auto image_index = *images;
+      bool inverted = (image_index & 1) == 1;
+      auto *bitmap = inverted ? &img.vr4.at(image_index / 2).inverted_bitmap[0]
+                              : &img.vr4.at(image_index / 2).bitmap[0];
 
-			for (size_t iy = 0; iy != 8; ++iy) {
-				for (size_t iv = 0; iv != 8 / sizeof(vr4_entry::bitmap_t); ++iv) {
-					for (size_t b = 0; b != sizeof(vr4_entry::bitmap_t); ++b) {
-						if (!bounds_check || (x >= offset_x && y >= offset_y && x < width && y < height)) {
-							*dst = (uint8_t)(*bitmap >> (8 * b));
-						}
-						++dst;
-						++x;
-					}
-					++bitmap;
-				}
-				x -= 8;
-				++y;
-				dst -= 8;
-				dst += pitch;
-			}
-			x += 8;
-			y -= 8;
-			dst -= pitch * 8;
-			dst += 8;
-			++images;
-		}
-		x -= 32;
-		y += 8;
-		dst += pitch * 8;
-		dst -= 32;
-	}
+      for (size_t iy = 0; iy != 8; ++iy) {
+        for (size_t iv = 0; iv != 8 / sizeof(vr4_entry::bitmap_t); ++iv) {
+          for (size_t b = 0; b != sizeof(vr4_entry::bitmap_t); ++b) {
+            if (!bounds_check ||
+                (x >= offset_x && y >= offset_y && x < width && y < height)) {
+              *dst = (uint8_t)(*bitmap >> (8 * b));
+            }
+            ++dst;
+            ++x;
+          }
+          ++bitmap;
+        }
+        x -= 8;
+        ++y;
+        dst -= 8;
+        dst += pitch;
+      }
+      x += 8;
+      y -= 8;
+      dst -= pitch * 8;
+      dst += 8;
+      ++images;
+    }
+    x -= 32;
+    y += 8;
+    dst += pitch * 8;
+    dst -= 32;
+  }
 }
 
-static inline void draw_tile(tileset_image_data& img, size_t megatile_index, uint8_t* dst, size_t pitch, size_t offset_x, size_t offset_y, size_t width, size_t height) {
-	if (offset_x == 0 && offset_y == 0 && width == 32 && height == 32) {
-		draw_tile<false>(img, megatile_index, dst, pitch, offset_x, offset_y, width, height);
-	} else {
-		draw_tile<true>(img, megatile_index, dst, pitch, offset_x, offset_y, width, height);
-	}
+static inline void draw_tile(tileset_image_data &img, size_t megatile_index,
+                             uint8_t *dst, size_t pitch, size_t offset_x,
+                             size_t offset_y, size_t width, size_t height) {
+  if (offset_x == 0 && offset_y == 0 && width == 32 && height == 32) {
+    draw_tile<false>(img, megatile_index, dst, pitch, offset_x, offset_y, width,
+                     height);
+  } else {
+    draw_tile<true>(img, megatile_index, dst, pitch, offset_x, offset_y, width,
+                    height);
+  }
 }
 
-template<bool bounds_check, bool flipped, bool textured, typename remap_F>
-void draw_frame(const grp_t::frame_t& frame, const uint8_t* texture, uint8_t* dst, size_t pitch, size_t offset_x, size_t offset_y, size_t width, size_t height, remap_F&& remap_f) {
-	for (size_t y = 0; y != offset_y; ++y) {
-		dst += pitch;
-		if (textured) texture += frame.size.x;
-	}
+template <bool bounds_check, bool flipped, bool textured, typename remap_F>
+void draw_frame(const grp_t::frame_t &frame, const uint8_t *texture,
+                uint8_t *dst, size_t pitch, size_t offset_x, size_t offset_y,
+                size_t width, size_t height, remap_F &&remap_f) {
+  for (size_t y = 0; y != offset_y; ++y) {
+    dst += pitch;
+    if (textured)
+      texture += frame.size.x;
+  }
 
-	for (size_t y = offset_y; y != height; ++y) {
+  for (size_t y = offset_y; y != height; ++y) {
 
-		if (flipped) dst += frame.size.x - 1;
-		if (textured && flipped) texture += frame.size.x - 1;
+    if (flipped)
+      dst += frame.size.x - 1;
+    if (textured && flipped)
+      texture += frame.size.x - 1;
 
-		const uint8_t* d = frame.data_container.data() + frame.line_data_offset.at(y);
-		for (size_t x = flipped ? frame.size.x - 1 : 0; x != (flipped ? (size_t)0 - 1 : frame.size.x);) {
-			int v = *d++;
-			if (v & 0x80) {
-				v &= 0x7f;
-				x += flipped ? -v : v;
-				dst += flipped ? -v : v;
-				if (textured) texture += flipped ? -v : v;
-			} else if (v & 0x40) {
-				v &= 0x3f;
-				int c = *d++;
-				for (;v; --v) {
-					if (!bounds_check || (x >= offset_x && x < width)) {
-						*dst = remap_f(textured ? *texture : c, *dst);
-					}
-					dst += flipped ? -1 : 1;
-					x += flipped ? -1 : 1;
-					if (textured) texture += flipped ? -1 : 1;
-				}
-			} else {
-				for (;v; --v) {
-					int c = *d++;
-					if (!bounds_check || (x >= offset_x && x < width)) {
-						*dst = remap_f(textured ? *texture : c, *dst);
-					}
-					dst += flipped ? -1 : 1;
-					x += flipped ? -1 : 1;
-					if (textured) texture += flipped ? -1 : 1;
-				}
-			}
-		}
+    const uint8_t *d =
+        frame.data_container.data() + frame.line_data_offset.at(y);
+    for (size_t x = flipped ? frame.size.x - 1 : 0;
+         x != (flipped ? (size_t)0 - 1 : frame.size.x);) {
+      int v = *d++;
+      if (v & 0x80) {
+        v &= 0x7f;
+        x += flipped ? -v : v;
+        dst += flipped ? -v : v;
+        if (textured)
+          texture += flipped ? -v : v;
+      } else if (v & 0x40) {
+        v &= 0x3f;
+        int c = *d++;
+        for (; v; --v) {
+          if (!bounds_check || (x >= offset_x && x < width)) {
+            *dst = remap_f(textured ? *texture : c, *dst);
+          }
+          dst += flipped ? -1 : 1;
+          x += flipped ? -1 : 1;
+          if (textured)
+            texture += flipped ? -1 : 1;
+        }
+      } else {
+        for (; v; --v) {
+          int c = *d++;
+          if (!bounds_check || (x >= offset_x && x < width)) {
+            *dst = remap_f(textured ? *texture : c, *dst);
+          }
+          dst += flipped ? -1 : 1;
+          x += flipped ? -1 : 1;
+          if (textured)
+            texture += flipped ? -1 : 1;
+        }
+      }
+    }
 
-		if (!flipped) dst -= frame.size.x;
-		else ++dst;
-		dst += pitch;
-		if (textured) {
-			if (!flipped) texture -= frame.size.x;
-			else ++texture;
-			texture += frame.size.x;
-		}
-
-	}
+    if (!flipped)
+      dst -= frame.size.x;
+    else
+      ++dst;
+    dst += pitch;
+    if (textured) {
+      if (!flipped)
+        texture -= frame.size.x;
+      else
+        ++texture;
+      texture += frame.size.x;
+    }
+  }
 }
 
 struct no_remap {
-	uint8_t operator()(uint8_t new_value, uint8_t old_value) const {
-		return new_value;
-	}
+  uint8_t operator()(uint8_t new_value, uint8_t old_value) const {
+    return new_value;
+  }
 };
 
-template<typename remap_F = no_remap>
-void draw_frame(const grp_t::frame_t& frame, bool flipped, uint8_t* dst, size_t pitch, size_t offset_x, size_t offset_y, size_t width, size_t height, remap_F&& remap_f = remap_F()) {
-	if (offset_x == 0 && offset_y == 0 && width == frame.size.x && height == frame.size.y) {
-		if (flipped) draw_frame<false, true, false>(frame, nullptr, dst, pitch, offset_x, offset_y, width, height, std::forward<remap_F>(remap_f));
-		else draw_frame<false, false, false>(frame, nullptr, dst, pitch, offset_x, offset_y, width, height, std::forward<remap_F>(remap_f));
-	} else {
-		if (flipped) draw_frame<true, true, false>(frame, nullptr, dst, pitch, offset_x, offset_y, width, height, std::forward<remap_F>(remap_f));
-		else draw_frame<true, false, false>(frame, nullptr, dst, pitch, offset_x, offset_y, width, height, std::forward<remap_F>(remap_f));
-	}
+template <typename remap_F = no_remap>
+void draw_frame(const grp_t::frame_t &frame, bool flipped, uint8_t *dst,
+                size_t pitch, size_t offset_x, size_t offset_y, size_t width,
+                size_t height, remap_F &&remap_f = remap_F()) {
+  if (offset_x == 0 && offset_y == 0 && width == frame.size.x &&
+      height == frame.size.y) {
+    if (flipped)
+      draw_frame<false, true, false>(frame, nullptr, dst, pitch, offset_x,
+                                     offset_y, width, height,
+                                     std::forward<remap_F>(remap_f));
+    else
+      draw_frame<false, false, false>(frame, nullptr, dst, pitch, offset_x,
+                                      offset_y, width, height,
+                                      std::forward<remap_F>(remap_f));
+  } else {
+    if (flipped)
+      draw_frame<true, true, false>(frame, nullptr, dst, pitch, offset_x,
+                                    offset_y, width, height,
+                                    std::forward<remap_F>(remap_f));
+    else
+      draw_frame<true, false, false>(frame, nullptr, dst, pitch, offset_x,
+                                     offset_y, width, height,
+                                     std::forward<remap_F>(remap_f));
+  }
 }
 
-template<typename remap_F = no_remap>
-void draw_frame_textured(const grp_t::frame_t& frame, const uint8_t* texture, bool flipped, uint8_t* dst, size_t pitch, size_t offset_x, size_t offset_y, size_t width, size_t height, remap_F&& remap_f = remap_F()) {
-	if (offset_x == 0 && offset_y == 0 && width == frame.size.x && height == frame.size.y) {
-		if (flipped) draw_frame<false, true, true>(frame, texture, dst, pitch, offset_x, offset_y, width, height, std::forward<remap_F>(remap_f));
-		else draw_frame<false, false, true>(frame, texture, dst, pitch, offset_x, offset_y, width, height, std::forward<remap_F>(remap_f));
-	} else {
-		if (flipped) draw_frame<true, true, true>(frame, texture, dst, pitch, offset_x, offset_y, width, height, std::forward<remap_F>(remap_f));
-		else draw_frame<true, false, true>(frame, texture, dst, pitch, offset_x, offset_y, width, height, std::forward<remap_F>(remap_f));
-	}
+template <typename remap_F = no_remap>
+void draw_frame_textured(const grp_t::frame_t &frame, const uint8_t *texture,
+                         bool flipped, uint8_t *dst, size_t pitch,
+                         size_t offset_x, size_t offset_y, size_t width,
+                         size_t height, remap_F &&remap_f = remap_F()) {
+  if (offset_x == 0 && offset_y == 0 && width == frame.size.x &&
+      height == frame.size.y) {
+    if (flipped)
+      draw_frame<false, true, true>(frame, texture, dst, pitch, offset_x,
+                                    offset_y, width, height,
+                                    std::forward<remap_F>(remap_f));
+    else
+      draw_frame<false, false, true>(frame, texture, dst, pitch, offset_x,
+                                     offset_y, width, height,
+                                     std::forward<remap_F>(remap_f));
+  } else {
+    if (flipped)
+      draw_frame<true, true, true>(frame, texture, dst, pitch, offset_x,
+                                   offset_y, width, height,
+                                   std::forward<remap_F>(remap_f));
+    else
+      draw_frame<true, false, true>(frame, texture, dst, pitch, offset_x,
+                                    offset_y, width, height,
+                                    std::forward<remap_F>(remap_f));
+  }
 }
 
 struct apm_t {
-	a_deque<int> history;
-	int current_apm = 0;
-	int last_frame_div = 0;
-	static const int resolution = 1;
-	void add_action(int frame) {
-		if (!history.empty() && frame / resolution == last_frame_div) {
-			++history.back();
-		} else {
-			if (history.size() >= 10 * 1000 / 42 / resolution) history.pop_front();
-			history.push_back(1);
-			last_frame_div = frame / 12;
-		}
-	}
-	void update(int frame) {
-		if (history.empty() || frame / resolution != last_frame_div) {
-			if (history.size() >= 10 * 1000 / 42 / resolution) history.pop_front();
-			history.push_back(0);
-			last_frame_div = frame / resolution;
-		}
-		if (frame % resolution) return;
-		if (history.size() == 0) {
-			current_apm = 0;
-			return;
-		}
-		int sum = 0;
-		for (auto& v : history) sum += v;
-		current_apm = (int)(sum * ((int64_t)256 * 60 * 1000 / 42 / resolution) / history.size() / 256);
-	}
+  a_deque<int> history;
+  int current_apm = 0;
+  int last_frame_div = 0;
+  static const int resolution = 1;
+  void add_action(int frame) {
+    if (!history.empty() && frame / resolution == last_frame_div) {
+      ++history.back();
+    } else {
+      if (history.size() >= 10 * 1000 / 42 / resolution)
+        history.pop_front();
+      history.push_back(1);
+      last_frame_div = frame / 12;
+    }
+  }
+  void update(int frame) {
+    if (history.empty() || frame / resolution != last_frame_div) {
+      if (history.size() >= 10 * 1000 / 42 / resolution)
+        history.pop_front();
+      history.push_back(0);
+      last_frame_div = frame / resolution;
+    }
+    if (frame % resolution)
+      return;
+    if (history.size() == 0) {
+      current_apm = 0;
+      return;
+    }
+    int sum = 0;
+    for (auto &v : history)
+      sum += v;
+    current_apm = (int)(sum * ((int64_t)256 * 60 * 1000 / 42 / resolution) /
+                        history.size() / 256);
+  }
 };
 
-struct ui_util_functions: replay_functions {
+struct ui_util_functions : replay_functions {
 
-	explicit ui_util_functions(state& st, action_state& action_st, replay_state& replay_st) : replay_functions(st, action_st, replay_st) {}
+  explicit ui_util_functions(state &st, action_state &action_st,
+                             replay_state &replay_st)
+      : replay_functions(st, action_st, replay_st) {}
 
-	rect sprite_clickable_bounds(const sprite_t* sprite) const {
-		rect r{{(int)game_st.map_width - 1, (int)game_st.map_height - 1}, {0, 0}};
-		for (const image_t* image : ptr(sprite->images)) {
-			if (!i_flag(image, image_t::flag_clickable)) continue;
-			xy pos = get_image_map_position(image);
-			auto size = image->grp->frames.at(image->frame_index).size;
-			xy to = pos + xy((int)size.x, (int)size.y);
-			if (pos.x < r.from.x) r.from.x = pos.x;
-			if (pos.y < r.from.y) r.from.y = pos.y;
-			if (to.x > r.to.x) r.to.x = to.x;
-			if (to.y > r.to.y) r.to.y = to.y;
-		}
-		return r;
-	}
+  rect sprite_clickable_bounds(const sprite_t *sprite) const {
+    rect r{{(int)game_st.map_width - 1, (int)game_st.map_height - 1}, {0, 0}};
+    for (const image_t *image : ptr(sprite->images)) {
+      if (!i_flag(image, image_t::flag_clickable))
+        continue;
+      xy pos = get_image_map_position(image);
+      auto size = image->grp->frames.at(image->frame_index).size;
+      xy to = pos + xy((int)size.x, (int)size.y);
+      if (pos.x < r.from.x)
+        r.from.x = pos.x;
+      if (pos.y < r.from.y)
+        r.from.y = pos.y;
+      if (to.x > r.to.x)
+        r.to.x = to.x;
+      if (to.y > r.to.y)
+        r.to.y = to.y;
+    }
+    return r;
+  }
 
-	bool unit_can_be_selected(const unit_t* u) const {
-		if (unit_is(u, UnitTypes::Terran_Nuclear_Missile)) return false;
-		if (unit_is(u, UnitTypes::Protoss_Scarab)) return false;
-		if (unit_is(u, UnitTypes::Spell_Disruption_Web)) return false;
-		if (unit_is(u, UnitTypes::Spell_Dark_Swarm)) return false;
-		if (unit_is(u, UnitTypes::Special_Upper_Level_Door)) return false;
-		if (unit_is(u, UnitTypes::Special_Right_Upper_Level_Door)) return false;
-		if (unit_is(u, UnitTypes::Special_Pit_Door)) return false;
-		if (unit_is(u, UnitTypes::Special_Right_Pit_Door)) return false;
-		return true;
-	}
+  bool unit_can_be_selected(const unit_t *u) const {
+    if (unit_is(u, UnitTypes::Terran_Nuclear_Missile))
+      return false;
+    if (unit_is(u, UnitTypes::Protoss_Scarab))
+      return false;
+    if (unit_is(u, UnitTypes::Spell_Disruption_Web))
+      return false;
+    if (unit_is(u, UnitTypes::Spell_Dark_Swarm))
+      return false;
+    if (unit_is(u, UnitTypes::Special_Upper_Level_Door))
+      return false;
+    if (unit_is(u, UnitTypes::Special_Right_Upper_Level_Door))
+      return false;
+    if (unit_is(u, UnitTypes::Special_Pit_Door))
+      return false;
+    if (unit_is(u, UnitTypes::Special_Right_Pit_Door))
+      return false;
+    return true;
+  }
 
-	bool image_has_data_at(const image_t* image, xy pos) const {
-		auto& frame = image->grp->frames.at(image->frame_index);
-		xy map_pos = get_image_map_position(image);
-		int x = pos.x - map_pos.x;
-		if (i_flag(image, image_t::flag_horizontally_flipped)) x = image->grp->width - 2 * frame.offset.x - x;
-		int y = pos.y - map_pos.y;
-		if ((size_t)x >= frame.size.x) return false;
-		if ((size_t)y >= frame.size.y) return false;
+  bool image_has_data_at(const image_t *image, xy pos) const {
+    auto &frame = image->grp->frames.at(image->frame_index);
+    xy map_pos = get_image_map_position(image);
+    int x = pos.x - map_pos.x;
+    if (i_flag(image, image_t::flag_horizontally_flipped))
+      x = image->grp->width - 2 * frame.offset.x - x;
+    int y = pos.y - map_pos.y;
+    if ((size_t)x >= frame.size.x)
+      return false;
+    if ((size_t)y >= frame.size.y)
+      return false;
 
-		const uint8_t* d = frame.data_container.data() + frame.line_data_offset.at(y);
-		while (x > 0) {
-			int v = *d++;
-			if (v & 0x80) {
-				v &= 0x7f;
-				x -= v;
-				if (x <= 0) return false;
-			} else if (v & 0x40) {
-				v &= 0x3f;
-				d++;
-				x -= v;
-			} else {
-				x -= v;
-			}
-		}
-		return true;
-	}
+    const uint8_t *d =
+        frame.data_container.data() + frame.line_data_offset.at(y);
+    while (x > 0) {
+      int v = *d++;
+      if (v & 0x80) {
+        v &= 0x7f;
+        x -= v;
+        if (x <= 0)
+          return false;
+      } else if (v & 0x40) {
+        v &= 0x3f;
+        d++;
+        x -= v;
+      } else {
+        x -= v;
+      }
+    }
+    return true;
+  }
 
-	bool unit_has_clickable_image_data_at(const unit_t* u, xy pos) const {
-		if (!is_in_bounds(pos, sprite_clickable_bounds(u->sprite))) return false;
-		if (ut_flag(u, unit_type_t::flag_100)) {
-			for (const image_t* image : ptr(u->sprite->images)) {
-				if (!i_flag(image, image_t::flag_clickable)) continue;
-				if (image_has_data_at(image, pos)) return true;
-			}
-			return false;
-		} else {
-			return image_has_data_at(u->sprite->main_image, pos);
-		}
-	}
+  bool unit_has_clickable_image_data_at(const unit_t *u, xy pos) const {
+    if (!is_in_bounds(pos, sprite_clickable_bounds(u->sprite)))
+      return false;
+    if (ut_flag(u, unit_type_t::flag_100)) {
+      for (const image_t *image : ptr(u->sprite->images)) {
+        if (!i_flag(image, image_t::flag_clickable))
+          continue;
+        if (image_has_data_at(image, pos))
+          return true;
+      }
+      return false;
+    } else {
+      return image_has_data_at(u->sprite->main_image, pos);
+    }
+  }
 
-	unit_t* select_get_unit_at(xy pos) const {
-		rect area = square_at(pos, 32);
-		area.to += xy(game_st.max_unit_width, game_st.max_unit_height);
-		unit_t* best_unit = nullptr;
-		int best_unit_size{};
-		for (unit_t* u : find_units_noexpand(area)) {
-			if (!is_in_bounds(pos, sprite_clickable_bounds(u->sprite))) continue;
-			u = unit_main_unit(u);
-			if (!unit_can_be_selected(u)) continue;
-			if (!best_unit) {
-				best_unit = u;
-				best_unit_size = u->unit_type->placement_size.x * u->unit_type->placement_size.y;
-				continue;
-			}
-			if (sprite_depth_order(u->sprite) >= sprite_depth_order(best_unit->sprite)) {
-				if (unit_has_clickable_image_data_at(u, pos) || (u->subunit && unit_has_clickable_image_data_at(u->subunit, pos))) {
-					best_unit = u;
-					best_unit_size = u->sprite->width * u->sprite->height;
-					continue;
-				}
-			} else {
-				if (unit_has_clickable_image_data_at(best_unit, pos)) continue;
-				if (best_unit->subunit && unit_has_clickable_image_data_at(best_unit->subunit, pos)) continue;
-			}
-			if (u->unit_type->placement_size.x * u->unit_type->placement_size.y < best_unit_size) {
-				best_unit = u;
-				best_unit_size = u->unit_type->placement_size.x * u->unit_type->placement_size.y;
-			}
-		}
-		return best_unit;
-	}
+  unit_t *select_get_unit_at(xy pos) const {
+    rect area = square_at(pos, 32);
+    area.to += xy(game_st.max_unit_width, game_st.max_unit_height);
+    unit_t *best_unit = nullptr;
+    int best_unit_size{};
+    for (unit_t *u : find_units_noexpand(area)) {
+      if (!is_in_bounds(pos, sprite_clickable_bounds(u->sprite)))
+        continue;
+      u = unit_main_unit(u);
+      if (!unit_can_be_selected(u))
+        continue;
+      if (!best_unit) {
+        best_unit = u;
+        best_unit_size =
+            u->unit_type->placement_size.x * u->unit_type->placement_size.y;
+        continue;
+      }
+      if (sprite_depth_order(u->sprite) >=
+          sprite_depth_order(best_unit->sprite)) {
+        if (unit_has_clickable_image_data_at(u, pos) ||
+            (u->subunit && unit_has_clickable_image_data_at(u->subunit, pos))) {
+          best_unit = u;
+          best_unit_size = u->sprite->width * u->sprite->height;
+          continue;
+        }
+      } else {
+        if (unit_has_clickable_image_data_at(best_unit, pos))
+          continue;
+        if (best_unit->subunit &&
+            unit_has_clickable_image_data_at(best_unit->subunit, pos))
+          continue;
+      }
+      if (u->unit_type->placement_size.x * u->unit_type->placement_size.y <
+          best_unit_size) {
+        best_unit = u;
+        best_unit_size =
+            u->unit_type->placement_size.x * u->unit_type->placement_size.y;
+      }
+    }
+    return best_unit;
+  }
 
-	uint32_t sprite_depth_order(const sprite_t* sprite) const {
-		uint32_t score = 0;
-		score |= sprite->elevation_level;
-		score <<= 13;
-		score |= sprite->elevation_level <= 4 ? sprite->position.y : 0;
-		score <<= 1;
-		score |= s_flag(sprite, sprite_t::flag_turret) ? 1 : 0;
-		return score;
-	}
-
+  uint32_t sprite_depth_order(const sprite_t *sprite) const {
+    uint32_t score = 0;
+    score |= sprite->elevation_level;
+    score <<= 13;
+    score |= sprite->elevation_level <= 4 ? sprite->position.y : 0;
+    score <<= 1;
+    score |= s_flag(sprite, sprite_t::flag_turret) ? 1 : 0;
+    return score;
+  }
 };
 
-struct ui_functions: ui_util_functions {
-	image_data img;
-	tileset_image_data tileset_img;
-	native_window::window wnd;
-	bool create_window = true;
-	bool draw_ui_elements = true;
-	bool is_replay_mode = true;
-	bool is_live_game_mode = false;
-	bool enforce_local_visibility = false;
-	bool default_enforce_local_visibility = false;
-	int local_player_id = -1;
-	int enemy_player_id = -1;
-
-	bool exit_on_close = true;
-	bool window_closed = false;
-
-	bool quicksave_pending = false;
-	bool quickload_pending = false;
-
-	// ---------------------------------------------------------------------------
-	// Trigger-driven HUD notifications.
-	// When a trigger fires a display-text, transmission, or objectives action
-	// we store the message here and display it on-screen for a fixed duration.
-	// ---------------------------------------------------------------------------
-	struct hud_message_t {
-		a_string text;
-		// Expiry in simulated frames (set to current_frame + display_frames).
-		int expiry_frame = 0;
-	};
-	// Ring of up to 4 simultaneous HUD lines.
-	static const int k_hud_max_lines = 4;
-	hud_message_t hud_messages[k_hud_max_lines];
-	int hud_next_slot = 0;
-
-	// Next-scenario name set by the Set Next Scenario trigger action.  The
-	// main loop in gfxtest.cpp can inspect this field to initiate a transition.
-	a_string pending_next_scenario;
-
-	void push_hud_message(const a_string& text, int display_frames = 7 * 24) {
-		hud_messages[hud_next_slot % k_hud_max_lines] = {text, st.current_frame + display_frames};
-		++hud_next_slot;
-	}
-
-	// ---------------------------------------------------------------------------
-	// Trigger callback overrides.
-	// ---------------------------------------------------------------------------
-	virtual void on_trigger_display_text(int /*owner*/, const a_string& text) override {
-		if (text.empty()) return;
-		push_hud_message(text);
-		ui::log("trigger: display text: %s\n", text.c_str());
-	}
-
-	virtual void on_trigger_transmission(int owner, int string_index) override {
-		// Transmission includes implicit center-view (handled below via location
-		// stored in the action) and text display.  We show the text string here.
-		a_string msg = get_map_string((size_t)string_index);
-		if (!msg.empty()) {
-			push_hud_message(msg);
-			ui::log("trigger: transmission: %s\n", msg.c_str());
-		}
-	}
-
-	virtual void on_trigger_center_view(int owner, int location_id) override {
-		if (location_id <= 0 || (size_t)location_id > st.locations.size()) return;
-		const location& loc = st.locations.at((size_t)location_id - 1);
-		xy center = (loc.area.from + loc.area.to) / 2;
-		screen_pos.x = center.x - (int)(view_width / 2);
-		screen_pos.y = center.y - (int)(view_height / 2);
-	}
-
-	virtual void on_trigger_set_objectives(int /*owner*/, const a_string& text) override {
-		if (!text.empty()) {
-			ui::log("trigger: mission objectives: %s\n", text.c_str());
-		}
-	}
-
-	virtual void on_trigger_set_next_scenario(int /*owner*/, const a_string& scenario) override {
-		pending_next_scenario = scenario;
-		ui::log("trigger: next scenario: %s\n", scenario.c_str());
-	}
-
-	virtual void on_trigger_pause_game() override {
-		if (is_live_game_mode) {
-			is_paused = true;
-			ui::log("trigger: game paused\n");
-		}
-	}
-
-	virtual void on_trigger_unpause_game() override {
-		if (is_live_game_mode) {
-			is_paused = false;
-			ui::log("trigger: game unpaused\n");
-		}
-	}
-
-	virtual void on_victory_state(int owner, int state) override {
-		if (!is_live_game_mode) return;
-		// Auto-pause on any victory/defeat state change for the local player so
-		// the player has a moment to react before continuing or reloading.
-		// Victory states: 0=none, 1-2=defeated/eliminated, 3+=won (matches
-		// player_won: victory_state >= 3, player_defeated: state && !won).
-		static const int k_victory_state_won_threshold = 3;
-		if (owner == local_player_id && state != 0) {
-			is_paused = true;
-			bool won = (state >= k_victory_state_won_threshold);
-			const char* state_name = won ? "victory" : "defeat";
-			ui::log("trigger: local player %s (state %d)\n", state_name, state);
-			a_string msg = won ? a_string("Mission accomplished.") : a_string("Mission failed.");
-			push_hud_message(msg, 10 * 24);
-		}
-	}
-
-
-	xy screen_pos;
-
-	size_t screen_width;
-	size_t screen_height;
-
-	game_player player;
-	replay_state current_replay_state;
-	action_state current_action_state;
-	std::array<apm_t, 12> apm;
-	ui_functions(game_player player) : ui_util_functions(player.st(), current_action_state, current_replay_state), player(std::move(player)) {
-	}
-
-	std::function<void(a_vector<uint8_t>&, a_string)> load_data_file;
-
-	sound_types_t sound_types;
-	a_vector<a_string> sound_filenames;
-
-	const sound_type_t* get_sound_type(Sounds id) const {
-		if ((size_t)id >= (size_t)Sounds::None) error("invalid sound id %d", (size_t)id);
-		return &sound_types.vec[(size_t)id];
-	}
-
-	a_vector<bool> has_loaded_sound;
-	a_vector<std::unique_ptr<native_sound::sound>> loaded_sounds;
-	a_vector<std::chrono::high_resolution_clock::time_point> last_played_sound;
-
-	int global_volume = 50;
-
-	struct sound_channel {
-		bool playing = false;
-		const sound_type_t* sound_type = nullptr;
-		int priority = 0;
-		int flags = 0;
-		const unit_type_t* unit_type = nullptr;
-		int volume = 0;
-	};
-	a_vector<sound_channel> sound_channels;
-
-	void set_volume(int volume) {
-		if (volume < 0) volume = 0;
-		else if (volume > 100) volume = 100;
-		global_volume = volume;
-		for (auto& c : sound_channels) {
-			if (c.playing) {
-				native_sound::set_volume(&c - sound_channels.data(), (128 - 4) * (c.volume * global_volume / 100) / 100);
-			}
-		}
-	}
-
-	sound_channel* get_sound_channel(int priority) {
-		sound_channel* r = nullptr;
-		for (auto& c : sound_channels) {
-			if (c.playing) {
-				if (!native_sound::is_playing(&c - sound_channels.data())) {
-					c.playing = false;
-					r = &c;
-				}
-			} else r = &c;
-		}
-		if (r) return r;
-		int best_prio = priority;
-		for (auto& c : sound_channels) {
-			if (c.flags & 0x20) continue;
-			if (c.priority < best_prio) {
-				best_prio = c.priority;
-				r = &c;
-			}
-		}
-		return r;
-	}
-
-	virtual void play_sound(int id, xy position, const unit_t* source_unit, bool add_race_index) override {
-		if (global_volume == 0) return;
-		if (add_race_index) id += 1;
-		if ((size_t)id >= has_loaded_sound.size()) return;
-		if (!has_loaded_sound[id]) {
-			has_loaded_sound[id] = true;
-			a_vector<uint8_t> data;
-			load_data_file(data, "sound/" + sound_filenames[id]);
-			loaded_sounds[id] = native_sound::load_wav(data.data(), data.size());
-		}
-		auto& s = loaded_sounds[id];
-		if (!s) return;
-
-		auto now = clock.now();
-		if (now - last_played_sound[id] <= std::chrono::milliseconds(80)) return;
-		last_played_sound[id] = now;
-
-		const sound_type_t* sound_type = get_sound_type((Sounds)id);
-
-		int volume = sound_type->min_volume;
-
-		if (position != xy()) {
-			int distance = 0;
-			if (position.x < screen_pos.x) distance += screen_pos.x - position.x;
-			else if (position.x > screen_pos.x + (int)screen_width) distance += position.x - (screen_pos.x + (int)screen_width);
-			if (position.y < screen_pos.y) distance += screen_pos.y - position.y;
-			else if (position.y > screen_pos.y + (int)screen_height) distance += position.y - (screen_pos.y + (int)screen_height);
-
-			int distance_volume = 99 - 99 * distance / 512;
-
-			if (distance_volume > volume) volume = distance_volume;
-		}
-
-		if (volume > 10) {
-			int pan = 0;
-//			if (position != xy()) {
-//				int pan_x = (position.x - (screen_pos.x + (int)screen_width / 2)) / 32;
-//				bool left = pan_x < 0;
-//				if (left) pan_x = -pan_x;
-//				if (pan_x <= 2) pan = 0;
-//				else if (pan_x <= 5) pan = 52;
-//				else if (pan_x <= 10) pan = 127;
-//				else if (pan_x <= 20) pan = 191;
-//				else if (pan_x <= 40) pan = 230;
-//				else pan = 255;
-//				if (left) pan = -pan;
-//			}
-
-			const unit_type_t* unit_type = source_unit ? source_unit->unit_type : nullptr;
-
-			if (sound_type->flags & 0x10) {
-				for (auto& c : sound_channels) {
-					if (c.playing && c.sound_type == sound_type) {
-						if (native_sound::is_playing(&c - sound_channels.data())) return;
-						c.playing = false;
-					}
-				}
-			} else if (sound_type->flags & 2 && unit_type) {
-				for (auto& c : sound_channels) {
-					if (c.playing && c.unit_type == unit_type && c.flags & 2) {
-						if (native_sound::is_playing(&c - sound_channels.data())) return;
-						c.playing = false;
-					}
-				}
-			}
-
-			auto* c = get_sound_channel(sound_type->priority);
-			if (c) {
-				native_sound::play(c - sound_channels.data(), &*s, (128 - 4) * (volume * global_volume / 100) / 100, pan);
-				c->playing = true;
-				c->sound_type = sound_type;
-				c->flags = sound_type->flags;
-				c->priority = sound_type->priority;
-				c->unit_type = unit_type;
-				c->volume = volume;
-			}
-		}
-	}
-
-	a_vector<uint8_t> creep_random_tile_indices = a_vector<uint8_t>(256 * 256);
-	void init() {
-		uint32_t rand_state = (uint32_t)clock.now().time_since_epoch().count();
-		auto rand = [&]() {
-			rand_state = rand_state * 22695477 + 1;
-			return (rand_state >> 16) & 0x7fff;
-		};
-		for (auto& v : creep_random_tile_indices) {
-			if (rand() % 100 < 4) v = 6 + rand() % 7;
-			else v = rand() % 6;
-		}
-
-		a_vector<uint8_t> data;
-		load_data_file(data, "arr/sfxdata.dat");
-		sound_types = data_loading::load_sfxdata_dat(data);
-
-		sound_filenames.resize(sound_types.vec.size());
-		has_loaded_sound.resize(sound_filenames.size());
-		loaded_sounds.resize(has_loaded_sound.size());
-		last_played_sound.resize(loaded_sounds.size());
-
-		string_table_data tbl;
-		load_data_file(tbl.data, "arr/sfxdata.tbl");
-		for (size_t i = 0; i != sound_types.vec.size(); ++i) {
-			size_t index = sound_types.vec[i].filename_index;
-			sound_filenames[i] = tbl[index];
-		}
-		native_sound::frequency = 44100;
-		native_sound::channels = 8;
-		native_sound::init();
-
-		sound_channels.resize(8);
-
-		load_data_file(images_tbl.data, "arr/images.tbl");
-
-		load_all_image_data(load_data_file);
-	}
-
-	virtual void on_action(int owner, int action) override {
-		apm.at(owner).add_action(st.current_frame);
-	}
-
-	size_t view_width;
-	size_t view_height;
-	fp16 view_scale;
-
-	rect_t<xy_t<size_t>> screen_tile_bounds() {
-		size_t from_tile_y = screen_pos.y / 32u;
-		if (from_tile_y >= game_st.map_tile_height) from_tile_y = 0;
-		size_t to_tile_y = (screen_pos.y + view_height + 31) / 32u;
-		if (to_tile_y > game_st.map_tile_height) to_tile_y = game_st.map_tile_height;
-		size_t from_tile_x = screen_pos.x / 32u;
-		if (from_tile_x >= game_st.map_tile_width) from_tile_x = 0;
-		size_t to_tile_x = (screen_pos.x + view_width + 31) / 32u;
-		if (to_tile_x > game_st.map_tile_width) to_tile_x = game_st.map_tile_width;
-
-		return {{from_tile_x, from_tile_y}, {to_tile_x, to_tile_y}};
-	}
-
-
-	void draw_tiles(uint8_t* data, size_t data_pitch) {
-
-		auto screen_tile = screen_tile_bounds();
-		uint8_t visibility_mask = local_visibility_mask();
-
-		size_t tile_index = screen_tile.from.y * game_st.map_tile_width + screen_tile.from.x;
-		auto* megatile_index = &st.tiles_mega_tile_index[tile_index];
-		auto* tile = &st.tiles[tile_index];
-		size_t width = screen_tile.to.x - screen_tile.from.x;
-
-		xy dirs[9] = {{1, 1}, {0, 1}, {-1, 1}, {1, 0}, {-1, 0}, {1, -1}, {0, -1}, {-1, -1}, {0, 0}};
-
-		for (size_t tile_y = screen_tile.from.y; tile_y != screen_tile.to.y; ++tile_y) {
-			for (size_t tile_x = screen_tile.from.x; tile_x != screen_tile.to.x; ++tile_x) {
-
-				int screen_x = tile_x * 32 - screen_pos.x;
-				int screen_y = tile_y * 32 - screen_pos.y;
-
-				size_t offset_x = 0;
-				size_t offset_y = 0;
-				if (screen_x < 0) {
-					offset_x = -screen_x;
-				}
-				if (screen_y < 0) {
-					offset_y = -screen_y;
-				}
-
-				uint8_t* dst = data + screen_y * data_pitch + screen_x;
-
-				size_t width = 32;
-				size_t height = 32;
-
-				width = std::min(width, screen_width - screen_x);
-				height = std::min(height, screen_height - screen_y);
-
-				size_t index = *megatile_index;
-				if (tile->flags & tile_t::flag_has_creep) {
-					index = game_st.cv5.at(1).mega_tile_index[creep_random_tile_indices[tile_x + tile_y * game_st.map_tile_width]];
-				}
-				draw_tile(tileset_img, index, dst, data_pitch, offset_x, offset_y, width, height);
-
-				if (~tile->flags & tile_t::flag_has_creep) {
-					size_t creep_index = 0;
-					for (size_t i = 0; i != 9; ++i) {
-						int add_x = dirs[i].x;
-						int add_y = dirs[i].y;
-						if (tile_x + add_x >= game_st.map_tile_width) continue;
-						if (tile_y + add_y >= game_st.map_tile_height) continue;
-						if (st.tiles[tile_x + add_x + (tile_y + add_y) * game_st.map_tile_width].flags & tile_t::flag_has_creep) creep_index |= 1 << i;
-					}
-					size_t creep_frame = img.creep_edge_frame_index[creep_index];
-
-					if (creep_frame) {
-
-						auto& frame = tileset_img.creep_grp.frames.at(creep_frame - 1);
-
-						screen_x += frame.offset.x;
-						screen_y += frame.offset.y;
-
-						size_t width = frame.size.x;
-						size_t height = frame.size.y;
-
-						if (screen_x < (int)screen_width && screen_y < (int)screen_height) {
-							if (screen_x + (int)width > 0 && screen_y + (int)height > 0) {
-
-								size_t offset_x = 0;
-								size_t offset_y = 0;
-								if (screen_x < 0) {
-									offset_x = -screen_x;
-								}
-								if (screen_y < 0) {
-									offset_y = -screen_y;
-								}
-
-								uint8_t* dst = data + screen_y * data_pitch + screen_x;
-
-								width = std::min(width, screen_width - screen_x);
-								height = std::min(height, screen_height - screen_y);
-
-								draw_frame(frame, false, dst, data_pitch, offset_x, offset_y, width, height);
-							}
-						}
-					}
-				}
-
-				if (enforce_local_visibility && has_local_player()) {
-					rect tile_area{{screen_x, screen_y}, {screen_x + 32, screen_y + 32}};
-					if ((tile->explored & visibility_mask) == 0) {
-						fill_rectangle(data, data_pitch, tile_area, 0);
-					} else if ((tile->visible & visibility_mask) == 0) {
-						darken_rectangle(data, data_pitch, tile_area);
-					}
-				}
-
-				++megatile_index;
-				++tile;
-			}
-			megatile_index -= width;
-			megatile_index += game_st.map_tile_width;
-			tile -= width;
-			tile += game_st.map_tile_width;
-		}
-	}
-
-	a_vector<uint8_t> temporary_warp_texture_buffer;
-
-	void draw_image(const image_t* image, uint8_t* data, size_t data_pitch, size_t color_index) {
-
-		if (is_new_image(image)) {
-			image_draw_queue.push_back(image);
-			return;
-		}
-
-		xy map_pos = get_image_map_position(image);
-
-		int screen_x = map_pos.x - screen_pos.x;
-		int screen_y = map_pos.y - screen_pos.y;
-
-		if (screen_x >= (int)screen_width || screen_y >= (int)screen_height) return;
-
-		auto& frame = image->grp->frames.at(image->frame_index);
-
-		size_t width = frame.size.x;
-		size_t height = frame.size.y;
-
-		if (screen_x + (int)width <= 0 || screen_y + (int)height <= 0) return;
-
-		size_t offset_x = 0;
-		size_t offset_y = 0;
-		if (screen_x < 0) {
-			offset_x = -screen_x;
-		}
-		if (screen_y < 0) {
-			offset_y = -screen_y;
-		}
-
-		uint8_t* dst = data + screen_y * data_pitch + screen_x;
-
-		width = std::min(width, screen_width - screen_x);
-		height = std::min(height, screen_height - screen_y);
-
-		auto draw_alpha = [&](size_t index, auto remap_f) {
-			auto& data = tileset_img.light_pcx.at(index).data;
-			uint8_t* ptr = data.data();
-			size_t size = data.size() / 256;
-			auto glow = [ptr, size, remap_f](uint8_t new_value, uint8_t old_value) {
-				new_value = remap_f(new_value, old_value);
-				--new_value;
-				if (new_value >= size) return (uint8_t)0;
-				return ptr[256u * new_value + old_value];
-			};
-			draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst, data_pitch, offset_x, offset_y, width, height, glow);
-		};
-
-		if (image->modifier == 0 || image->modifier == 1) {
-			uint8_t* ptr = img.player_unit_colors.at(color_index).data();
-			auto player_color = [ptr](uint8_t new_value, uint8_t) {
-				if (new_value >= 8 && new_value < 16) return ptr[new_value - 8];
-				return new_value;
-			};
-			draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst, data_pitch, offset_x, offset_y, width, height, player_color);
-		} else if (image->modifier == 2 || image->modifier == 4) {
-			uint8_t* color_ptr = img.player_unit_colors.at(color_index).data();
-			draw_alpha(4, [color_ptr](uint8_t new_value, uint8_t) {
-				if (new_value >= 8 && new_value < 16) return color_ptr[new_value - 8];
-				return new_value;
-			});
-			uint8_t* selector = tileset_img.cloak_fade_selector.data();
-			int value = image->modifier_data1;
-			auto cloaking = [color_ptr, selector, value](uint8_t new_value, uint8_t old_value) {
-				if (selector[new_value] <= value) return old_value;
-				if (new_value >= 8 && new_value < 16) return color_ptr[new_value - 8];
-				return new_value;
-			};
-			draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst, data_pitch, offset_x, offset_y, width, height, cloaking);
-		} else if (image->modifier == 3) {
-			uint8_t* color_ptr = img.player_unit_colors.at(color_index).data();
-			draw_alpha(4, [color_ptr](uint8_t new_value, uint8_t) {
-				if (new_value >= 8 && new_value < 16) return color_ptr[new_value - 8];
-				return new_value;
-			});
-		} else if (image->modifier == 8) {
-			size_t data_size = data_pitch * screen_height;
-			auto distortion = [data_size, dst](uint8_t new_value, uint8_t& old_value) {
-				size_t offset = &old_value - dst;
-				if (offset >= new_value && data_size - offset > new_value) return *(&old_value + new_value);
-				return old_value;
-			};
-			draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst, data_pitch, offset_x, offset_y, width, height, distortion);
-		} else if (image->modifier == 10) {
-			uint8_t* ptr = &tileset_img.dark_pcx.data[256 * 18];
-			auto shadow = [ptr](uint8_t, uint8_t old_value) {
-				return ptr[old_value];
-			};
-			draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst, data_pitch, offset_x, offset_y, width, height, shadow);
-		} else if (image->modifier == 9) {
-			draw_alpha(image->image_type->color_shift - 1, no_remap());
-		} else if (image->modifier == 12) {
-			if (temporary_warp_texture_buffer.size() < frame.size.x * frame.size.y) temporary_warp_texture_buffer.resize(frame.size.x * frame.size.y);
-			auto& texture_frame = global_st.image_grp[(size_t)ImageTypes::IMAGEID_Warp_Texture]->frames.at(image->modifier_data1);
-			draw_frame(texture_frame, false, temporary_warp_texture_buffer.data(), frame.size.x, 0, 0, frame.size.x, frame.size.y);
-			draw_frame_textured(frame, temporary_warp_texture_buffer.data(), i_flag(image, image_t::flag_horizontally_flipped), dst, data_pitch, offset_x, offset_y, width, height);
-		} else if (image->modifier == 17) {
-			auto& data = tileset_img.light_pcx.at(0).data;
-			uint8_t* ptr = &data.at(256u * (image->modifier_data1 - 1));
-			size_t size = data.data() + data.size() - ptr;
-			auto glow = [ptr, size](uint8_t, uint8_t old_value) {
-				if (old_value >= size) return (uint8_t)0;
-				return ptr[old_value];
-			};
-			draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst, data_pitch, offset_x, offset_y, width, height, glow);
-		} else error("don't know how to draw image modifier %d", image->modifier);
-
-	}
-
-	a_vector<const unit_t*> current_selection_sprites_set = a_vector<const unit_t*>(2500);
-	a_vector<const sprite_t*> current_selection_sprites;
-
-	void draw_selection_circle(const sprite_t* sprite, const unit_t* u, uint8_t* data, size_t data_pitch) {
-		auto* image_type = get_image_type((ImageTypes)((int)ImageTypes::IMAGEID_Selection_Circle_22pixels + sprite->sprite_type->selection_circle));
-
-		xy map_pos = sprite->position + xy(0, sprite->sprite_type->selection_circle_vpos);
-
-		auto* grp = global_st.image_grp[(size_t)image_type->id];
-		auto& frame = grp->frames.at(0);
-
-		map_pos.x += int(frame.offset.x - grp->width / 2);
-		map_pos.y += int(frame.offset.y - grp->height / 2);
-
-		int screen_x = map_pos.x - screen_pos.x;
-		int screen_y = map_pos.y - screen_pos.y;
-
-		if (screen_x >= (int)screen_width || screen_y >= (int)screen_height) return;
-
-		size_t width = frame.size.x;
-		size_t height = frame.size.y;
-
-		if (screen_x + (int)width <= 0 || screen_y + (int)height <= 0) return;
-
-		size_t offset_x = 0;
-		size_t offset_y = 0;
-		if (screen_x < 0) {
-			offset_x = -screen_x;
-		}
-		if (screen_y < 0) {
-			offset_y = -screen_y;
-		}
-
-		uint8_t* dst = data + screen_y * data_pitch + screen_x;
-
-		width = std::min(width, screen_width - screen_x);
-		height = std::min(height, screen_height - screen_y);
-
-		size_t color_index = st.players[sprite->owner].color;
-		uint8_t color = img.player_unit_colors.at(color_index)[0];
-		if (unit_is_mineral_field(u) || unit_is(u, UnitTypes::Resource_Vespene_Geyser)) {
-			color = tileset_img.resource_minimap_color;
-		}
-		auto player_color = [color](uint8_t new_value, uint8_t) {
-			if (new_value >= 0 && new_value < 8) return color;
-			return new_value;
-		};
-		draw_frame(frame, false, dst, data_pitch, offset_x, offset_y, width, height, player_color);
-
-	}
-
-	void draw_health_bars(const sprite_t* sprite, const unit_t* u, uint8_t* data, size_t data_pitch) {
-
-		auto* selection_circle_image_type = get_image_type((ImageTypes)((int)ImageTypes::IMAGEID_Selection_Circle_22pixels + sprite->sprite_type->selection_circle));
-
-		auto* selection_circle_grp = global_st.image_grp[(size_t)selection_circle_image_type->id];
-		auto& selection_circle_frame = selection_circle_grp->frames.at(0);
-
-		int offsety = sprite->sprite_type->selection_circle_vpos + selection_circle_frame.size.y / 2 + 8;
-
-		bool has_shield = u->unit_type->has_shield;
-		bool has_energy = ut_has_energy(u) || u_hallucination(u) || unit_is(u, UnitTypes::Zerg_Broodling);
-
-		int width = sprite->sprite_type->health_bar_size;
-		width -= (width - 1) % 3;
-		if (width < 19) width = 19;
-		int orig_width = width;
-		int height = 5;
-		if (has_shield) height += 2;
-		if (has_energy) height += 6;
-
-		xy map_pos = sprite->position + xy(0, offsety);
-
-		map_pos.x += int(0 - width / 2);
-		map_pos.y += int(0 - height / 2);
-
-		int screen_x = map_pos.x - screen_pos.x;
-		int screen_y = map_pos.y - screen_pos.y;
-
-		if (screen_x >= (int)screen_width || screen_y >= (int)screen_height) return;
-		if (screen_x + width <= 0 || screen_y + height <= 0) return;
-
-		auto filled_width = [&](int percent) {
-			int r = percent * width / 100;
-			if (r < 3) r = 3;
-			else if (r % 3) {
-				if (r % 3 > 1) r += 3 - (r % 3);
-				else r -= r % 3;
-			}
-			return r;
-		};
-
-		int hp_percent = unit_hp_percent(u);
-		int dw = filled_width(hp_percent);
-
-		int shield_dw = 0;
-		if (has_shield) {
-			int shield_percent = (int)u->shield_points.integer_part() * 100 / std::max(u->unit_type->shield_points, 1);
-			shield_dw = filled_width(shield_percent);
-		}
-
-		int energy_dw = 0;
-		if (has_energy) {
-			int energy_percent;
-			if (ut_has_energy(u)) energy_percent = (int)u->energy.integer_part() * 100 / std::max((int)unit_max_energy(u).integer_part(), 1);
-			else energy_percent = (int)u->remove_timer / std::max((int)default_remove_timer(u), 1);
-			energy_dw = filled_width(energy_percent);
-		}
-
-		const int no_shield_colors_66[] = {18, 0, 1, 2, 18};
-		const int no_shield_colors_33[] = {18, 3, 4, 5, 18};
-		const int no_shield_colors_0[] = {18, 6, 7, 8, 18};
-		const int no_shield_colors_bg[] = {18, 15, 16, 17, 18};
-
-		const int with_shield_colors_66[] = {18, 0, 0, 1, 1, 2, 18};
-		const int with_shield_colors_33[] = {18, 3, 3, 4, 4, 5, 18};
-		const int with_shield_colors_0[] = {18, 6, 6, 7, 7, 8, 18};
-		const int with_shield_colors_bg[] = {18, 15, 15, 16, 16, 17, 18};
-
-		const int* colors_66 = has_shield ? with_shield_colors_66 : no_shield_colors_66;
-		const int* colors_33 = has_shield ? with_shield_colors_33 : no_shield_colors_33;
-		const int* colors_0 = has_shield ? with_shield_colors_0 : no_shield_colors_0;
-		const int* colors_bg = has_shield ? with_shield_colors_bg : no_shield_colors_bg;
-
-		int offset_x = 0;
-		int offset_y = 0;
-		if (screen_x < 0) {
-			offset_x = -screen_x;
-			dw = std::max(dw + screen_x, 0);
-			shield_dw = std::max(shield_dw + screen_x, 0);
-			energy_dw = std::max(energy_dw + screen_x, 0);
-			width = std::max(width + screen_x, 0);
-			screen_x = 0;
-		}
-		if (screen_y < 0) {
-			offset_y = -screen_y;
-			height += screen_y;
-			screen_y = 0;
-		}
-
-		uint8_t* dst = data + screen_y * data_pitch + screen_x;
-
-		width = std::min(width, (int)screen_width - screen_x);
-		height = std::min(height, (int)screen_height - screen_y);
-
-		if (dw > width) dw = width;
-		if (shield_dw > width) shield_dw = width;
-		if (energy_dw > width) energy_dw = width;
-
-		int hp_height = std::min(std::max((has_shield ? 7 : 5) - offset_y, 0), height);
-
-		for (int i = offset_y; i < offset_y + hp_height; ++i) {
-			int ci = hp_percent >= 66 ? colors_66[i] : hp_percent >= 33 ? colors_33[i] : colors_0[i];
-			int c = img.hp_bar_colors.at(ci);
-
-			if (dw > 0) memset(dst, c, dw);
-			if (width - dw > 0) {
-				c = img.hp_bar_colors.at(colors_bg[i]);
-				memset(dst + dw, c, width - dw);
-			}
-			dst += data_pitch;
-		}
-
-		if (has_shield) {
-			const int shield_colors[] = {18, 10, 11, 18};
-			const int shield_colors_bg[] = {18, 16, 17, 18};
-
-			dst = data + screen_y * data_pitch + screen_x;
-
-			for (int i = offset_y; i < std::min(4, height); ++i) {
-				int c = img.hp_bar_colors.at(shield_colors[i]);
-
-				if (shield_dw > 0) memset(dst, c, shield_dw);
-				if (width - shield_dw > 0) {
-					c = img.hp_bar_colors.at(shield_colors_bg[i]);
-					memset(dst + shield_dw, c, width - shield_dw);
-				}
-				dst += data_pitch;
-			}
-		}
-
-		int energy_offset = std::max((has_shield ? 8 : 6) - offset_y, 0);
-		int energy_begin = std::max(offset_y - (has_shield ? 8 : 6), 0);
-		int energy_end = std::min(5, offset_y + height - (has_shield ? 8 : 6));
-
-		if (has_energy ) {
-			dst = data + (screen_y + energy_offset) * data_pitch + screen_x;
-			const int energy_colors[] = {18, 12, 13, 14, 18};
-			for (int i = energy_begin; i < energy_end; ++i) {
-				int c = img.hp_bar_colors.at(energy_colors[i]);
-
-				if (energy_dw > 0) memset(dst, c, energy_dw);
-				if (width - energy_dw > 0) {
-					c = img.hp_bar_colors.at(no_shield_colors_bg[i]);
-					memset(dst + energy_dw, c, width - energy_dw);
-				}
-				dst += data_pitch;
-			}
-		}
-
-		dst = data + screen_y * data_pitch + screen_x;
-		if (offset_x % 3) dst += 3 - offset_x % 3;
-
-		int c = img.hp_bar_colors.at(18);
-		for (int x = 0; x < orig_width; x += 3) {
-			if (x < offset_x || x >= offset_x + width) continue;
-			for (int y = 0; y != hp_height; ++y) {
-				*dst = c;
-				dst += data_pitch;
-			}
-			if (has_energy && energy_end > energy_begin) {
-				if (energy_offset) dst += data_pitch;
-				for (int i = energy_begin; i != energy_end; ++i) {
-					*dst = c;
-					dst += data_pitch;
-				}
-				if (energy_offset) dst -= data_pitch;
-				dst -= (energy_end - energy_begin) * data_pitch;
-			}
-			dst -= hp_height * data_pitch;
-			dst += 3;
-		}
-
-	}
-
-	void draw_sprite(const sprite_t* sprite, uint8_t* data, size_t data_pitch) {
-		const unit_t* draw_selection_u = current_selection_sprites_set.at(sprite->index);
-		const unit_t* draw_health_bars_u = draw_selection_u;
-		for (auto* image : ptr(reverse(sprite->images))) {
-			if (i_flag(image, image_t::flag_hidden)) continue;
-			if (draw_selection_u && image->modifier != 10) {
-				draw_selection_circle(sprite, draw_selection_u, data, data_pitch);
-				draw_selection_u = nullptr;
-			}
-			draw_image(image, data, data_pitch, st.players[sprite->owner].color);
-		}
-		if (draw_health_bars_u && !u_invincible(draw_health_bars_u)) {
-			draw_health_bars(sprite, draw_health_bars_u, data, data_pitch);
-		}
-	}
-
-	a_vector<std::pair<uint32_t, const sprite_t*>> sorted_sprites;
-
-	void draw_sprites(uint8_t* data, size_t data_pitch) {
-
-		image_draw_queue.clear();
-
-		sorted_sprites.clear();
-
-		auto screen_tile = screen_tile_bounds();
-
-		size_t from_y = screen_tile.from.y;
-		if (from_y < 4) from_y = 0;
-		else from_y -= 4;
-		size_t to_y = screen_tile.to.y;
-		if (to_y >= game_st.map_tile_height - 4) to_y = game_st.map_tile_height - 1;
-		else to_y += 4;
-		for (size_t y = from_y; y != to_y; ++y) {
-			for (auto* sprite : ptr(st.sprites_on_tile_line.at(y))) {
-				if (s_hidden(sprite)) continue;
-				if (enforce_local_visibility && has_local_player()) {
-					if ((sprite->visibility_flags & (1 << local_player_id)) == 0) continue;
-				}
-				sorted_sprites.emplace_back(sprite_depth_order(sprite), sprite);
-			}
-		}
-
-		std::sort(sorted_sprites.begin(), sorted_sprites.end());
-
-		for (auto uid : current_selection) {
-			auto* u = get_unit(uid);
-			if (!u) continue;
-			current_selection_sprites_set.at(u->sprite->index) = u;
-			current_selection_sprites.push_back(u->sprite);
-		}
-
-		for (auto& v : sorted_sprites) {
-			draw_sprite(v.second, data, data_pitch);
-		}
-
-		for (auto* s : current_selection_sprites) {
-			current_selection_sprites_set.at(s->index) = nullptr;
-		}
-		current_selection_sprites.clear();
-	}
-
-	void fill_rectangle(uint8_t* data, size_t data_pitch, rect area, uint8_t index) {
-		if (area.from.x < 0) area.from.x = 0;
-		if (area.from.y < 0) area.from.y = 0;
-		if (area.to.x > (int)screen_width) area.to.x = screen_width;
-		if (area.to.y > (int)screen_height) area.to.y = screen_height;
-		if (area.from.x >= area.to.x || area.from.y >= area.to.y) return;
-		size_t width = area.to.x - area.from.x;
-		size_t pitch = data_pitch;
-		size_t from_y = area.from.y;
-		size_t to_y = area.to.y;
-		uint8_t* ptr = data + data_pitch * from_y + area.from.x;
-		for (size_t i = from_y; i != to_y; ++i) {
-			memset(ptr, index, width);
-			ptr += pitch;
-		}
-	}
-
-	void darken_rectangle(uint8_t* data, size_t data_pitch, rect area) {
-		if (area.from.x < 0) area.from.x = 0;
-		if (area.from.y < 0) area.from.y = 0;
-		if (area.to.x > (int)screen_width) area.to.x = screen_width;
-		if (area.to.y > (int)screen_height) area.to.y = screen_height;
-		if (area.from.x >= area.to.x || area.from.y >= area.to.y) return;
-
-		uint8_t* dark_row = &tileset_img.dark_pcx.data[256 * 18];
-		size_t width = (size_t)(area.to.x - area.from.x);
-		uint8_t* ptr = data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
-		for (int y = area.from.y; y < area.to.y; ++y) {
-			for (size_t x = 0; x < width; ++x) {
-				ptr[x] = dark_row[ptr[x]];
-			}
-			ptr += data_pitch;
-		}
-	}
-
-	void line_rectangle(uint8_t* data, size_t data_pitch, rect area, uint8_t index) {
-		if (area.from.x < 0) area.from.x = 0;
-		if (area.from.y < 0) area.from.y = 0;
-		if (area.to.x > (int)screen_width) area.to.x = screen_width;
-		if (area.to.y > (int)screen_height) area.to.y = screen_height;
-		if (area.from.x >= area.to.x || area.from.y >= area.to.y) return;
-		size_t width = area.to.x - area.from.x;
-		size_t height = area.to.y - area.from.y;
-		uint8_t* p = data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
-		memset(p, index, width);
-		memset(p + data_pitch * height, index, width);
-		for (size_t y = 0; y != height; ++y) {
-			p[data_pitch * y] = index;
-			p[data_pitch * y + width - 1] = index;
-		}
-	}
-
-	void line_rectangle_rgba(uint32_t* data, size_t data_pitch, rect area, uint32_t color) {
-		if (area.from.x < 0) area.from.x = 0;
-		if (area.from.y < 0) area.from.y = 0;
-		if (area.to.x > (int)screen_width) area.to.x = screen_width;
-		if (area.to.y > (int)screen_height) area.to.y = screen_height;
-		if (area.from.x >= area.to.x || area.from.y >= area.to.y) return;
-		size_t width = area.to.x - area.from.x;
-		size_t height = area.to.y - area.from.y;
-		uint32_t* p = data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
-		for (size_t x = 0; x != width; ++x) {
-			p[x] = color;
-			p[height * data_pitch + x] = color;
-		}
-		for (size_t y = 0; y != height; ++y) {
-			p[data_pitch * y] = color;
-			p[data_pitch * y + width - 1] = color;
-		}
-	}
-
-	bool unit_visble_on_minimap(unit_t* u) {
-		if (u->owner < 8) {
-			uint8_t mask = local_visibility_mask();
-			if ((u->sprite->visibility_flags & mask) == 0) return false;
-		}
-		if (ut_turret(u)) return false;
-		if (unit_is_trap(u)) return false;
-		if (unit_is(u, UnitTypes::Spell_Dark_Swarm)) return false;
-		if (unit_is(u, UnitTypes::Spell_Disruption_Web)) return false;
-		return true;
-	}
-
-	rect get_minimap_area() {
-		size_t minimap_width = std::max(game_st.map_tile_width, game_st.map_tile_height);
-		size_t minimap_height = std::max(game_st.map_tile_width, game_st.map_tile_height);
-		if (game_st.map_width < game_st.map_height) {
-			minimap_width = minimap_width * minimap_width * game_st.map_tile_width / (minimap_height * game_st.map_tile_height);
-		} else if (game_st.map_height < game_st.map_width) {
-			minimap_height = minimap_height * minimap_height * game_st.map_tile_height / (minimap_width* game_st.map_tile_width);
-		}
-		if (screen_width < minimap_width || screen_height < minimap_height) return {};
-		int map_screen_x = 4;
-		int map_screen_y = screen_height - 4 - minimap_height;
-		rect area;
-		area.from = {map_screen_x, map_screen_y};
-		area.to = area.from + xy{(int)minimap_width, (int)minimap_height};
-		return area;
-	}
-
-	void draw_minimap(uint8_t* data, size_t data_pitch) {
-		auto area = get_minimap_area();
-		size_t minimap_width = area.to.x - area.from.x;
-		size_t minimap_height = area.to.y - area.from.y;
-		if (minimap_width != game_st.map_tile_width) return;
-		if (minimap_height != game_st.map_tile_height) return;
-		fill_rectangle(data, data_pitch, area, 0);
-		line_rectangle(data, data_pitch, {area.from - xy(1, 1), area.to + xy(1, 1)}, 0);
-
-		uint8_t* p = data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
-		bool apply_local_visibility = enforce_local_visibility && has_local_player();
-		uint8_t visibility_mask = local_visibility_mask();
-
-		size_t pitch = data_pitch - game_st.map_tile_width;
-		for (size_t y = 0; y != game_st.map_tile_height; ++y) {
-			for (size_t x = 0; x != game_st.map_tile_width; ++x) {
-				const tile_t& t = st.tiles[y * game_st.map_tile_width + x];
-				if (apply_local_visibility && (t.explored & visibility_mask) == 0) {
-					*p++ = 0;
-					continue;
-				}
-				size_t index;
-				if (~t.flags & tile_t::flag_has_creep) index = st.tiles_mega_tile_index[y * game_st.map_tile_width + x];
-				else index = game_st.cv5.at(1).mega_tile_index[creep_random_tile_indices[y * game_st.map_tile_width + x]];
-				auto* images = &tileset_img.vx4.at(index).images[0];
-				auto* bitmap = &tileset_img.vr4.at(*images / 2).bitmap[0];
-				auto val = bitmap[55 / sizeof(vr4_entry::bitmap_t)];
-				size_t shift = 8 * (55 % sizeof(vr4_entry::bitmap_t));
-				val >>= shift;
-				if (apply_local_visibility && (t.visible & visibility_mask) == 0) {
-					uint8_t* dark_row = &tileset_img.dark_pcx.data[256 * 18];
-					val = dark_row[val];
-				}
-				*p++ = (uint8_t)val;
-			}
-			p += pitch;
-		}
-
-		for (size_t i = 12; i != 0;) {
-			--i;
-			for (unit_t* u : ptr(st.player_units[i])) {
-				if (!unit_visble_on_minimap(u)) continue;
-				int color = img.player_minimap_colors.at(st.players[u->owner].color);
-				size_t w = u->unit_type->placement_size.x / 32u;
-				size_t h = u->unit_type->placement_size.y / 32u;
-				if (unit_is_mineral_field(u) || unit_is(u, UnitTypes::Resource_Vespene_Geyser)) {
-					color = tileset_img.resource_minimap_color;
-				}
-				if (ut_building(u)) {
-					if (w > 4) w = 4;
-					if (h > 4) h = 4;
-				}
-				if (w < 2) w = 2;
-				if (h < 2) h = 2;
-				rect unit_area;
-				unit_area.from = area.from + (u->sprite->position - u->unit_type->placement_size / 2) / 32u;
-				unit_area.to = unit_area.from + xy(w, h);
-				fill_rectangle(data, data_pitch, unit_area, color);
-			}
-		}
-
-		rect view_rect;
-		view_rect.from = area.from + xy(screen_pos.x / 32u, screen_pos.y / 32u);
-		view_rect.to = view_rect.from + xy((view_width + 31) / 32u, (view_height + 31) / 32u);
-		line_rectangle(data, data_pitch, view_rect, 255);
-
-	}
-
-	int replay_frame = 0;
-
-	rect get_replay_slider_area() {
+struct ui_functions : ui_util_functions {
+  image_data img;
+  tileset_image_data tileset_img;
+  native_window::window wnd;
+  bool create_window = true;
+  bool draw_ui_elements = true;
+  bool is_replay_mode = true;
+  bool is_live_game_mode = false;
+  bool enforce_local_visibility = false;
+  bool default_enforce_local_visibility = false;
+  int local_player_id = -1;
+  int enemy_player_id = -1;
+
+  bool exit_on_close = true;
+  bool window_closed = false;
+
+  bool quicksave_pending = false;
+  bool quickload_pending = false;
+
+  // ---------------------------------------------------------------------------
+  // Trigger-driven HUD notifications.
+  // When a trigger fires a display-text, transmission, or objectives action
+  // we store the message here and display it on-screen for a fixed duration.
+  // ---------------------------------------------------------------------------
+  struct hud_message_t {
+    a_string text;
+    // Expiry in simulated frames (set to current_frame + display_frames).
+    int expiry_frame = 0;
+  };
+  // Ring of up to 4 simultaneous HUD lines.
+  static const int k_hud_max_lines = 4;
+  hud_message_t hud_messages[k_hud_max_lines];
+  int hud_next_slot = 0;
+
+  // Next-scenario name set by the Set Next Scenario trigger action.  The
+  // main loop in gfxtest.cpp can inspect this field to initiate a transition.
+  a_string pending_next_scenario;
+
+  void push_hud_message(const a_string &text, int display_frames = 7 * 24) {
+    hud_messages[hud_next_slot % k_hud_max_lines] = {text, st.current_frame +
+                                                               display_frames};
+    ++hud_next_slot;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Trigger callback overrides.
+  // ---------------------------------------------------------------------------
+  virtual void on_trigger_display_text(int /*owner*/,
+                                       const a_string &text) override {
+    if (text.empty())
+      return;
+    push_hud_message(text);
+    ui::log("trigger: display text: %s\n", text.c_str());
+  }
+
+  virtual void on_trigger_transmission(int owner, int string_index) override {
+    // Transmission includes implicit center-view (handled below via location
+    // stored in the action) and text display.  We show the text string here.
+    a_string msg = get_map_string((size_t)string_index);
+    if (!msg.empty()) {
+      push_hud_message(msg);
+      ui::log("trigger: transmission: %s\n", msg.c_str());
+    }
+  }
+
+  virtual void on_trigger_center_view(int owner, int location_id) override {
+    if (location_id <= 0 || (size_t)location_id > st.locations.size())
+      return;
+    const location &loc = st.locations.at((size_t)location_id - 1);
+    xy center = (loc.area.from + loc.area.to) / 2;
+    screen_pos.x = center.x - (int)(view_width / 2);
+    screen_pos.y = center.y - (int)(view_height / 2);
+  }
+
+  virtual void on_trigger_set_objectives(int /*owner*/,
+                                         const a_string &text) override {
+    if (!text.empty()) {
+      ui::log("trigger: mission objectives: %s\n", text.c_str());
+    }
+  }
+
+  virtual void on_trigger_set_next_scenario(int /*owner*/,
+                                            const a_string &scenario) override {
+    pending_next_scenario = scenario;
+    ui::log("trigger: next scenario: %s\n", scenario.c_str());
+  }
+
+  virtual void on_trigger_pause_game() override {
+    if (is_live_game_mode) {
+      is_paused = true;
+      ui::log("trigger: game paused\n");
+    }
+  }
+
+  virtual void on_trigger_unpause_game() override {
+    if (is_live_game_mode) {
+      is_paused = false;
+      ui::log("trigger: game unpaused\n");
+    }
+  }
+
+  virtual void on_victory_state(int owner, int state) override {
+    if (!is_live_game_mode)
+      return;
+    // Auto-pause on any victory/defeat state change for the local player so
+    // the player has a moment to react before continuing or reloading.
+    // Victory states: 0=none, 1-2=defeated/eliminated, 3+=won (matches
+    // player_won: victory_state >= 3, player_defeated: state && !won).
+    static const int k_victory_state_won_threshold = 3;
+    if (owner == local_player_id && state != 0) {
+      is_paused = true;
+      bool won = (state >= k_victory_state_won_threshold);
+      const char *state_name = won ? "victory" : "defeat";
+      ui::log("trigger: local player %s (state %d)\n", state_name, state);
+      a_string msg =
+          won ? a_string("Mission accomplished.") : a_string("Mission failed.");
+      push_hud_message(msg, 10 * 24);
+    }
+  }
+
+  xy screen_pos;
+
+  size_t screen_width;
+  size_t screen_height;
+
+  game_player player;
+  replay_state current_replay_state;
+  action_state current_action_state;
+  std::array<apm_t, 12> apm;
+  ui_functions(game_player player)
+      : ui_util_functions(player.st(), current_action_state,
+                          current_replay_state),
+        player(std::move(player)) {}
+
+  std::function<void(a_vector<uint8_t> &, a_string)> load_data_file;
+
+  sound_types_t sound_types;
+  a_vector<a_string> sound_filenames;
+
+  const sound_type_t *get_sound_type(Sounds id) const {
+    if ((size_t)id >= (size_t)Sounds::None)
+      error("invalid sound id %d", (size_t)id);
+    return &sound_types.vec[(size_t)id];
+  }
+
+  a_vector<bool> has_loaded_sound;
+  a_vector<std::unique_ptr<native_sound::sound>> loaded_sounds;
+  a_vector<std::chrono::high_resolution_clock::time_point> last_played_sound;
+
+  int global_volume = 50;
+
+  struct sound_channel {
+    bool playing = false;
+    const sound_type_t *sound_type = nullptr;
+    int priority = 0;
+    int flags = 0;
+    const unit_type_t *unit_type = nullptr;
+    int volume = 0;
+  };
+  a_vector<sound_channel> sound_channels;
+
+  void set_volume(int volume) {
+    if (volume < 0)
+      volume = 0;
+    else if (volume > 100)
+      volume = 100;
+    global_volume = volume;
+    for (auto &c : sound_channels) {
+      if (c.playing) {
+        native_sound::set_volume(&c - sound_channels.data(),
+                                 (128 - 4) * (c.volume * global_volume / 100) /
+                                     100);
+      }
+    }
+  }
+
+  sound_channel *get_sound_channel(int priority) {
+    sound_channel *r = nullptr;
+    for (auto &c : sound_channels) {
+      if (c.playing) {
+        if (!native_sound::is_playing(&c - sound_channels.data())) {
+          c.playing = false;
+          r = &c;
+        }
+      } else
+        r = &c;
+    }
+    if (r)
+      return r;
+    int best_prio = priority;
+    for (auto &c : sound_channels) {
+      if (c.flags & 0x20)
+        continue;
+      if (c.priority < best_prio) {
+        best_prio = c.priority;
+        r = &c;
+      }
+    }
+    return r;
+  }
+
+  virtual void play_sound(int id, xy position, const unit_t *source_unit,
+                          bool add_race_index) override {
+    if (global_volume == 0)
+      return;
+    if (add_race_index)
+      id += 1;
+    if ((size_t)id >= has_loaded_sound.size())
+      return;
+    if (!has_loaded_sound[id]) {
+      has_loaded_sound[id] = true;
+      a_vector<uint8_t> data;
+      load_data_file(data, "sound/" + sound_filenames[id]);
+      loaded_sounds[id] = native_sound::load_wav(data.data(), data.size());
+    }
+    auto &s = loaded_sounds[id];
+    if (!s)
+      return;
+
+    auto now = clock.now();
+    if (now - last_played_sound[id] <= std::chrono::milliseconds(80))
+      return;
+    last_played_sound[id] = now;
+
+    const sound_type_t *sound_type = get_sound_type((Sounds)id);
+
+    int volume = sound_type->min_volume;
+
+    if (position != xy()) {
+      int distance = 0;
+      if (position.x < screen_pos.x)
+        distance += screen_pos.x - position.x;
+      else if (position.x > screen_pos.x + (int)screen_width)
+        distance += position.x - (screen_pos.x + (int)screen_width);
+      if (position.y < screen_pos.y)
+        distance += screen_pos.y - position.y;
+      else if (position.y > screen_pos.y + (int)screen_height)
+        distance += position.y - (screen_pos.y + (int)screen_height);
+
+      int distance_volume = 99 - 99 * distance / 512;
+
+      if (distance_volume > volume)
+        volume = distance_volume;
+    }
+
+    if (volume > 10) {
+      int pan = 0;
+      //			if (position != xy()) {
+      //				int pan_x = (position.x - (screen_pos.x
+      //+ (int)screen_width / 2)) / 32; 				bool left = pan_x < 0; 				if (left) pan_x =
+      //-pan_x; 				if (pan_x <= 2) pan = 0; 				else if (pan_x <= 5) pan = 52; 				else if
+      //(pan_x <= 10) pan = 127; 				else if (pan_x <= 20) pan = 191; 				else if (pan_x
+      //<= 40) pan = 230; 				else pan = 255; 				if (left) pan = -pan;
+      //			}
+
+      const unit_type_t *unit_type =
+          source_unit ? source_unit->unit_type : nullptr;
+
+      if (sound_type->flags & 0x10) {
+        for (auto &c : sound_channels) {
+          if (c.playing && c.sound_type == sound_type) {
+            if (native_sound::is_playing(&c - sound_channels.data()))
+              return;
+            c.playing = false;
+          }
+        }
+      } else if (sound_type->flags & 2 && unit_type) {
+        for (auto &c : sound_channels) {
+          if (c.playing && c.unit_type == unit_type && c.flags & 2) {
+            if (native_sound::is_playing(&c - sound_channels.data()))
+              return;
+            c.playing = false;
+          }
+        }
+      }
+
+      auto *c = get_sound_channel(sound_type->priority);
+      if (c) {
+        native_sound::play(c - sound_channels.data(), &*s,
+                           (128 - 4) * (volume * global_volume / 100) / 100,
+                           pan);
+        c->playing = true;
+        c->sound_type = sound_type;
+        c->flags = sound_type->flags;
+        c->priority = sound_type->priority;
+        c->unit_type = unit_type;
+        c->volume = volume;
+      }
+    }
+  }
+
+  a_vector<uint8_t> creep_random_tile_indices = a_vector<uint8_t>(256 * 256);
+  void init() {
+    uint32_t rand_state = (uint32_t)clock.now().time_since_epoch().count();
+    auto rand = [&]() {
+      rand_state = rand_state * 22695477 + 1;
+      return (rand_state >> 16) & 0x7fff;
+    };
+    for (auto &v : creep_random_tile_indices) {
+      if (rand() % 100 < 4)
+        v = 6 + rand() % 7;
+      else
+        v = rand() % 6;
+    }
+
+    a_vector<uint8_t> data;
+    load_data_file(data, "arr/sfxdata.dat");
+    sound_types = data_loading::load_sfxdata_dat(data);
+
+    sound_filenames.resize(sound_types.vec.size());
+    has_loaded_sound.resize(sound_filenames.size());
+    loaded_sounds.resize(has_loaded_sound.size());
+    last_played_sound.resize(loaded_sounds.size());
+
+    string_table_data tbl;
+    load_data_file(tbl.data, "arr/sfxdata.tbl");
+    for (size_t i = 0; i != sound_types.vec.size(); ++i) {
+      size_t index = sound_types.vec[i].filename_index;
+      sound_filenames[i] = tbl[index];
+    }
+    native_sound::frequency = 44100;
+    native_sound::channels = 8;
+    native_sound::init();
+
+    sound_channels.resize(8);
+
+    load_data_file(images_tbl.data, "arr/images.tbl");
+
+    load_all_image_data(load_data_file);
+  }
+
+  virtual void on_action(int owner, int action) override {
+    apm.at(owner).add_action(st.current_frame);
+  }
+
+  size_t view_width;
+  size_t view_height;
+  fp16 view_scale;
+
+  rect_t<xy_t<size_t>> screen_tile_bounds() {
+    size_t from_tile_y = screen_pos.y / 32u;
+    if (from_tile_y >= game_st.map_tile_height)
+      from_tile_y = 0;
+    size_t to_tile_y = (screen_pos.y + view_height + 31) / 32u;
+    if (to_tile_y > game_st.map_tile_height)
+      to_tile_y = game_st.map_tile_height;
+    size_t from_tile_x = screen_pos.x / 32u;
+    if (from_tile_x >= game_st.map_tile_width)
+      from_tile_x = 0;
+    size_t to_tile_x = (screen_pos.x + view_width + 31) / 32u;
+    if (to_tile_x > game_st.map_tile_width)
+      to_tile_x = game_st.map_tile_width;
+
+    return {{from_tile_x, from_tile_y}, {to_tile_x, to_tile_y}};
+  }
+
+  void draw_tiles(uint8_t *data, size_t data_pitch) {
+
+    auto screen_tile = screen_tile_bounds();
+    uint8_t visibility_mask = local_visibility_mask();
+
+    size_t tile_index =
+        screen_tile.from.y * game_st.map_tile_width + screen_tile.from.x;
+    auto *megatile_index = &st.tiles_mega_tile_index[tile_index];
+    auto *tile = &st.tiles[tile_index];
+    size_t width = screen_tile.to.x - screen_tile.from.x;
+
+    xy dirs[9] = {{1, 1},  {0, 1},  {-1, 1},  {1, 0}, {-1, 0},
+                  {1, -1}, {0, -1}, {-1, -1}, {0, 0}};
+
+    for (size_t tile_y = screen_tile.from.y; tile_y != screen_tile.to.y;
+         ++tile_y) {
+      for (size_t tile_x = screen_tile.from.x; tile_x != screen_tile.to.x;
+           ++tile_x) {
+
+        int screen_x = tile_x * 32 - screen_pos.x;
+        int screen_y = tile_y * 32 - screen_pos.y;
+
+        size_t offset_x = 0;
+        size_t offset_y = 0;
+        if (screen_x < 0) {
+          offset_x = -screen_x;
+        }
+        if (screen_y < 0) {
+          offset_y = -screen_y;
+        }
+
+        uint8_t *dst = data + screen_y * data_pitch + screen_x;
+
+        size_t width = 32;
+        size_t height = 32;
+
+        width = std::min(width, screen_width - screen_x);
+        height = std::min(height, screen_height - screen_y);
+
+        size_t index = *megatile_index;
+        if (tile->flags & tile_t::flag_has_creep) {
+          index =
+              game_st.cv5.at(1).mega_tile_index
+                  [creep_random_tile_indices[tile_x +
+                                             tile_y * game_st.map_tile_width]];
+        }
+        draw_tile(tileset_img, index, dst, data_pitch, offset_x, offset_y,
+                  width, height);
+
+        if (~tile->flags & tile_t::flag_has_creep) {
+          size_t creep_index = 0;
+          for (size_t i = 0; i != 9; ++i) {
+            int add_x = dirs[i].x;
+            int add_y = dirs[i].y;
+            if (tile_x + add_x >= game_st.map_tile_width)
+              continue;
+            if (tile_y + add_y >= game_st.map_tile_height)
+              continue;
+            if (st.tiles[tile_x + add_x +
+                         (tile_y + add_y) * game_st.map_tile_width]
+                    .flags &
+                tile_t::flag_has_creep)
+              creep_index |= 1 << i;
+          }
+          size_t creep_frame = img.creep_edge_frame_index[creep_index];
+
+          if (creep_frame) {
+
+            auto &frame = tileset_img.creep_grp.frames.at(creep_frame - 1);
+
+            screen_x += frame.offset.x;
+            screen_y += frame.offset.y;
+
+            size_t width = frame.size.x;
+            size_t height = frame.size.y;
+
+            if (screen_x < (int)screen_width && screen_y < (int)screen_height) {
+              if (screen_x + (int)width > 0 && screen_y + (int)height > 0) {
+
+                size_t offset_x = 0;
+                size_t offset_y = 0;
+                if (screen_x < 0) {
+                  offset_x = -screen_x;
+                }
+                if (screen_y < 0) {
+                  offset_y = -screen_y;
+                }
+
+                uint8_t *dst = data + screen_y * data_pitch + screen_x;
+
+                width = std::min(width, screen_width - screen_x);
+                height = std::min(height, screen_height - screen_y);
+
+                draw_frame(frame, false, dst, data_pitch, offset_x, offset_y,
+                           width, height);
+              }
+            }
+          }
+        }
+
+        if (enforce_local_visibility && has_local_player()) {
+          rect tile_area{{screen_x, screen_y}, {screen_x + 32, screen_y + 32}};
+          if ((tile->explored & visibility_mask) == 0) {
+            fill_rectangle(data, data_pitch, tile_area, 0);
+          } else if ((tile->visible & visibility_mask) == 0) {
+            darken_rectangle(data, data_pitch, tile_area);
+          }
+        }
+
+        ++megatile_index;
+        ++tile;
+      }
+      megatile_index -= width;
+      megatile_index += game_st.map_tile_width;
+      tile -= width;
+      tile += game_st.map_tile_width;
+    }
+  }
+
+  a_vector<uint8_t> temporary_warp_texture_buffer;
+
+  void draw_image(const image_t *image, uint8_t *data, size_t data_pitch,
+                  size_t color_index) {
+
+    if (is_new_image(image)) {
+      image_draw_queue.push_back(image);
+      return;
+    }
+
+    xy map_pos = get_image_map_position(image);
+
+    int screen_x = map_pos.x - screen_pos.x;
+    int screen_y = map_pos.y - screen_pos.y;
+
+    if (screen_x >= (int)screen_width || screen_y >= (int)screen_height)
+      return;
+
+    auto &frame = image->grp->frames.at(image->frame_index);
+
+    size_t width = frame.size.x;
+    size_t height = frame.size.y;
+
+    if (screen_x + (int)width <= 0 || screen_y + (int)height <= 0)
+      return;
+
+    size_t offset_x = 0;
+    size_t offset_y = 0;
+    if (screen_x < 0) {
+      offset_x = -screen_x;
+    }
+    if (screen_y < 0) {
+      offset_y = -screen_y;
+    }
+
+    uint8_t *dst = data + screen_y * data_pitch + screen_x;
+
+    width = std::min(width, screen_width - screen_x);
+    height = std::min(height, screen_height - screen_y);
+
+    auto draw_alpha = [&](size_t index, auto remap_f) {
+      auto &data = tileset_img.light_pcx.at(index).data;
+      uint8_t *ptr = data.data();
+      size_t size = data.size() / 256;
+      auto glow = [ptr, size, remap_f](uint8_t new_value, uint8_t old_value) {
+        new_value = remap_f(new_value, old_value);
+        --new_value;
+        if (new_value >= size)
+          return (uint8_t)0;
+        return ptr[256u * new_value + old_value];
+      };
+      draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst,
+                 data_pitch, offset_x, offset_y, width, height, glow);
+    };
+
+    if (image->modifier == 0 || image->modifier == 1) {
+      uint8_t *ptr = img.player_unit_colors.at(color_index).data();
+      auto player_color = [ptr](uint8_t new_value, uint8_t) {
+        if (new_value >= 8 && new_value < 16)
+          return ptr[new_value - 8];
+        return new_value;
+      };
+      draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst,
+                 data_pitch, offset_x, offset_y, width, height, player_color);
+    } else if (image->modifier == 2 || image->modifier == 4) {
+      uint8_t *color_ptr = img.player_unit_colors.at(color_index).data();
+      draw_alpha(4, [color_ptr](uint8_t new_value, uint8_t) {
+        if (new_value >= 8 && new_value < 16)
+          return color_ptr[new_value - 8];
+        return new_value;
+      });
+      uint8_t *selector = tileset_img.cloak_fade_selector.data();
+      int value = image->modifier_data1;
+      auto cloaking = [color_ptr, selector, value](uint8_t new_value,
+                                                   uint8_t old_value) {
+        if (selector[new_value] <= value)
+          return old_value;
+        if (new_value >= 8 && new_value < 16)
+          return color_ptr[new_value - 8];
+        return new_value;
+      };
+      draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst,
+                 data_pitch, offset_x, offset_y, width, height, cloaking);
+    } else if (image->modifier == 3) {
+      uint8_t *color_ptr = img.player_unit_colors.at(color_index).data();
+      draw_alpha(4, [color_ptr](uint8_t new_value, uint8_t) {
+        if (new_value >= 8 && new_value < 16)
+          return color_ptr[new_value - 8];
+        return new_value;
+      });
+    } else if (image->modifier == 8) {
+      size_t data_size = data_pitch * screen_height;
+      auto distortion = [data_size, dst](uint8_t new_value,
+                                         uint8_t &old_value) {
+        size_t offset = &old_value - dst;
+        if (offset >= new_value && data_size - offset > new_value)
+          return *(&old_value + new_value);
+        return old_value;
+      };
+      draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst,
+                 data_pitch, offset_x, offset_y, width, height, distortion);
+    } else if (image->modifier == 10) {
+      uint8_t *ptr = &tileset_img.dark_pcx.data[256 * 18];
+      auto shadow = [ptr](uint8_t, uint8_t old_value) {
+        return ptr[old_value];
+      };
+      draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst,
+                 data_pitch, offset_x, offset_y, width, height, shadow);
+    } else if (image->modifier == 9) {
+      draw_alpha(image->image_type->color_shift - 1, no_remap());
+    } else if (image->modifier == 12) {
+      if (temporary_warp_texture_buffer.size() < frame.size.x * frame.size.y)
+        temporary_warp_texture_buffer.resize(frame.size.x * frame.size.y);
+      auto &texture_frame =
+          global_st.image_grp[(size_t)ImageTypes::IMAGEID_Warp_Texture]
+              ->frames.at(image->modifier_data1);
+      draw_frame(texture_frame, false, temporary_warp_texture_buffer.data(),
+                 frame.size.x, 0, 0, frame.size.x, frame.size.y);
+      draw_frame_textured(frame, temporary_warp_texture_buffer.data(),
+                          i_flag(image, image_t::flag_horizontally_flipped),
+                          dst, data_pitch, offset_x, offset_y, width, height);
+    } else if (image->modifier == 17) {
+      auto &data = tileset_img.light_pcx.at(0).data;
+      uint8_t *ptr = &data.at(256u * (image->modifier_data1 - 1));
+      size_t size = data.data() + data.size() - ptr;
+      auto glow = [ptr, size](uint8_t, uint8_t old_value) {
+        if (old_value >= size)
+          return (uint8_t)0;
+        return ptr[old_value];
+      };
+      draw_frame(frame, i_flag(image, image_t::flag_horizontally_flipped), dst,
+                 data_pitch, offset_x, offset_y, width, height, glow);
+    } else
+      error("don't know how to draw image modifier %d", image->modifier);
+  }
+
+  a_vector<const unit_t *> current_selection_sprites_set =
+      a_vector<const unit_t *>(2500);
+  a_vector<const sprite_t *> current_selection_sprites;
+
+  void draw_selection_circle(const sprite_t *sprite, const unit_t *u,
+                             uint8_t *data, size_t data_pitch) {
+    auto *image_type = get_image_type(
+        (ImageTypes)((int)ImageTypes::IMAGEID_Selection_Circle_22pixels +
+                     sprite->sprite_type->selection_circle));
+
+    xy map_pos =
+        sprite->position + xy(0, sprite->sprite_type->selection_circle_vpos);
+
+    auto *grp = global_st.image_grp[(size_t)image_type->id];
+    auto &frame = grp->frames.at(0);
+
+    map_pos.x += int(frame.offset.x - grp->width / 2);
+    map_pos.y += int(frame.offset.y - grp->height / 2);
+
+    int screen_x = map_pos.x - screen_pos.x;
+    int screen_y = map_pos.y - screen_pos.y;
+
+    if (screen_x >= (int)screen_width || screen_y >= (int)screen_height)
+      return;
+
+    size_t width = frame.size.x;
+    size_t height = frame.size.y;
+
+    if (screen_x + (int)width <= 0 || screen_y + (int)height <= 0)
+      return;
+
+    size_t offset_x = 0;
+    size_t offset_y = 0;
+    if (screen_x < 0) {
+      offset_x = -screen_x;
+    }
+    if (screen_y < 0) {
+      offset_y = -screen_y;
+    }
+
+    uint8_t *dst = data + screen_y * data_pitch + screen_x;
+
+    width = std::min(width, screen_width - screen_x);
+    height = std::min(height, screen_height - screen_y);
+
+    size_t color_index = st.players[sprite->owner].color;
+    uint8_t color = img.player_unit_colors.at(color_index)[0];
+    if (unit_is_mineral_field(u) ||
+        unit_is(u, UnitTypes::Resource_Vespene_Geyser)) {
+      color = tileset_img.resource_minimap_color;
+    }
+    auto player_color = [color](uint8_t new_value, uint8_t) {
+      if (new_value >= 0 && new_value < 8)
+        return color;
+      return new_value;
+    };
+    draw_frame(frame, false, dst, data_pitch, offset_x, offset_y, width, height,
+               player_color);
+  }
+
+  void draw_health_bars(const sprite_t *sprite, const unit_t *u, uint8_t *data,
+                        size_t data_pitch) {
+
+    auto *selection_circle_image_type = get_image_type(
+        (ImageTypes)((int)ImageTypes::IMAGEID_Selection_Circle_22pixels +
+                     sprite->sprite_type->selection_circle));
+
+    auto *selection_circle_grp =
+        global_st.image_grp[(size_t)selection_circle_image_type->id];
+    auto &selection_circle_frame = selection_circle_grp->frames.at(0);
+
+    int offsety = sprite->sprite_type->selection_circle_vpos +
+                  selection_circle_frame.size.y / 2 + 8;
+
+    bool has_shield = u->unit_type->has_shield;
+    bool has_energy = ut_has_energy(u) || u_hallucination(u) ||
+                      unit_is(u, UnitTypes::Zerg_Broodling);
+
+    int width = sprite->sprite_type->health_bar_size;
+    width -= (width - 1) % 3;
+    if (width < 19)
+      width = 19;
+    int orig_width = width;
+    int height = 5;
+    if (has_shield)
+      height += 2;
+    if (has_energy)
+      height += 6;
+
+    xy map_pos = sprite->position + xy(0, offsety);
+
+    map_pos.x += int(0 - width / 2);
+    map_pos.y += int(0 - height / 2);
+
+    int screen_x = map_pos.x - screen_pos.x;
+    int screen_y = map_pos.y - screen_pos.y;
+
+    if (screen_x >= (int)screen_width || screen_y >= (int)screen_height)
+      return;
+    if (screen_x + width <= 0 || screen_y + height <= 0)
+      return;
+
+    auto filled_width = [&](int percent) {
+      int r = percent * width / 100;
+      if (r < 3)
+        r = 3;
+      else if (r % 3) {
+        if (r % 3 > 1)
+          r += 3 - (r % 3);
+        else
+          r -= r % 3;
+      }
+      return r;
+    };
+
+    int hp_percent = unit_hp_percent(u);
+    int dw = filled_width(hp_percent);
+
+    int shield_dw = 0;
+    if (has_shield) {
+      int shield_percent = (int)u->shield_points.integer_part() * 100 /
+                           std::max(u->unit_type->shield_points, 1);
+      shield_dw = filled_width(shield_percent);
+    }
+
+    int energy_dw = 0;
+    if (has_energy) {
+      int energy_percent;
+      if (ut_has_energy(u))
+        energy_percent = (int)u->energy.integer_part() * 100 /
+                         std::max((int)unit_max_energy(u).integer_part(), 1);
+      else
+        energy_percent =
+            (int)u->remove_timer / std::max((int)default_remove_timer(u), 1);
+      energy_dw = filled_width(energy_percent);
+    }
+
+    const int no_shield_colors_66[] = {18, 0, 1, 2, 18};
+    const int no_shield_colors_33[] = {18, 3, 4, 5, 18};
+    const int no_shield_colors_0[] = {18, 6, 7, 8, 18};
+    const int no_shield_colors_bg[] = {18, 15, 16, 17, 18};
+
+    const int with_shield_colors_66[] = {18, 0, 0, 1, 1, 2, 18};
+    const int with_shield_colors_33[] = {18, 3, 3, 4, 4, 5, 18};
+    const int with_shield_colors_0[] = {18, 6, 6, 7, 7, 8, 18};
+    const int with_shield_colors_bg[] = {18, 15, 15, 16, 16, 17, 18};
+
+    const int *colors_66 =
+        has_shield ? with_shield_colors_66 : no_shield_colors_66;
+    const int *colors_33 =
+        has_shield ? with_shield_colors_33 : no_shield_colors_33;
+    const int *colors_0 =
+        has_shield ? with_shield_colors_0 : no_shield_colors_0;
+    const int *colors_bg =
+        has_shield ? with_shield_colors_bg : no_shield_colors_bg;
+
+    int offset_x = 0;
+    int offset_y = 0;
+    if (screen_x < 0) {
+      offset_x = -screen_x;
+      dw = std::max(dw + screen_x, 0);
+      shield_dw = std::max(shield_dw + screen_x, 0);
+      energy_dw = std::max(energy_dw + screen_x, 0);
+      width = std::max(width + screen_x, 0);
+      screen_x = 0;
+    }
+    if (screen_y < 0) {
+      offset_y = -screen_y;
+      height += screen_y;
+      screen_y = 0;
+    }
+
+    uint8_t *dst = data + screen_y * data_pitch + screen_x;
+
+    width = std::min(width, (int)screen_width - screen_x);
+    height = std::min(height, (int)screen_height - screen_y);
+
+    if (dw > width)
+      dw = width;
+    if (shield_dw > width)
+      shield_dw = width;
+    if (energy_dw > width)
+      energy_dw = width;
+
+    int hp_height =
+        std::min(std::max((has_shield ? 7 : 5) - offset_y, 0), height);
+
+    for (int i = offset_y; i < offset_y + hp_height; ++i) {
+      int ci = hp_percent >= 66   ? colors_66[i]
+               : hp_percent >= 33 ? colors_33[i]
+                                  : colors_0[i];
+      int c = img.hp_bar_colors.at(ci);
+
+      if (dw > 0)
+        memset(dst, c, dw);
+      if (width - dw > 0) {
+        c = img.hp_bar_colors.at(colors_bg[i]);
+        memset(dst + dw, c, width - dw);
+      }
+      dst += data_pitch;
+    }
+
+    if (has_shield) {
+      const int shield_colors[] = {18, 10, 11, 18};
+      const int shield_colors_bg[] = {18, 16, 17, 18};
+
+      dst = data + screen_y * data_pitch + screen_x;
+
+      for (int i = offset_y; i < std::min(4, height); ++i) {
+        int c = img.hp_bar_colors.at(shield_colors[i]);
+
+        if (shield_dw > 0)
+          memset(dst, c, shield_dw);
+        if (width - shield_dw > 0) {
+          c = img.hp_bar_colors.at(shield_colors_bg[i]);
+          memset(dst + shield_dw, c, width - shield_dw);
+        }
+        dst += data_pitch;
+      }
+    }
+
+    int energy_offset = std::max((has_shield ? 8 : 6) - offset_y, 0);
+    int energy_begin = std::max(offset_y - (has_shield ? 8 : 6), 0);
+    int energy_end = std::min(5, offset_y + height - (has_shield ? 8 : 6));
+
+    if (has_energy) {
+      dst = data + (screen_y + energy_offset) * data_pitch + screen_x;
+      const int energy_colors[] = {18, 12, 13, 14, 18};
+      for (int i = energy_begin; i < energy_end; ++i) {
+        int c = img.hp_bar_colors.at(energy_colors[i]);
+
+        if (energy_dw > 0)
+          memset(dst, c, energy_dw);
+        if (width - energy_dw > 0) {
+          c = img.hp_bar_colors.at(no_shield_colors_bg[i]);
+          memset(dst + energy_dw, c, width - energy_dw);
+        }
+        dst += data_pitch;
+      }
+    }
+
+    dst = data + screen_y * data_pitch + screen_x;
+    if (offset_x % 3)
+      dst += 3 - offset_x % 3;
+
+    int c = img.hp_bar_colors.at(18);
+    for (int x = 0; x < orig_width; x += 3) {
+      if (x < offset_x || x >= offset_x + width)
+        continue;
+      for (int y = 0; y != hp_height; ++y) {
+        *dst = c;
+        dst += data_pitch;
+      }
+      if (has_energy && energy_end > energy_begin) {
+        if (energy_offset)
+          dst += data_pitch;
+        for (int i = energy_begin; i != energy_end; ++i) {
+          *dst = c;
+          dst += data_pitch;
+        }
+        if (energy_offset)
+          dst -= data_pitch;
+        dst -= (energy_end - energy_begin) * data_pitch;
+      }
+      dst -= hp_height * data_pitch;
+      dst += 3;
+    }
+  }
+
+  void draw_sprite(const sprite_t *sprite, uint8_t *data, size_t data_pitch) {
+    const unit_t *draw_selection_u =
+        current_selection_sprites_set.at(sprite->index);
+    const unit_t *draw_health_bars_u = draw_selection_u;
+    for (auto *image : ptr(reverse(sprite->images))) {
+      if (i_flag(image, image_t::flag_hidden))
+        continue;
+      if (draw_selection_u && image->modifier != 10) {
+        draw_selection_circle(sprite, draw_selection_u, data, data_pitch);
+        draw_selection_u = nullptr;
+      }
+      draw_image(image, data, data_pitch, st.players[sprite->owner].color);
+    }
+    if (draw_health_bars_u && !u_invincible(draw_health_bars_u)) {
+      draw_health_bars(sprite, draw_health_bars_u, data, data_pitch);
+    }
+  }
+
+  a_vector<std::pair<uint32_t, const sprite_t *>> sorted_sprites;
+
+  void draw_sprites(uint8_t *data, size_t data_pitch) {
+
+    image_draw_queue.clear();
+
+    sorted_sprites.clear();
+
+    auto screen_tile = screen_tile_bounds();
+
+    size_t from_y = screen_tile.from.y;
+    if (from_y < 4)
+      from_y = 0;
+    else
+      from_y -= 4;
+    size_t to_y = screen_tile.to.y;
+    if (to_y >= game_st.map_tile_height - 4)
+      to_y = game_st.map_tile_height - 1;
+    else
+      to_y += 4;
+    for (size_t y = from_y; y != to_y; ++y) {
+      for (auto *sprite : ptr(st.sprites_on_tile_line.at(y))) {
+        if (s_hidden(sprite))
+          continue;
+        if (enforce_local_visibility && has_local_player()) {
+          if ((sprite->visibility_flags & (1 << local_player_id)) == 0)
+            continue;
+        }
+        sorted_sprites.emplace_back(sprite_depth_order(sprite), sprite);
+      }
+    }
+
+    std::sort(sorted_sprites.begin(), sorted_sprites.end());
+
+    for (auto uid : current_selection) {
+      auto *u = get_unit(uid);
+      if (!u)
+        continue;
+      current_selection_sprites_set.at(u->sprite->index) = u;
+      current_selection_sprites.push_back(u->sprite);
+    }
+
+    for (auto &v : sorted_sprites) {
+      draw_sprite(v.second, data, data_pitch);
+    }
+
+    for (auto *s : current_selection_sprites) {
+      current_selection_sprites_set.at(s->index) = nullptr;
+    }
+    current_selection_sprites.clear();
+  }
+
+  void fill_rectangle(uint8_t *data, size_t data_pitch, rect area,
+                      uint8_t index) {
+    if (area.from.x < 0)
+      area.from.x = 0;
+    if (area.from.y < 0)
+      area.from.y = 0;
+    if (area.to.x > (int)screen_width)
+      area.to.x = screen_width;
+    if (area.to.y > (int)screen_height)
+      area.to.y = screen_height;
+    if (area.from.x >= area.to.x || area.from.y >= area.to.y)
+      return;
+    size_t width = area.to.x - area.from.x;
+    size_t pitch = data_pitch;
+    size_t from_y = area.from.y;
+    size_t to_y = area.to.y;
+    uint8_t *ptr = data + data_pitch * from_y + area.from.x;
+    for (size_t i = from_y; i != to_y; ++i) {
+      memset(ptr, index, width);
+      ptr += pitch;
+    }
+  }
+
+  void darken_rectangle(uint8_t *data, size_t data_pitch, rect area) {
+    if (area.from.x < 0)
+      area.from.x = 0;
+    if (area.from.y < 0)
+      area.from.y = 0;
+    if (area.to.x > (int)screen_width)
+      area.to.x = screen_width;
+    if (area.to.y > (int)screen_height)
+      area.to.y = screen_height;
+    if (area.from.x >= area.to.x || area.from.y >= area.to.y)
+      return;
+
+    uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * 18];
+    size_t width = (size_t)(area.to.x - area.from.x);
+    uint8_t *ptr =
+        data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
+    for (int y = area.from.y; y < area.to.y; ++y) {
+      for (size_t x = 0; x < width; ++x) {
+        ptr[x] = dark_row[ptr[x]];
+      }
+      ptr += data_pitch;
+    }
+  }
+
+  void line_rectangle(uint8_t *data, size_t data_pitch, rect area,
+                      uint8_t index) {
+    if (area.from.x < 0)
+      area.from.x = 0;
+    if (area.from.y < 0)
+      area.from.y = 0;
+    if (area.to.x > (int)screen_width)
+      area.to.x = screen_width;
+    if (area.to.y > (int)screen_height)
+      area.to.y = screen_height;
+    if (area.from.x >= area.to.x || area.from.y >= area.to.y)
+      return;
+    size_t width = area.to.x - area.from.x;
+    size_t height = area.to.y - area.from.y;
+    uint8_t *p = data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
+    memset(p, index, width);
+    memset(p + data_pitch * height, index, width);
+    for (size_t y = 0; y != height; ++y) {
+      p[data_pitch * y] = index;
+      p[data_pitch * y + width - 1] = index;
+    }
+  }
+
+  void line_rectangle_rgba(uint32_t *data, size_t data_pitch, rect area,
+                           uint32_t color) {
+    if (area.from.x < 0)
+      area.from.x = 0;
+    if (area.from.y < 0)
+      area.from.y = 0;
+    if (area.to.x > (int)screen_width)
+      area.to.x = screen_width;
+    if (area.to.y > (int)screen_height)
+      area.to.y = screen_height;
+    if (area.from.x >= area.to.x || area.from.y >= area.to.y)
+      return;
+    size_t width = area.to.x - area.from.x;
+    size_t height = area.to.y - area.from.y;
+    uint32_t *p = data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
+    for (size_t x = 0; x != width; ++x) {
+      p[x] = color;
+      p[height * data_pitch + x] = color;
+    }
+    for (size_t y = 0; y != height; ++y) {
+      p[data_pitch * y] = color;
+      p[data_pitch * y + width - 1] = color;
+    }
+  }
+
+  bool unit_visble_on_minimap(unit_t *u) {
+    if (u->owner < 8) {
+      uint8_t mask = local_visibility_mask();
+      if ((u->sprite->visibility_flags & mask) == 0)
+        return false;
+    }
+    if (ut_turret(u))
+      return false;
+    if (unit_is_trap(u))
+      return false;
+    if (unit_is(u, UnitTypes::Spell_Dark_Swarm))
+      return false;
+    if (unit_is(u, UnitTypes::Spell_Disruption_Web))
+      return false;
+    return true;
+  }
+
+  rect get_minimap_area() {
+    size_t minimap_width =
+        std::max(game_st.map_tile_width, game_st.map_tile_height);
+    size_t minimap_height =
+        std::max(game_st.map_tile_width, game_st.map_tile_height);
+    if (game_st.map_width < game_st.map_height) {
+      minimap_width = minimap_width * minimap_width * game_st.map_tile_width /
+                      (minimap_height * game_st.map_tile_height);
+    } else if (game_st.map_height < game_st.map_width) {
+      minimap_height = minimap_height * minimap_height *
+                       game_st.map_tile_height /
+                       (minimap_width * game_st.map_tile_width);
+    }
+    if (screen_width < minimap_width || screen_height < minimap_height)
+      return {};
+    int map_screen_x = 4;
+    int map_screen_y = screen_height - 4 - minimap_height;
+    rect area;
+    area.from = {map_screen_x, map_screen_y};
+    area.to = area.from + xy{(int)minimap_width, (int)minimap_height};
+    return area;
+  }
+
+  void draw_minimap(uint8_t *data, size_t data_pitch) {
+    auto area = get_minimap_area();
+    size_t minimap_width = area.to.x - area.from.x;
+    size_t minimap_height = area.to.y - area.from.y;
+    if (minimap_width != game_st.map_tile_width)
+      return;
+    if (minimap_height != game_st.map_tile_height)
+      return;
+    fill_rectangle(data, data_pitch, area, 0);
+    line_rectangle(data, data_pitch, {area.from - xy(1, 1), area.to + xy(1, 1)},
+                   0);
+
+    uint8_t *p = data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
+    bool apply_local_visibility =
+        enforce_local_visibility && has_local_player();
+    uint8_t visibility_mask = local_visibility_mask();
+
+    size_t pitch = data_pitch - game_st.map_tile_width;
+    for (size_t y = 0; y != game_st.map_tile_height; ++y) {
+      for (size_t x = 0; x != game_st.map_tile_width; ++x) {
+        const tile_t &t = st.tiles[y * game_st.map_tile_width + x];
+        if (apply_local_visibility && (t.explored & visibility_mask) == 0) {
+          *p++ = 0;
+          continue;
+        }
+        size_t index;
+        if (~t.flags & tile_t::flag_has_creep)
+          index = st.tiles_mega_tile_index[y * game_st.map_tile_width + x];
+        else
+          index =
+              game_st.cv5.at(1).mega_tile_index
+                  [creep_random_tile_indices[y * game_st.map_tile_width + x]];
+        auto *images = &tileset_img.vx4.at(index).images[0];
+        auto *bitmap = &tileset_img.vr4.at(*images / 2).bitmap[0];
+        auto val = bitmap[55 / sizeof(vr4_entry::bitmap_t)];
+        size_t shift = 8 * (55 % sizeof(vr4_entry::bitmap_t));
+        val >>= shift;
+        if (apply_local_visibility && (t.visible & visibility_mask) == 0) {
+          uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * 18];
+          val = dark_row[val];
+        }
+        *p++ = (uint8_t)val;
+      }
+      p += pitch;
+    }
+
+    for (size_t i = 12; i != 0;) {
+      --i;
+      for (unit_t *u : ptr(st.player_units[i])) {
+        if (!unit_visble_on_minimap(u))
+          continue;
+        int color = img.player_minimap_colors.at(st.players[u->owner].color);
+        size_t w = u->unit_type->placement_size.x / 32u;
+        size_t h = u->unit_type->placement_size.y / 32u;
+        if (unit_is_mineral_field(u) ||
+            unit_is(u, UnitTypes::Resource_Vespene_Geyser)) {
+          color = tileset_img.resource_minimap_color;
+        }
+        if (ut_building(u)) {
+          if (w > 4)
+            w = 4;
+          if (h > 4)
+            h = 4;
+        }
+        if (w < 2)
+          w = 2;
+        if (h < 2)
+          h = 2;
+        rect unit_area;
+        unit_area.from =
+            area.from +
+            (u->sprite->position - u->unit_type->placement_size / 2) / 32u;
+        unit_area.to = unit_area.from + xy(w, h);
+        fill_rectangle(data, data_pitch, unit_area, color);
+      }
+    }
+
+    rect view_rect;
+    view_rect.from = area.from + xy(screen_pos.x / 32u, screen_pos.y / 32u);
+    view_rect.to =
+        view_rect.from + xy((view_width + 31) / 32u, (view_height + 31) / 32u);
+    line_rectangle(data, data_pitch, view_rect, 255);
+  }
+
+  int replay_frame = 0;
+
+  rect get_replay_slider_area() {
 #ifdef EMSCRIPTEN
-		return {};
+    return {};
 #endif
-		if (!is_replay_mode) return {};
-		rect r;
-		int width = 192;
-		int height = 32;
-		r.from.x = (int)screen_width - 8 - width;
-		r.from.y = (int)screen_height - 8 - 128 - height;
-		r.to.x = r.from.x + width;
-		r.to.y = r.from.y + height;
-		if (r.from.x < 0 || r.from.y < 0) return {};
-		return r;
-	}
-
-	rect get_live_ui_area() const {
-		if (!is_live_game_mode || !has_local_player()) return {};
-		int width = 168;
-		int height = 146;
-		rect r;
-		r.from.x = (int)screen_width - 8 - width;
-		r.from.y = (int)screen_height - 8 - height;
-		r.to = r.from + xy(width, height);
-		if (r.from.x < 0 || r.from.y < 0) return {};
-		return r;
-	}
-
-	rect get_live_command_slot_area(size_t slot_n) const {
-		if (slot_n >= live_command_slots_n) return {};
-		auto area = get_live_ui_area();
-		if (area == rect{}) return {};
-		int col = (int)(slot_n % 4);
-		int row = (int)(slot_n / 4);
-		int slot_w = 34;
-		int slot_h = 34;
-		int gap = 2;
-		int x = area.from.x + 8 + col * (slot_w + gap);
-		int y = area.from.y + 30 + row * (slot_h + gap);
-		return rect{xy(x, y), xy(x + slot_w, y + slot_h)};
-	}
-
-	size_t live_command_slot_at(int mouse_x, int mouse_y) const {
-		for (size_t i = 0; i != live_command_slots_n; ++i) {
-			auto r = get_live_command_slot_area(i);
-			if (r == rect{}) continue;
-			if (point_in_rect(r, mouse_x, mouse_y)) return i;
-		}
-		return (size_t)-1;
-	}
-
-	bool live_ui_handles_left_click(int mouse_x, int mouse_y) {
-		auto area = get_live_ui_area();
-		if (area == rect{}) return false;
-		if (!point_in_rect(area, mouse_x, mouse_y)) return false;
-
-		size_t slot_n = live_command_slot_at(mouse_x, mouse_y);
-		if (slot_n != (size_t)-1) {
-			if (slot_n < live_commands.size()) {
-				execute_live_command(slot_n);
-			}
-		}
-		return true;
-	}
-
-	void draw_digit_7seg(uint8_t* data, size_t data_pitch, xy p, int digit, uint8_t color) {
-		static const uint8_t masks[10] = {
-			0b0111111, // 0
-			0b0000110, // 1
-			0b1011011, // 2
-			0b1001111, // 3
-			0b1100110, // 4
-			0b1101101, // 5
-			0b1111101, // 6
-			0b0000111, // 7
-			0b1111111, // 8
-			0b1101111  // 9
-		};
-		if (digit < 0 || digit > 9) return;
-		uint8_t mask = masks[digit];
-		auto seg = [&](int bit, rect r) {
-			if (mask & (1u << bit)) fill_rectangle(data, data_pitch, r, color);
-		};
-		// a,b,c,d,e,f,g
-		seg(0, rect{p + xy(1, 0), p + xy(6, 1)});
-		seg(1, rect{p + xy(6, 1), p + xy(7, 5)});
-		seg(2, rect{p + xy(6, 6), p + xy(7, 10)});
-		seg(3, rect{p + xy(1, 10), p + xy(6, 11)});
-		seg(4, rect{p + xy(0, 6), p + xy(1, 10)});
-		seg(5, rect{p + xy(0, 1), p + xy(1, 5)});
-		seg(6, rect{p + xy(1, 5), p + xy(6, 6)});
-	}
-
-	void draw_small_number(uint8_t* data, size_t data_pitch, xy p, int value, int min_digits, uint8_t color) {
-		if (value < 0) value = 0;
-		int digits[8] = {};
-		int n_digits = 0;
-		do {
-			digits[n_digits++] = value % 10;
-			value /= 10;
-		} while (value && n_digits < 8);
-		while (n_digits < min_digits && n_digits < 8) digits[n_digits++] = 0;
-		for (int i = n_digits - 1; i >= 0; --i) {
-			draw_digit_7seg(data, data_pitch, p, digits[i], color);
-			p.x += 8;
-		}
-	}
-
-	void draw_replay_slider_ui(uint8_t* data, size_t data_pitch) {
-		auto area = get_replay_slider_area();
-		if (area == rect{}) return;
-		if (replay_st.end_frame == 0) return;
-		fill_rectangle(data, data_pitch, area, 1);
-		line_rectangle(data, data_pitch, area, 12);
-
-		int button_w = 16;
-		int button_h = 32;
-		int ow = (area.to.x - area.from.x) - button_w;
-		int ox = replay_frame * ow / replay_st.end_frame;
-
-		if (st.current_frame != replay_frame) {
-			int cox = st.current_frame * ow / replay_st.end_frame;
-			line_rectangle(data, data_pitch, rect{area.from + xy(cox + button_w / 2, 0), area.from + xy(cox + button_w / 2 + 1, button_h)}, 50);
-		}
-
-		fill_rectangle(data, data_pitch, rect{area.from + xy(ox, 0), area.from + xy(ox, 0) + xy(button_w, button_h)}, 10);
-		line_rectangle(data, data_pitch, rect{area.from + xy(ox, 0), area.from + xy(ox, 0) + xy(button_w, button_h)}, 51);
-	}
-
-	void draw_live_ui(uint8_t* data, size_t data_pitch) {
-		refresh_live_commands_if_needed();
-		auto area = get_live_ui_area();
-		if (area == rect{}) return;
-
-		fill_rectangle(data, data_pitch, area, 1);
-		line_rectangle(data, data_pitch, area, 12);
-
-		unit_t* source = get_single_local_selected_unit();
-
-		rect hud_area{area.from + xy(4, 4), area.from + xy(area.to.x - area.from.x - 4, 26)};
-		fill_rectangle(data, data_pitch, hud_area, 0);
-		line_rectangle(data, data_pitch, hud_area, 50);
-
-		if (has_local_player()) {
-			int owner = local_player_id;
-			int minerals = st.current_minerals[owner];
-			int gas = st.current_gas[owner];
-			int supply_used_raw = st.supply_used[owner][0].raw_value + st.supply_used[owner][1].raw_value + st.supply_used[owner][2].raw_value;
-			int supply_avail_raw = st.supply_available[owner][0].raw_value + st.supply_available[owner][1].raw_value + st.supply_available[owner][2].raw_value;
-			int supply_used = supply_used_raw / 2;
-			int supply_avail = supply_avail_raw / 2;
-
-			fill_rectangle(data, data_pitch, rect{area.from + xy(8, 8), area.from + xy(13, 13)}, 111);
-			draw_small_number(data, data_pitch, area.from + xy(16, 7), minerals, 3, 255);
-
-			fill_rectangle(data, data_pitch, rect{area.from + xy(62, 8), area.from + xy(67, 13)}, 117);
-			draw_small_number(data, data_pitch, area.from + xy(70, 7), gas, 3, 255);
-
-			fill_rectangle(data, data_pitch, rect{area.from + xy(116, 8), area.from + xy(121, 13)}, 10);
-			draw_small_number(data, data_pitch, area.from + xy(124, 7), supply_used, 2, 255);
-			fill_rectangle(data, data_pitch, rect{area.from + xy(140, 11), area.from + xy(142, 13)}, 255);
-			draw_small_number(data, data_pitch, area.from + xy(145, 7), supply_avail, 2, 255);
-		}
-
-		for (size_t i = 0; i != live_command_slots_n; ++i) {
-			auto slot = get_live_command_slot_area(i);
-			if (slot == rect{}) continue;
-			fill_rectangle(data, data_pitch, slot, 3);
-			line_rectangle(data, data_pitch, slot, 50);
-			if (i >= live_commands.size()) continue;
-
-			const auto& cmd = live_commands[i];
-			bool enabled = live_command_is_enabled(cmd, source);
-			uint8_t fill = 20;
-			switch (cmd.kind) {
-			case live_command_kind_t::train: fill = 79; break;
-			case live_command_kind_t::train_fighter: fill = 81; break;
-			case live_command_kind_t::morph: fill = 93; break;
-			case live_command_kind_t::morph_building: fill = 95; break;
-			case live_command_kind_t::build_place: fill = 117; break;
-			case live_command_kind_t::research: fill = 68; break;
-			case live_command_kind_t::upgrade: fill = 54; break;
-			case live_command_kind_t::tactical_stop: fill = 33; break;
-			case live_command_kind_t::tactical_hold_position: fill = 74; break;
-			case live_command_kind_t::tactical_attack_move_mode: fill = 140; break;
-			case live_command_kind_t::tactical_patrol_mode: fill = 111; break;
-			case live_command_kind_t::ability_cancel: fill = 33; break;
-			case live_command_kind_t::ability_burrow_toggle: fill = 48; break;
-			case live_command_kind_t::ability_siege_toggle: fill = 74; break;
-			case live_command_kind_t::ability_cloak_toggle: fill = 140; break;
-			case live_command_kind_t::ability_return_cargo: fill = 111; break;
-			case live_command_kind_t::ability_unload_all: fill = 102; break;
-			case live_command_kind_t::ability_liftoff_land_toggle: fill = 122; break;
-			case live_command_kind_t::ability_stim: fill = 162; break;
-			case live_command_kind_t::ability_morph_archon: fill = 175; break;
-			case live_command_kind_t::ability_morph_dark_archon: fill = 186; break;
-			case live_command_kind_t::ability_scanner_sweep: fill = 33; break;
-			case live_command_kind_t::ability_defensive_matrix: fill = 48; break;
-			case live_command_kind_t::ability_irradiate: fill = 74; break;
-			case live_command_kind_t::ability_emp_shockwave: fill = 93; break;
-			case live_command_kind_t::ability_yamato_gun: fill = 140; break;
-			case live_command_kind_t::ability_lockdown: fill = 111; break;
-			case live_command_kind_t::ability_spider_mines: fill = 102; break;
-			case live_command_kind_t::ability_healing: fill = 122; break;
-			case live_command_kind_t::ability_restoration: fill = 162; break;
-			case live_command_kind_t::ability_optical_flare: fill = 175; break;
-			case live_command_kind_t::ability_spawn_broodlings: fill = 186; break;
-			case live_command_kind_t::ability_parasite: fill = 33; break;
-			case live_command_kind_t::ability_dark_swarm: fill = 48; break;
-			case live_command_kind_t::ability_plague: fill = 74; break;
-			case live_command_kind_t::ability_consume: fill = 93; break;
-			case live_command_kind_t::ability_ensnare: fill = 140; break;
-			case live_command_kind_t::ability_psionic_storm: fill = 111; break;
-			case live_command_kind_t::ability_hallucination: fill = 102; break;
-			case live_command_kind_t::ability_recall: fill = 122; break;
-			case live_command_kind_t::ability_stasis_field: fill = 162; break;
-			case live_command_kind_t::ability_disruption_web: fill = 175; break;
-			case live_command_kind_t::ability_mind_control: fill = 186; break;
-			case live_command_kind_t::ability_feedback: fill = 33; break;
-			case live_command_kind_t::ability_maelstrom: fill = 48; break;
-			case live_command_kind_t::ability_infestation: fill = 74; break;
-			}
-			if (!enabled) fill = 14;
-			fill_rectangle(data, data_pitch, rect{slot.from + xy(2, 2), slot.to - xy(2, 2)}, fill);
-			if (live_build_placement_armed &&
-			    ((cmd.kind == live_command_kind_t::build_place &&
-			      live_build_placement_command.kind == live_command_kind_t::build_place &&
-			      cmd.unit_type == live_build_placement_command.unit_type) ||
-			     (cmd.kind == live_command_kind_t::ability_liftoff_land_toggle &&
-			      live_build_placement_command.kind == live_command_kind_t::ability_liftoff_land_toggle &&
-			      cmd.unit_type == live_build_placement_command.unit_type))) {
-				line_rectangle(data, data_pitch, rect{slot.from + xy(1, 1), slot.to - xy(1, 1)}, 255);
-			}
-			if ((cmd.kind == live_command_kind_t::tactical_attack_move_mode && pending_order_mode == pending_order_mode_t::attack_move) ||
-			    (cmd.kind == live_command_kind_t::tactical_patrol_mode && pending_order_mode == pending_order_mode_t::patrol) ||
-			    (cmd.kind == live_command_kind_t::ability_scanner_sweep && pending_order_mode == pending_order_mode_t::spell_scanner_sweep) ||
-			    (cmd.kind == live_command_kind_t::ability_defensive_matrix && pending_order_mode == pending_order_mode_t::spell_defensive_matrix) ||
-			    (cmd.kind == live_command_kind_t::ability_irradiate && pending_order_mode == pending_order_mode_t::spell_irradiate) ||
-			    (cmd.kind == live_command_kind_t::ability_emp_shockwave && pending_order_mode == pending_order_mode_t::spell_emp_shockwave) ||
-			    (cmd.kind == live_command_kind_t::ability_yamato_gun && pending_order_mode == pending_order_mode_t::spell_yamato_gun) ||
-			    (cmd.kind == live_command_kind_t::ability_lockdown && pending_order_mode == pending_order_mode_t::spell_lockdown) ||
-			    (cmd.kind == live_command_kind_t::ability_spider_mines && pending_order_mode == pending_order_mode_t::spell_spider_mines) ||
-			    (cmd.kind == live_command_kind_t::ability_healing && pending_order_mode == pending_order_mode_t::spell_healing) ||
-			    (cmd.kind == live_command_kind_t::ability_restoration && pending_order_mode == pending_order_mode_t::spell_restoration) ||
-			    (cmd.kind == live_command_kind_t::ability_optical_flare && pending_order_mode == pending_order_mode_t::spell_optical_flare) ||
-			    (cmd.kind == live_command_kind_t::ability_spawn_broodlings && pending_order_mode == pending_order_mode_t::spell_spawn_broodlings) ||
-			    (cmd.kind == live_command_kind_t::ability_parasite && pending_order_mode == pending_order_mode_t::spell_parasite) ||
-			    (cmd.kind == live_command_kind_t::ability_dark_swarm && pending_order_mode == pending_order_mode_t::spell_dark_swarm) ||
-			    (cmd.kind == live_command_kind_t::ability_plague && pending_order_mode == pending_order_mode_t::spell_plague) ||
-			    (cmd.kind == live_command_kind_t::ability_consume && pending_order_mode == pending_order_mode_t::spell_consume) ||
-			    (cmd.kind == live_command_kind_t::ability_ensnare && pending_order_mode == pending_order_mode_t::spell_ensnare) ||
-			    (cmd.kind == live_command_kind_t::ability_psionic_storm && pending_order_mode == pending_order_mode_t::spell_psionic_storm) ||
-			    (cmd.kind == live_command_kind_t::ability_hallucination && pending_order_mode == pending_order_mode_t::spell_hallucination) ||
-			    (cmd.kind == live_command_kind_t::ability_recall && pending_order_mode == pending_order_mode_t::spell_recall) ||
-			    (cmd.kind == live_command_kind_t::ability_stasis_field && pending_order_mode == pending_order_mode_t::spell_stasis_field) ||
-			    (cmd.kind == live_command_kind_t::ability_disruption_web && pending_order_mode == pending_order_mode_t::spell_disruption_web) ||
-			    (cmd.kind == live_command_kind_t::ability_mind_control && pending_order_mode == pending_order_mode_t::spell_mind_control) ||
-			    (cmd.kind == live_command_kind_t::ability_feedback && pending_order_mode == pending_order_mode_t::spell_feedback) ||
-			    (cmd.kind == live_command_kind_t::ability_maelstrom && pending_order_mode == pending_order_mode_t::spell_maelstrom) ||
-			    (cmd.kind == live_command_kind_t::ability_infestation && pending_order_mode == pending_order_mode_t::spell_infestation)) {
-				line_rectangle(data, data_pitch, rect{slot.from + xy(1, 1), slot.to - xy(1, 1)}, 255);
-			}
-			int payload_id = live_command_payload_id(cmd);
-			draw_small_number(data, data_pitch, slot.from + xy(4, 21), payload_id, 3, enabled ? 255 : 51);
-		}
-	}
-
-	void draw_ui(uint8_t* data, size_t data_pitch) {
-		if (is_replay_mode) draw_replay_slider_ui(data, data_pitch);
-		else if (is_live_game_mode) draw_live_ui(data, data_pitch);
-	}
-
-	// Draws a compact debug overlay in the top-left corner: frame number,
-	// draw FPS and current game speed multiplier.  Toggled by F3.
-	void draw_debug_overlay(uint8_t* data, size_t data_pitch) {
-		const int x = 4;
-		const int y = 4;
-		// Background box: 4 rows of 7-segment digits (8px wide, 11px tall each)
-		// plus 2px padding.  Row layout: frame, fps, speed_num, speed_den.
-		const int box_w = 96;
-		const int box_h = 4 * 13 + 4;
-		rect box{xy(x - 2, y - 2), xy(x - 2 + box_w, y - 2 + box_h)};
-		// Clamp to screen bounds.
-		if (box.to.x > (int)screen_width)  box.to.x = (int)screen_width;
-		if (box.to.y > (int)screen_height) box.to.y = (int)screen_height;
-		fill_rectangle(data, data_pitch, box, 0);
-		line_rectangle(data, data_pitch, box, 14);
-
-		int frame = st.current_frame;
-		draw_small_number(data, data_pitch, xy(x, y + 0 * 13), frame, 1, 255);
-
-		int fps = fps_draw_last;
-		draw_small_number(data, data_pitch, xy(x, y + 1 * 13), fps, 2, 117);
-
-		// Display game speed as a fraction of normal (fp8 integer(1) == normal).
-		// Normal = 1x, 2x, 4x … up to 128x; or 1/2x displayed as the raw
-		// fp8 numerator over 256.
-		int speed_num = game_speed.raw_value;
-		int speed_den = 256;
-		// Simplify by dividing out common factor of 256 for integer speeds.
-		if (speed_num > 0 && (speed_num & 0xff) == 0) {
-			speed_num >>= 8;
-			speed_den = 1;
-		}
-		draw_small_number(data, data_pitch, xy(x, y + 2 * 13), speed_num, 1, 140);
-		if (speed_den > 1) {
-			draw_small_number(data, data_pitch, xy(x + 24, y + 2 * 13), speed_den, 1, 50);
-		}
-
-		// Paused indicator: a solid bright block in row 3.
-		if (is_paused) {
-			fill_rectangle(data, data_pitch,
-				rect{xy(x, y + 3 * 13), xy(x + 16, y + 3 * 13 + 9)}, 162);
-		}
-	}
-
-	// Draw active HUD text messages (trigger display text / transmission /
-	// victory-defeat banners) at the bottom-centre of the game viewport.
-	// Each message is a row of 7-segment digits for the characters it can
-	// represent; unknown characters are skipped.  Messages expire after their
-	// configured display duration.
-	void draw_hud_messages(uint8_t* data, size_t data_pitch) {
-		int active = 0;
-		for (int i = 0; i < k_hud_max_lines; ++i) {
-			if (hud_messages[i].expiry_frame > 0 && st.current_frame < hud_messages[i].expiry_frame) {
-				++active;
-			}
-		}
-		if (active == 0) return;
-
-		// Layout: render from the bottom of the screen, most-recent on top.
-		// Each line is a narrow dark banner rendered via draw_small_number rows
-		// (7-segment font, each digit 8px wide, 11px tall).
-		const int margin = 4;
-		const int banner_padding = 3;
-		const int char_w = 8;
-		const int char_h = 11;
-		const int banner_h = char_h + 2 * banner_padding;
-		int y_bottom = (int)screen_height - margin - banner_padding;
-
-		for (int slot = hud_next_slot - 1; slot >= hud_next_slot - k_hud_max_lines && active > 0; --slot) {
-			int idx = ((slot % k_hud_max_lines) + k_hud_max_lines) % k_hud_max_lines;
-			const hud_message_t& hm = hud_messages[idx];
-			if (hm.expiry_frame <= 0 || st.current_frame >= hm.expiry_frame) continue;
-			--active;
-
-			// Use at most screen_width - 2*margin characters worth of width.
-			int max_chars = ((int)screen_width - 2 * margin) / char_w;
-			int show_chars = std::min((int)hm.text.size(), max_chars);
-			int banner_w = show_chars * char_w + 2 * banner_padding;
-			int bx = ((int)screen_width - banner_w) / 2;
-			int by = y_bottom - banner_h;
-
-			rect box{xy(bx, by), xy(bx + banner_w, by + banner_h)};
-			fill_rectangle(data, data_pitch, box, 0);
-			line_rectangle(data, data_pitch, box, 14);
-
-			// Render characters as digit blocks where possible.
-			xy p{bx + banner_padding, by + banner_padding};
-			for (int ci = 0; ci < show_chars; ++ci) {
-				char c = hm.text[ci];
-				if (c >= '0' && c <= '9') {
-					draw_digit_7seg(data, data_pitch, p, c - '0', 255);
-				} else if (c != ' ') {
-					// Non-digit, non-space: draw a simple bright block as a character indicator.
-					fill_rectangle(data, data_pitch, rect{p + xy(2, 3), p + xy(6, 9)}, 255);
-				}
-				p.x += char_w;
-			}
-
-			y_bottom = by - margin;
-		}
-	}
-
-	virtual void draw_callback(uint8_t* data, size_t data_pitch) {
-	}
-
-	a_vector<const image_t*> image_draw_queue;
-
-	bool use_new_images = false;
-
-	bool new_images_index_loaded = false;
-
-	a_vector<char> grp_new_image_state = a_vector<char>((size_t)ImageTypes::None);
-	a_unordered_set<a_string> new_images_index;
-	string_table_data images_tbl;
-
-	a_vector<a_vector<std::unique_ptr<native_window_drawing::surface>>> new_images;
-	a_vector<a_vector<std::unique_ptr<native_window_drawing::surface>>> new_images_flipped;
-
-	bool is_new_image(const image_t* image) {
-		if (!use_new_images) return false;
-		if (!new_images_index_loaded) {
-			new_images_index_loaded = true;
-			async_read_file("index.txt", [this](const uint8_t* data, size_t len) {
-				if (!data) {
-					ui::log("failed to load index.txt :(\n");
-					return;
-				}
-				char* c = (char*)data;
-				char* e = (char*)data + len;
-				while (c != e && (*c == '\r' || *c =='\n' || *c == ' ')) ++c;
-				while (c != e) {
-					char* s = c;
-					while (c != e && *c != '\r' && *c !='\n' && *c != ' ') ++c;
-					a_string fn(s, c - s);
-					while (c != e && (*c == '\r' || *c =='\n' || *c == ' ')) ++c;
-					for (char& c : fn) {
-						if (c == '\\') c = '/';
-					}
-					if (!fn.empty() && fn.front() == '/') fn.erase(fn.begin());
-					if (!fn.empty() && fn.back() == '/') fn.erase(std::prev(fn.end()));
-					ui::log("index entry '%s'\n", fn);
-					new_images_index.insert(std::move(fn));
-				}
-			});
-		}
-		if (new_images_index.empty()) return false;
-		size_t index = image->grp - global_st.grps.data();
-		auto& state = grp_new_image_state.at(index);
-		if (state == 0) {
-			state = 2;
-			a_string fn = images_tbl.at(image->image_type->grp_filename_index);
-			for (char& c : fn) {
-				if (c == '\\') c = '/';
-			}
-			for (auto i = fn.rbegin(); i != fn.rend(); ++i) {
-				if (*i == '.') {
-					fn.erase(std::prev(i.base()), fn.end());
-				}
-				if (*i == '/') break;
-			}
-			if (!fn.empty() && fn.front() == '/') fn.erase(fn.begin());
-			fn = "unit/" + fn;
-			ui::log("checking '%s' (image %d, grp %u)\n", fn, (int)image->image_type->id, index);
-			if (new_images_index.count(fn)) {
-				size_t frames = image->grp->frames.size();
-				if (new_images.size() <= index) new_images.resize(index + 1);
-				new_images[index].resize(frames);
-				if (new_images_flipped.size() <= index) new_images_flipped.resize(index + 1);
-				new_images_flipped[index].resize(frames);
-				ui::log("loading %d frames...\n", frames);
-				auto frames_left = std::make_shared<size_t>(frames);
-				for (size_t i = 0; i != frames; ++i) {
-					a_string frame_fn = format("%s/%02u.png", fn, i);
-					async_read_file(frame_fn, [this, frame_fn, index, i, frames_left](const uint8_t* data, size_t len) {
-						if (!data) {
-							ui::log("failed to load '%s'\n", frame_fn);
-							return;
-						}
-						new_images.at(index).at(i) = native_window_drawing::load_image(data, len);
-						--*frames_left;
-						if (*frames_left == 0) {
-							grp_new_image_state.at(index) = 1;
-
-							ui::log("grp %d successfully loaded %d frames\n", index, new_images.at(index).size());
-						}
-					});
-				}
-			}
-		}
-		//ui::log("index %d state %d\n", index, state);
-		return state == 1;
-	}
-
-	native_window_drawing::surface* get_new_image_surface(const image_t* image, bool flipped) {
-		size_t index = image->grp - global_st.grps.data();
-		size_t frame = image->frame_index;
-		if (flipped) {
-			auto& r = new_images_flipped.at(index).at(frame);
-			if (!r) {
-				auto* s = new_images.at(index).at(frame).get();
-				if (!s) return nullptr;
-				r = flip_image(s);
-			}
-			return r.get();
-		} else {
-			return new_images.at(index).at(frame).get();
-		}
-	}
-
-	std::unique_ptr<native_window_drawing::surface> tmp_surface;
-
-	void draw_new_image(const image_t* image) {
-		xy map_pos = get_image_center_map_position(image);
-
-		int screen_x = map_pos.x - screen_pos.x;
-		int screen_y = map_pos.y - screen_pos.y;
-
-		auto* surface = get_new_image_surface(image, i_flag(image, image_t::flag_horizontally_flipped));
-		if (!surface) {
-			ui::log("ERROR: new image %d (grp %d) frame %d does not exist\n", (int)image->image_type->id, image->grp - global_st.grps.data(), image->frame_index);
-			return;
-		}
-
-		auto scale = 114_fp8;
-
-		size_t w = (fp8::integer(surface->w) * scale).integer_part();
-		size_t h = (fp8::integer(surface->w) * scale).integer_part();
-
-		size_t orig_w = w;
-		size_t orig_h = h;
-
-		screen_x -= w / 2;
-		screen_y -= w / 2;
-
-		if (screen_x >= (int)screen_width || screen_y >= (int)screen_height) return;
-		if (screen_x + (int)w <= 0 || screen_y + (int)h <= 0) return;
-
-		size_t offset_x = 0;
-		size_t offset_y = 0;
-		if (screen_x < 0) {
-			offset_x = -screen_x;
-			w += screen_x;
-			screen_x = 0;
-		}
-		if (screen_y < 0) {
-			offset_y = -screen_y;
-			h += screen_y;
-			screen_y = 0;
-		}
-
-		w = std::min(w, screen_width - screen_x);
-		h = std::min(h, screen_height - screen_y);
-
-		if (image->modifier == 10) {
-			if (!tmp_surface || (size_t)tmp_surface->w < orig_w || (size_t)tmp_surface->h < orig_h) {
-				tmp_surface = native_window_drawing::create_rgba_surface(orig_w, orig_h);
-			}
-			surface->set_blend_mode(native_window_drawing::blend_mode::none);
-			surface->blit_scaled(&*tmp_surface, 0, 0, orig_w, orig_h);
-
-			size_t src_pitch = tmp_surface->pitch / 4;
-			size_t dst_pitch = rgba_surface->pitch / 4;
-			uint32_t* src = (uint32_t*)tmp_surface->lock();
-			uint32_t* dst = (uint32_t*)rgba_surface->lock();
-
-			src += src_pitch * offset_y + offset_x;
-			dst += dst_pitch * screen_y + screen_x;
-
-			size_t src_skip = src_pitch - w;
-			size_t dst_skip = dst_pitch - w;
-
-			for (size_t y = h; y--;) {
-
-				for (size_t x = w; x--;) {
-					uint32_t s = *src;
-					uint32_t d = *dst;
-					if (s >> 24 >= 16) *dst = (d & 0xfefefe) / 2 | 0xff000000;
-					++src;
-					++dst;
-				}
-
-				src += src_skip;
-				dst += dst_skip;
-			}
-
-			tmp_surface->unlock();
-			rgba_surface->unlock();
-
-		} else {
-			surface->set_blend_mode(native_window_drawing::blend_mode::alpha);
-			surface->blit_scaled(&*rgba_surface, screen_x - offset_x, screen_y - offset_y, orig_w, orig_h);
-		}
-	}
-
-	void draw_image_queue() {
-		for (auto* image : image_draw_queue) {
-			draw_new_image(image);
-		}
-	}
-
-	fp8 game_speed = fp8::integer(1);
-
-	bool show_debug_overlay = false;
-
-	std::unique_ptr<native_window_drawing::surface> window_surface;
-	std::unique_ptr<native_window_drawing::surface> indexed_surface;
-	std::unique_ptr<native_window_drawing::surface> rgba_surface;
-	native_window_drawing::palette* palette = nullptr;
-	std::chrono::high_resolution_clock clock;
-	std::chrono::high_resolution_clock::time_point last_draw;
-	std::chrono::high_resolution_clock::time_point last_input_poll;
-	std::chrono::high_resolution_clock::time_point last_fps;
-	int fps_counter = 0;
-	// Smoothed draw FPS tracked independently from the sim fps_counter.
-	int fps_draw_counter = 0;
-	int fps_draw_last = 0;
-	size_t scroll_speed_n = 0;
-
-	void resize(int width, int height) {
-		if (!wnd && create_window) wnd.create("OpenBW", 0, 0, width, height);
-		screen_width = width;
-		screen_height = height;
-		//view_scale = fp16::integer(1) - (fp16::integer(1) / 4);
-		view_scale = fp16::integer(1);
-		view_width = (fp16::integer(screen_width) / view_scale).integer_part();
-		view_height = (fp16::integer(screen_height) / view_scale).integer_part();
-		view_scale = (ufp16::integer(screen_width) / view_width).as_signed();
-		window_surface.reset();
-		indexed_surface.reset();
-		rgba_surface.reset();
-	}
-
-	a_vector<unit_id> current_selection;
-
-	bool current_selection_is_selected(unit_t* u) {
-		auto uid = get_unit_id(u);
-		return std::find(current_selection.begin(), current_selection.end(), uid) != current_selection.end();
-	}
-
-	void current_selection_add(unit_t* u) {
-		if (!u) return;
-		if (!unit_is_local_controllable(u)) return;
-		auto uid = get_unit_id(u);
-		if (std::find(current_selection.begin(), current_selection.end(), uid) != current_selection.end()) return;
-		current_selection.push_back(uid);
-		live_commands_dirty = true;
-	}
-
-	void current_selection_clear() {
-		if (!current_selection.empty()) live_commands_dirty = true;
-		current_selection.clear();
-		cancel_live_build_placement();
-	}
-
-	void current_selection_remove(const unit_t* u) {
-		auto uid = get_unit_id(u);
-		auto i = std::find(current_selection.begin(), current_selection.end(), uid);
-		if (i != current_selection.end()) {
-			current_selection.erase(i);
-			live_commands_dirty = true;
-			cancel_live_build_placement();
-		}
-	}
-
-	enum class pending_order_mode_t {
-		none,
-		attack_move,
-		patrol,
-		// Targeted spell modes: right-click issues the corresponding order.
-		// Point-targeted (no unit required): scanner_sweep, defensive_matrix,
-		// dark_swarm, plague, ensnare, psionic_storm, disruption_web,
-		// emp_shockwave, spider_mines, recall, stasis_field, maelstrom,
-		// hallucination, consume.
-		// Unit-targeted (clicks on a unit): irradiate, lockdown, yamato_gun,
-		// restoration, optical_flare, spawn_broodlings, parasite, feedback,
-		// mind_control, healing.
-		spell_scanner_sweep,
-		spell_defensive_matrix,
-		spell_irradiate,
-		spell_emp_shockwave,
-		spell_yamato_gun,
-		spell_lockdown,
-		spell_spider_mines,
-		spell_healing,
-		spell_restoration,
-		spell_optical_flare,
-		spell_spawn_broodlings,
-		spell_parasite,
-		spell_dark_swarm,
-		spell_plague,
-		spell_consume,
-		spell_ensnare,
-		spell_psionic_storm,
-		spell_hallucination,
-		spell_recall,
-		spell_stasis_field,
-		spell_disruption_web,
-		spell_mind_control,
-		spell_feedback,
-		spell_maelstrom,
-		spell_infestation,
-	};
-
-	enum class live_command_kind_t {
-		train,
-		train_fighter,
-		morph,
-		morph_building,
-		build_place,
-		research,
-		upgrade,
-		tactical_stop,
-		tactical_hold_position,
-		tactical_attack_move_mode,
-		tactical_patrol_mode,
-		ability_cancel,
-		ability_burrow_toggle,
-		ability_siege_toggle,
-		ability_cloak_toggle,
-		ability_return_cargo,
-		ability_unload_all,
-		ability_liftoff_land_toggle,
-		ability_stim,
-		ability_morph_archon,
-		ability_morph_dark_archon,
-		// Targeted spells (activate targeting mode; right-click issues order).
-		ability_scanner_sweep,
-		ability_defensive_matrix,
-		ability_irradiate,
-		ability_emp_shockwave,
-		ability_yamato_gun,
-		ability_lockdown,
-		ability_spider_mines,
-		ability_healing,
-		ability_restoration,
-		ability_optical_flare,
-		ability_spawn_broodlings,
-		ability_parasite,
-		ability_dark_swarm,
-		ability_plague,
-		ability_consume,
-		ability_ensnare,
-		ability_psionic_storm,
-		ability_hallucination,
-		ability_recall,
-		ability_stasis_field,
-		ability_disruption_web,
-		ability_mind_control,
-		ability_feedback,
-		ability_maelstrom,
-		ability_infestation,
-	};
-
-	struct live_command_t {
-		live_command_kind_t kind = live_command_kind_t::train;
-		const unit_type_t* unit_type = nullptr;
-		const tech_type_t* tech_type = nullptr;
-		const upgrade_type_t* upgrade_type = nullptr;
-		const order_type_t* build_order_type = nullptr;
-	};
-
-	static constexpr size_t live_command_slots_n = 12;
-	a_vector<live_command_t> live_commands;
-	bool live_commands_dirty = true;
-	int live_commands_state_frame = -1;
-	bool live_build_placement_armed = false;
-	live_command_t live_build_placement_command;
-
-	pending_order_mode_t pending_order_mode = pending_order_mode_t::none;
-
-	void cancel_live_build_placement() {
-		live_build_placement_armed = false;
-	}
-
-	bool point_in_rect(rect r, int x, int y) const {
-		return x >= r.from.x && x < r.to.x && y >= r.from.y && y < r.to.y;
-	}
-
-	unit_t* get_single_local_selected_unit() {
-		if (!has_local_player()) return nullptr;
-		unit_t* result = nullptr;
-		for (auto uid : current_selection) {
-			unit_t* u = get_unit(uid);
-			if (!u || unit_dead(u) || us_hidden(u)) continue;
-			if (!unit_is_local_controllable(u)) continue;
-			if (result) return nullptr;
-			result = u;
-		}
-		return result;
-	}
-
-	template<typename pred_F>
-	bool any_local_selected_unit(pred_F&& pred) {
-		if (!has_local_player()) return false;
-		for (auto uid : current_selection) {
-			unit_t* u = get_unit(uid);
-			if (!u || unit_dead(u) || us_hidden(u)) continue;
-			if (!unit_is_local_controllable(u)) continue;
-			if (pred(u)) return true;
-		}
-		return false;
-	}
-
-	bool has_local_controllable_selection() {
-		return any_local_selected_unit([](const unit_t*) { return true; });
-	}
-
-	const order_type_t* hold_order_for_unit(const unit_t* source) const {
-		if (unit_is_carrier(source)) return get_order_type(Orders::CarrierHoldPosition);
-		if (unit_is_reaver(source)) return get_order_type(Orders::ReaverHoldPosition);
-		if (unit_is_queen(source)) return get_order_type(Orders::QueenHoldPosition);
-		if (unit_is(source, UnitTypes::Zerg_Scourge) || unit_is(source, UnitTypes::Zerg_Infested_Terran)) return get_order_type(Orders::SuicideHoldPosition);
-		if (unit_is(source, UnitTypes::Terran_Medic)) return get_order_type(Orders::MedicHoldPosition);
-		return get_order_type(Orders::HoldPosition);
-	}
-
-	bool live_command_can_tactical_stop() {
-		const order_type_t* order = get_order_type(Orders::Stop);
-		return any_local_selected_unit([&](const unit_t* source) {
-			return unit_can_receive_order(source, order, local_player_id);
-		});
-	}
-
-	bool live_command_can_tactical_hold_position() {
-		return any_local_selected_unit([&](const unit_t* source) {
-			return unit_can_receive_order(source, hold_order_for_unit(source), local_player_id);
-		});
-	}
-
-	bool live_command_can_tactical_attack_move_mode() {
-		const order_type_t* order = get_order_type(Orders::AttackMove);
-		return any_local_selected_unit([&](const unit_t* source) {
-			return unit_can_receive_order(source, order, local_player_id);
-		});
-	}
-
-	bool live_command_can_tactical_patrol_mode() {
-		const order_type_t* order = get_order_type(Orders::Patrol);
-		return any_local_selected_unit([&](const unit_t* source) {
-			return unit_can_receive_order(source, order, local_player_id);
-		});
-	}
-
-	const order_type_t* resolve_live_build_order(const unit_t* u, const unit_type_t* unit_type) const {
-		if (!u || !unit_type) return nullptr;
-		if (ut_addon(unit_type)) return get_order_type(Orders::PlaceAddon);
-		if (!ut_worker(u)) return nullptr;
-		auto race = unit_race(u);
-		if (race == race_t::terran) return get_order_type(Orders::PlaceBuilding);
-		if (race == race_t::zerg) return get_order_type(Orders::DroneStartBuild);
-		if (race == race_t::protoss) return get_order_type(Orders::PlaceProtossBuilding);
-		return nullptr;
-	}
-
-	bool live_build_placement_is_valid(unit_t* u, const live_command_t& cmd, xy_t<size_t> tile_pos) const {
-		if (!u || !cmd.unit_type) return false;
-		if (cmd.kind == live_command_kind_t::ability_liftoff_land_toggle) {
-			if (!ut_flying_building(u) || !u_flying(u)) return false;
-			if (!unit_can_receive_order(u, get_order_type(Orders::BuildingLand), local_player_id)) return false;
-			xy pos(int(32 * tile_pos.x) + cmd.unit_type->placement_size.x / 2,
-			       int(32 * tile_pos.y) + cmd.unit_type->placement_size.y / 2);
-			return can_place_building(u, local_player_id, cmd.unit_type, pos, false, false);
-		}
-		if (cmd.kind != live_command_kind_t::build_place || !cmd.build_order_type) return false;
-		if (!unit_build_order_valid(u, cmd.build_order_type, cmd.unit_type, local_player_id)) return false;
-		if (ut_addon(cmd.unit_type)) {
-			xy addon_pos(int(32 * tile_pos.x) + cmd.unit_type->placement_size.x / 2,
-			             int(32 * tile_pos.y) + cmd.unit_type->placement_size.y / 2);
-			if (!can_place_building(u, local_player_id, cmd.unit_type, addon_pos, false, false)) return false;
-			xy builder_pos(int(32 * tile_pos.x + u->unit_type->placement_size.x / 2),
-			               int(32 * tile_pos.y + u->unit_type->placement_size.y / 2));
-			builder_pos.x -= cmd.unit_type->addon_position.x / 32 * 32;
-			builder_pos.y -= cmd.unit_type->addon_position.y / 32 * 32;
-			return can_place_building(u, local_player_id, u->unit_type, builder_pos, false, false);
-		}
-		xy pos(int(32 * tile_pos.x) + cmd.unit_type->placement_size.x / 2,
-		       int(32 * tile_pos.y) + cmd.unit_type->placement_size.y / 2);
-		return can_place_building(u, local_player_id, cmd.unit_type, pos, false, false);
-	}
-
-	bool live_command_is_enabled(const live_command_t& cmd, const unit_t* source) {
-		switch (cmd.kind) {
-		case live_command_kind_t::tactical_stop:
-			return live_command_can_tactical_stop();
-		case live_command_kind_t::tactical_hold_position:
-			return live_command_can_tactical_hold_position();
-		case live_command_kind_t::tactical_attack_move_mode:
-			return live_command_can_tactical_attack_move_mode();
-		case live_command_kind_t::tactical_patrol_mode:
-			return live_command_can_tactical_patrol_mode();
-		default:
-			break;
-		}
-		if (!source || source->owner != local_player_id) return false;
-		switch (cmd.kind) {
-		case live_command_kind_t::train:
-			return cmd.unit_type && unit_can_build(source, cmd.unit_type) && has_available_resources_for(local_player_id, cmd.unit_type);
-		case live_command_kind_t::train_fighter:
-			return cmd.unit_type && unit_can_build(source, cmd.unit_type) && has_available_resources_for(local_player_id, cmd.unit_type);
-		case live_command_kind_t::morph:
-			return cmd.unit_type && unit_can_build(source, cmd.unit_type) && has_available_resources_for(local_player_id, cmd.unit_type);
-		case live_command_kind_t::morph_building:
-			return cmd.unit_type && unit_can_build(source, cmd.unit_type) && has_available_resources_for(local_player_id, cmd.unit_type);
-		case live_command_kind_t::build_place:
-			return cmd.unit_type && cmd.build_order_type && unit_build_order_valid(source, cmd.build_order_type, cmd.unit_type, local_player_id) && has_available_resources_for(local_player_id, cmd.unit_type);
-		case live_command_kind_t::research:
-			return cmd.tech_type && unit_can_research(source, cmd.tech_type, local_player_id) && has_available_resources_for(local_player_id, cmd.tech_type);
-		case live_command_kind_t::upgrade:
-			return cmd.upgrade_type && unit_can_upgrade(source, cmd.upgrade_type, local_player_id) && has_available_resources_for(local_player_id, cmd.upgrade_type);
-		case live_command_kind_t::tactical_stop:
-		case live_command_kind_t::tactical_hold_position:
-		case live_command_kind_t::tactical_attack_move_mode:
-		case live_command_kind_t::tactical_patrol_mode:
-			return false;
-		case live_command_kind_t::ability_cancel:
-			return live_command_can_cancel(source);
-		case live_command_kind_t::ability_burrow_toggle:
-			return live_command_can_burrow_toggle(source);
-		case live_command_kind_t::ability_siege_toggle:
-			return live_command_can_siege_toggle(source);
-		case live_command_kind_t::ability_cloak_toggle:
-			return live_command_can_cloak_toggle(source);
-		case live_command_kind_t::ability_return_cargo:
-			return live_command_can_return_cargo(source);
-		case live_command_kind_t::ability_unload_all:
-			return live_command_can_unload_all(source);
-		case live_command_kind_t::ability_liftoff_land_toggle:
-			return live_command_can_liftoff_land_toggle(source);
-		case live_command_kind_t::ability_stim:
-			return live_command_can_stim(source);
-		case live_command_kind_t::ability_morph_archon:
-			return live_command_can_morph_archon(source);
-		case live_command_kind_t::ability_morph_dark_archon:
-			return live_command_can_morph_dark_archon(source);
-		case live_command_kind_t::ability_scanner_sweep:
-			return live_command_can_scanner_sweep(source);
-		case live_command_kind_t::ability_defensive_matrix:
-			return live_command_can_defensive_matrix(source);
-		case live_command_kind_t::ability_irradiate:
-			return live_command_can_irradiate(source);
-		case live_command_kind_t::ability_emp_shockwave:
-			return live_command_can_emp_shockwave(source);
-		case live_command_kind_t::ability_yamato_gun:
-			return live_command_can_yamato_gun(source);
-		case live_command_kind_t::ability_lockdown:
-			return live_command_can_lockdown(source);
-		case live_command_kind_t::ability_spider_mines:
-			return live_command_can_spider_mines(source);
-		case live_command_kind_t::ability_healing:
-			return live_command_can_healing(source);
-		case live_command_kind_t::ability_restoration:
-			return live_command_can_restoration(source);
-		case live_command_kind_t::ability_optical_flare:
-			return live_command_can_optical_flare(source);
-		case live_command_kind_t::ability_spawn_broodlings:
-			return live_command_can_spawn_broodlings(source);
-		case live_command_kind_t::ability_parasite:
-			return live_command_can_parasite(source);
-		case live_command_kind_t::ability_dark_swarm:
-			return live_command_can_dark_swarm(source);
-		case live_command_kind_t::ability_plague:
-			return live_command_can_plague(source);
-		case live_command_kind_t::ability_consume:
-			return live_command_can_consume(source);
-		case live_command_kind_t::ability_ensnare:
-			return live_command_can_ensnare(source);
-		case live_command_kind_t::ability_psionic_storm:
-			return live_command_can_psionic_storm(source);
-		case live_command_kind_t::ability_hallucination:
-			return live_command_can_hallucination(source);
-		case live_command_kind_t::ability_recall:
-			return live_command_can_recall(source);
-		case live_command_kind_t::ability_stasis_field:
-			return live_command_can_stasis_field(source);
-		case live_command_kind_t::ability_disruption_web:
-			return live_command_can_disruption_web(source);
-		case live_command_kind_t::ability_mind_control:
-			return live_command_can_mind_control(source);
-		case live_command_kind_t::ability_feedback:
-			return live_command_can_feedback(source);
-		case live_command_kind_t::ability_maelstrom:
-			return live_command_can_maelstrom(source);
-		case live_command_kind_t::ability_infestation:
-			return live_command_can_infestation(source);
-		}
-		return false;
-	}
-
-	int live_command_payload_id(const live_command_t& cmd) const {
-		switch (cmd.kind) {
-		case live_command_kind_t::train:
-		case live_command_kind_t::train_fighter:
-		case live_command_kind_t::morph:
-		case live_command_kind_t::morph_building:
-		case live_command_kind_t::build_place:
-			return cmd.unit_type ? (int)cmd.unit_type->id : 0;
-		case live_command_kind_t::research:
-			return cmd.tech_type ? (int)cmd.tech_type->id : 0;
-		case live_command_kind_t::upgrade:
-			return cmd.upgrade_type ? (int)cmd.upgrade_type->id : 0;
-		case live_command_kind_t::tactical_stop:
-			return 911;
-		case live_command_kind_t::tactical_hold_position:
-			return 912;
-		case live_command_kind_t::tactical_attack_move_mode:
-			return 913;
-		case live_command_kind_t::tactical_patrol_mode:
-			return 914;
-		case live_command_kind_t::ability_cancel:
-			return 901;
-		case live_command_kind_t::ability_burrow_toggle:
-			return 902;
-		case live_command_kind_t::ability_siege_toggle:
-			return 903;
-		case live_command_kind_t::ability_cloak_toggle:
-			return 904;
-		case live_command_kind_t::ability_return_cargo:
-			return 905;
-		case live_command_kind_t::ability_unload_all:
-			return 906;
-		case live_command_kind_t::ability_liftoff_land_toggle:
-			return 910;
-		case live_command_kind_t::ability_stim:
-			return 907;
-		case live_command_kind_t::ability_morph_archon:
-			return 908;
-		case live_command_kind_t::ability_morph_dark_archon:
-			return 909;
-		case live_command_kind_t::ability_scanner_sweep:
-			return 920;
-		case live_command_kind_t::ability_defensive_matrix:
-			return 921;
-		case live_command_kind_t::ability_irradiate:
-			return 922;
-		case live_command_kind_t::ability_emp_shockwave:
-			return 923;
-		case live_command_kind_t::ability_yamato_gun:
-			return 924;
-		case live_command_kind_t::ability_lockdown:
-			return 925;
-		case live_command_kind_t::ability_spider_mines:
-			return 926;
-		case live_command_kind_t::ability_healing:
-			return 927;
-		case live_command_kind_t::ability_restoration:
-			return 928;
-		case live_command_kind_t::ability_optical_flare:
-			return 929;
-		case live_command_kind_t::ability_spawn_broodlings:
-			return 930;
-		case live_command_kind_t::ability_parasite:
-			return 931;
-		case live_command_kind_t::ability_dark_swarm:
-			return 932;
-		case live_command_kind_t::ability_plague:
-			return 933;
-		case live_command_kind_t::ability_consume:
-			return 934;
-		case live_command_kind_t::ability_ensnare:
-			return 935;
-		case live_command_kind_t::ability_psionic_storm:
-			return 936;
-		case live_command_kind_t::ability_hallucination:
-			return 937;
-		case live_command_kind_t::ability_recall:
-			return 938;
-		case live_command_kind_t::ability_stasis_field:
-			return 939;
-		case live_command_kind_t::ability_disruption_web:
-			return 940;
-		case live_command_kind_t::ability_mind_control:
-			return 941;
-		case live_command_kind_t::ability_feedback:
-			return 942;
-		case live_command_kind_t::ability_maelstrom:
-			return 943;
-		case live_command_kind_t::ability_infestation:
-			return 944;
-		}
-		return 0;
-	}
-
-	bool live_command_requires_single_source(live_command_kind_t kind) const {
-		switch (kind) {
-		case live_command_kind_t::tactical_stop:
-		case live_command_kind_t::tactical_hold_position:
-		case live_command_kind_t::tactical_attack_move_mode:
-		case live_command_kind_t::tactical_patrol_mode:
-			return false;
-		default:
-			return true;
-		}
-	}
-
-	const tech_type_t* live_cloak_tech_for_unit(const unit_t* source) const {
-		if (!source) return nullptr;
-		if (unit_is_ghost(source)) return get_tech_type(TechTypes::Personnel_Cloaking);
-		if (unit_is_wraith(source)) return get_tech_type(TechTypes::Cloaking_Field);
-		return nullptr;
-	}
-
-	bool live_command_can_cancel(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!u_completed(source)) return true;
-		if (unit_is_researching(source) || unit_is_upgrading(source)) return true;
-		if (source->secondary_order_type &&
-		    source->secondary_order_type->id == Orders::BuildAddon &&
-		    source->current_build_unit &&
-		    !u_completed(source->current_build_unit)) return true;
-		if (source->order_type &&
-		    (source->order_type->id == Orders::ZergUnitMorph ||
-		     source->order_type->id == Orders::ZergBuildingMorph)) return true;
-		if (live_command_can_cancel_nuke(source)) return true;
-		return !source->build_queue.empty();
-	}
-
-	bool live_command_can_burrow_toggle(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		const tech_type_t* burrow_tech = get_tech_type(TechTypes::Burrowing);
-		if (!unit_can_use_tech(source, burrow_tech, local_player_id)) return false;
-		if (u_burrowed(source)) return ut_can_burrow(source);
-		return true;
-	}
-
-	bool live_command_can_siege_toggle(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!unit_is_sieged_tank(source) && !unit_is_unsieged_tank(source)) return false;
-		return unit_can_use_tech(source, get_tech_type(TechTypes::Tank_Siege_Mode), local_player_id);
-	}
-
-	bool live_command_can_cloak_toggle(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		const tech_type_t* tech = live_cloak_tech_for_unit(source);
-		if (!tech) return false;
-		if (!unit_can_use_tech(source, tech, local_player_id)) return false;
-		if (u_requires_detector(source)) return true;
-		return source->energy >= fp8::integer(tech->energy_cost);
-	}
-
-	bool live_command_can_return_cargo(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		const order_type_t* order = nullptr;
-		if (source->carrying_flags & 2) order = get_order_type(Orders::ReturnMinerals);
-		else if (source->carrying_flags & 1) order = get_order_type(Orders::ReturnGas);
-		if (!order) return false;
-		return unit_can_receive_order(source, order, local_player_id);
-	}
-
-	bool live_command_can_unload_all(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (loaded_units(source).empty()) return false;
-		return unit_can_receive_order(source, get_order_type(Orders::Unload), local_player_id);
-	}
-
-	bool live_command_can_liftoff_land_toggle(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!ut_flying_building(source)) return false;
-		if (u_flying(source)) return unit_can_receive_order(source, get_order_type(Orders::BuildingLand), local_player_id);
-		return unit_can_receive_order(source, get_order_type(Orders::BuildingLiftoff), local_player_id);
-	}
-
-	bool live_command_can_cancel_nuke(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!unit_is_ghost(source)) return false;
-		return source->connected_unit && unit_is(source->connected_unit, UnitTypes::Terran_Nuclear_Missile);
-	}
-
-	bool live_command_can_stim(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		return unit_can_use_tech(source, get_tech_type(TechTypes::Stim_Packs), local_player_id);
-	}
-
-	bool live_command_can_morph_archon(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!unit_is(source, UnitTypes::Protoss_High_Templar)) return false;
-		return unit_can_use_tech(source, get_tech_type(TechTypes::Archon_Warp), local_player_id);
-	}
-
-	bool live_command_can_morph_dark_archon(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!unit_is(source, UnitTypes::Protoss_Dark_Templar)) return false;
-		return unit_can_use_tech(source, get_tech_type(TechTypes::Dark_Archon_Meld), local_player_id);
-	}
-
-	// Returns true when the source unit can use a tech that requires a map
-	// target (position or unit), given that the tech is unlocked and the unit
-	// has enough energy.
-	bool live_command_can_use_tech(const unit_t* source, TechTypes tech_id) const {
-		if (!source || source->owner != local_player_id) return false;
-		const tech_type_t* tech = get_tech_type(tech_id);
-		if (!unit_can_use_tech(source, tech, local_player_id)) return false;
-		return source->energy >= fp8::integer(tech->energy_cost);
-	}
-
-	bool live_command_can_scanner_sweep(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!unit_is(source, UnitTypes::Terran_Comsat_Station)) return false;
-		return live_command_can_use_tech(source, TechTypes::Scanner_Sweep);
-	}
-	bool live_command_can_defensive_matrix(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Defensive_Matrix);
-	}
-	bool live_command_can_irradiate(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Irradiate);
-	}
-	bool live_command_can_emp_shockwave(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::EMP_Shockwave);
-	}
-	bool live_command_can_yamato_gun(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Yamato_Gun);
-	}
-	bool live_command_can_lockdown(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Lockdown);
-	}
-	bool live_command_can_spider_mines(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!unit_is(source, UnitTypes::Terran_Vulture)) return false;
-		if (!unit_can_use_tech(source, get_tech_type(TechTypes::Spider_Mines), local_player_id)) return false;
-		return source->vulture.spider_mine_count > 0;
-	}
-	bool live_command_can_healing(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!unit_is(source, UnitTypes::Terran_Medic)) return false;
-		return live_command_can_use_tech(source, TechTypes::Healing);
-	}
-	bool live_command_can_restoration(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Restoration);
-	}
-	bool live_command_can_optical_flare(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Optical_Flare);
-	}
-	bool live_command_can_spawn_broodlings(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Spawn_Broodlings);
-	}
-	bool live_command_can_parasite(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Parasite);
-	}
-	bool live_command_can_dark_swarm(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Dark_Swarm);
-	}
-	bool live_command_can_plague(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Plague);
-	}
-	bool live_command_can_consume(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Consume);
-	}
-	bool live_command_can_ensnare(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Ensnare);
-	}
-	bool live_command_can_psionic_storm(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Psionic_Storm);
-	}
-	bool live_command_can_hallucination(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Hallucination);
-	}
-	bool live_command_can_recall(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Recall);
-	}
-	bool live_command_can_stasis_field(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Stasis_Field);
-	}
-	bool live_command_can_disruption_web(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Disruption_Web);
-	}
-	bool live_command_can_mind_control(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Mind_Control);
-	}
-	bool live_command_can_feedback(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Feedback);
-	}
-	bool live_command_can_maelstrom(const unit_t* source) const {
-		return live_command_can_use_tech(source, TechTypes::Maelstrom);
-	}
-	bool live_command_can_infestation(const unit_t* source) const {
-		if (!source || source->owner != local_player_id) return false;
-		if (!unit_is(source, UnitTypes::Zerg_Queen)) return false;
-		return live_command_can_use_tech(source, TechTypes::Infestation);
-	}
-
-	bool execute_live_cancel_command() {
-		if (action_cancel_research(local_player_id)) return true;
-		if (action_cancel_upgrade(local_player_id)) return true;
-		if (action_cancel_addon(local_player_id)) return true;
-		if (action_cancel_build_queue(local_player_id, 254)) return true;
-		if (action_cancel_nuke(local_player_id)) return true;
-		if (action_cancel_morph(local_player_id)) return true;
-		return action_cancel_building_unit(local_player_id);
-	}
-
-	bool execute_live_ability_command(live_command_kind_t kind, bool queue) {
-		unit_t* source = get_single_local_selected_unit();
-		if (!source) return false;
-		switch (kind) {
-		case live_command_kind_t::ability_cancel:
-			return execute_live_cancel_command();
-		case live_command_kind_t::ability_burrow_toggle:
-			if (u_burrowed(source)) return action_unburrow(local_player_id);
-			return action_burrow(local_player_id, queue);
-		case live_command_kind_t::ability_siege_toggle:
-			if (unit_is_sieged_tank(source)) return action_unsiege(local_player_id, queue);
-			return action_siege(local_player_id, queue);
-		case live_command_kind_t::ability_cloak_toggle:
-			if (u_requires_detector(source)) return action_decloak(local_player_id);
-			return action_cloak(local_player_id);
-		case live_command_kind_t::ability_return_cargo:
-			return action_return_cargo(local_player_id, queue);
-		case live_command_kind_t::ability_unload_all:
-			return action_unload_all(local_player_id, queue);
-		case live_command_kind_t::ability_liftoff_land_toggle:
-			if (!ut_flying_building(source)) return false;
-			if (u_flying(source)) {
-				live_build_placement_armed = true;
-				live_build_placement_command = {};
-				live_build_placement_command.kind = live_command_kind_t::ability_liftoff_land_toggle;
-				live_build_placement_command.unit_type = source->unit_type;
-				return true;
-			}
-			return action_liftoff(local_player_id, source->sprite->position);
-		case live_command_kind_t::ability_stim:
-			return action_stim_pack(local_player_id);
-		case live_command_kind_t::ability_morph_archon:
-			return action_morph_archon(local_player_id);
-		case live_command_kind_t::ability_morph_dark_archon:
-			return action_morph_dark_archon(local_player_id);
-		// Targeted spells: arm a pending order mode so the next right-click
-		// dispatches the correct order.
-		case live_command_kind_t::ability_scanner_sweep:
-			pending_order_mode = pending_order_mode_t::spell_scanner_sweep; return true;
-		case live_command_kind_t::ability_defensive_matrix:
-			pending_order_mode = pending_order_mode_t::spell_defensive_matrix; return true;
-		case live_command_kind_t::ability_irradiate:
-			pending_order_mode = pending_order_mode_t::spell_irradiate; return true;
-		case live_command_kind_t::ability_emp_shockwave:
-			pending_order_mode = pending_order_mode_t::spell_emp_shockwave; return true;
-		case live_command_kind_t::ability_yamato_gun:
-			pending_order_mode = pending_order_mode_t::spell_yamato_gun; return true;
-		case live_command_kind_t::ability_lockdown:
-			pending_order_mode = pending_order_mode_t::spell_lockdown; return true;
-		case live_command_kind_t::ability_spider_mines:
-			pending_order_mode = pending_order_mode_t::spell_spider_mines; return true;
-		case live_command_kind_t::ability_healing:
-			pending_order_mode = pending_order_mode_t::spell_healing; return true;
-		case live_command_kind_t::ability_restoration:
-			pending_order_mode = pending_order_mode_t::spell_restoration; return true;
-		case live_command_kind_t::ability_optical_flare:
-			pending_order_mode = pending_order_mode_t::spell_optical_flare; return true;
-		case live_command_kind_t::ability_spawn_broodlings:
-			pending_order_mode = pending_order_mode_t::spell_spawn_broodlings; return true;
-		case live_command_kind_t::ability_parasite:
-			pending_order_mode = pending_order_mode_t::spell_parasite; return true;
-		case live_command_kind_t::ability_dark_swarm:
-			pending_order_mode = pending_order_mode_t::spell_dark_swarm; return true;
-		case live_command_kind_t::ability_plague:
-			pending_order_mode = pending_order_mode_t::spell_plague; return true;
-		case live_command_kind_t::ability_consume:
-			pending_order_mode = pending_order_mode_t::spell_consume; return true;
-		case live_command_kind_t::ability_ensnare:
-			pending_order_mode = pending_order_mode_t::spell_ensnare; return true;
-		case live_command_kind_t::ability_psionic_storm:
-			pending_order_mode = pending_order_mode_t::spell_psionic_storm; return true;
-		case live_command_kind_t::ability_hallucination:
-			pending_order_mode = pending_order_mode_t::spell_hallucination; return true;
-		case live_command_kind_t::ability_recall:
-			pending_order_mode = pending_order_mode_t::spell_recall; return true;
-		case live_command_kind_t::ability_stasis_field:
-			pending_order_mode = pending_order_mode_t::spell_stasis_field; return true;
-		case live_command_kind_t::ability_disruption_web:
-			pending_order_mode = pending_order_mode_t::spell_disruption_web; return true;
-		case live_command_kind_t::ability_mind_control:
-			pending_order_mode = pending_order_mode_t::spell_mind_control; return true;
-		case live_command_kind_t::ability_feedback:
-			pending_order_mode = pending_order_mode_t::spell_feedback; return true;
-		case live_command_kind_t::ability_maelstrom:
-			pending_order_mode = pending_order_mode_t::spell_maelstrom; return true;
-		case live_command_kind_t::ability_infestation:
-			pending_order_mode = pending_order_mode_t::spell_infestation; return true;
-		default:
-			return false;
-		}
-	}
-
-	bool issue_live_ability_hotkey(live_command_kind_t kind, bool queue) {
-		if (!is_live_game_mode || !has_local_player()) return false;
-		sync_action_selection_from_current();
-		if (action_st.selection.at(local_player_id).empty()) return false;
-		pending_order_mode = pending_order_mode_t::none;
-		cancel_live_build_placement();
-		bool ok = execute_live_ability_command(kind, queue);
-		if (ok) live_commands_dirty = true;
-		return ok;
-	}
-
-	void rebuild_live_commands() {
-		live_commands.clear();
-		live_commands_dirty = false;
-
-		if (!is_live_game_mode || !has_local_player()) {
-			cancel_live_build_placement();
-			return;
-		}
-		if (!has_local_controllable_selection()) {
-			cancel_live_build_placement();
-			return;
-		}
-
-		auto add_tactical = [&](live_command_kind_t kind, bool enabled) {
-			if (!enabled) return;
-			if (live_commands.size() >= live_command_slots_n) return;
-			live_command_t cmd;
-			cmd.kind = kind;
-			live_commands.push_back(cmd);
-		};
-
-		unit_t* source = get_single_local_selected_unit();
-		if (!source || source->owner != local_player_id) {
-			add_tactical(live_command_kind_t::tactical_stop, live_command_can_tactical_stop());
-			add_tactical(live_command_kind_t::tactical_hold_position, live_command_can_tactical_hold_position());
-			add_tactical(live_command_kind_t::tactical_attack_move_mode, live_command_can_tactical_attack_move_mode());
-			add_tactical(live_command_kind_t::tactical_patrol_mode, live_command_can_tactical_patrol_mode());
-			cancel_live_build_placement();
-			return;
-		}
-
-		auto add_ability = [&](live_command_kind_t kind, bool enabled) {
-			if (!enabled) return;
-			if (live_commands.size() >= live_command_slots_n) return;
-			live_command_t cmd;
-			cmd.kind = kind;
-			if (kind == live_command_kind_t::ability_liftoff_land_toggle) cmd.unit_type = source->unit_type;
-			live_commands.push_back(cmd);
-		};
-
-		add_ability(live_command_kind_t::ability_cancel, live_command_can_cancel(source));
-		add_ability(live_command_kind_t::ability_burrow_toggle, live_command_can_burrow_toggle(source));
-		add_ability(live_command_kind_t::ability_siege_toggle, live_command_can_siege_toggle(source));
-		add_ability(live_command_kind_t::ability_cloak_toggle, live_command_can_cloak_toggle(source));
-		add_ability(live_command_kind_t::ability_return_cargo, live_command_can_return_cargo(source));
-		add_ability(live_command_kind_t::ability_unload_all, live_command_can_unload_all(source));
-		add_ability(live_command_kind_t::ability_liftoff_land_toggle, live_command_can_liftoff_land_toggle(source));
-		add_ability(live_command_kind_t::ability_stim, live_command_can_stim(source));
-		add_ability(live_command_kind_t::ability_morph_archon, live_command_can_morph_archon(source));
-		add_ability(live_command_kind_t::ability_morph_dark_archon, live_command_can_morph_dark_archon(source));
-		add_ability(live_command_kind_t::ability_scanner_sweep, live_command_can_scanner_sweep(source));
-		add_ability(live_command_kind_t::ability_defensive_matrix, live_command_can_defensive_matrix(source));
-		add_ability(live_command_kind_t::ability_irradiate, live_command_can_irradiate(source));
-		add_ability(live_command_kind_t::ability_emp_shockwave, live_command_can_emp_shockwave(source));
-		add_ability(live_command_kind_t::ability_yamato_gun, live_command_can_yamato_gun(source));
-		add_ability(live_command_kind_t::ability_lockdown, live_command_can_lockdown(source));
-		add_ability(live_command_kind_t::ability_spider_mines, live_command_can_spider_mines(source));
-		add_ability(live_command_kind_t::ability_healing, live_command_can_healing(source));
-		add_ability(live_command_kind_t::ability_restoration, live_command_can_restoration(source));
-		add_ability(live_command_kind_t::ability_optical_flare, live_command_can_optical_flare(source));
-		add_ability(live_command_kind_t::ability_spawn_broodlings, live_command_can_spawn_broodlings(source));
-		add_ability(live_command_kind_t::ability_parasite, live_command_can_parasite(source));
-		add_ability(live_command_kind_t::ability_dark_swarm, live_command_can_dark_swarm(source));
-		add_ability(live_command_kind_t::ability_plague, live_command_can_plague(source));
-		add_ability(live_command_kind_t::ability_consume, live_command_can_consume(source));
-		add_ability(live_command_kind_t::ability_ensnare, live_command_can_ensnare(source));
-		add_ability(live_command_kind_t::ability_psionic_storm, live_command_can_psionic_storm(source));
-		add_ability(live_command_kind_t::ability_hallucination, live_command_can_hallucination(source));
-		add_ability(live_command_kind_t::ability_recall, live_command_can_recall(source));
-		add_ability(live_command_kind_t::ability_stasis_field, live_command_can_stasis_field(source));
-		add_ability(live_command_kind_t::ability_disruption_web, live_command_can_disruption_web(source));
-		add_ability(live_command_kind_t::ability_mind_control, live_command_can_mind_control(source));
-		add_ability(live_command_kind_t::ability_feedback, live_command_can_feedback(source));
-		add_ability(live_command_kind_t::ability_maelstrom, live_command_can_maelstrom(source));
-		add_ability(live_command_kind_t::ability_infestation, live_command_can_infestation(source));
-
-		for (const auto& v : game_st.unit_types.vec) {
-			const unit_type_t* unit_type = &v;
-			if (!unit_can_build(source, unit_type)) continue;
-
-			live_command_t cmd;
-			cmd.unit_type = unit_type;
-			if (ut_building(unit_type)) {
-				if (unit_is_zerg_building(source) && unit_is_zerg_building(unit_type)) {
-					cmd.kind = live_command_kind_t::morph_building;
-				} else {
-					cmd.build_order_type = resolve_live_build_order(source, unit_type);
-					if (!cmd.build_order_type) continue;
-					cmd.kind = live_command_kind_t::build_place;
-				}
-			} else {
-				if (unit_is(source, UnitTypes::Zerg_Larva) || unit_is(source, UnitTypes::Zerg_Mutalisk) || unit_is(source, UnitTypes::Zerg_Hydralisk)) {
-					cmd.kind = live_command_kind_t::morph;
-				} else if ((unit_is_carrier(source) && unit_is(unit_type, UnitTypes::Protoss_Interceptor)) ||
-				           (unit_is_reaver(source) && unit_is(unit_type, UnitTypes::Protoss_Scarab))) {
-					cmd.kind = live_command_kind_t::train_fighter;
-				} else {
-					cmd.kind = live_command_kind_t::train;
-				}
-			}
-
-			live_commands.push_back(cmd);
-			if (live_commands.size() >= live_command_slots_n) break;
-		}
-
-		if (live_commands.size() < live_command_slots_n) {
-			for (const auto& v : game_st.tech_types.vec) {
-				const tech_type_t* tech_type = &v;
-				if (!unit_can_research(source, tech_type, local_player_id)) continue;
-				live_command_t cmd;
-				cmd.kind = live_command_kind_t::research;
-				cmd.tech_type = tech_type;
-				live_commands.push_back(cmd);
-				if (live_commands.size() >= live_command_slots_n) break;
-			}
-		}
-
-		if (live_commands.size() < live_command_slots_n) {
-			for (const auto& v : game_st.upgrade_types.vec) {
-				const upgrade_type_t* upgrade_type = &v;
-				if (!unit_can_upgrade(source, upgrade_type, local_player_id)) continue;
-				live_command_t cmd;
-				cmd.kind = live_command_kind_t::upgrade;
-				cmd.upgrade_type = upgrade_type;
-				live_commands.push_back(cmd);
-				if (live_commands.size() >= live_command_slots_n) break;
-			}
-		}
-
-		if (live_build_placement_armed) {
-			bool armed_still_present = false;
-			for (const auto& cmd : live_commands) {
-				if (cmd.kind != live_build_placement_command.kind) continue;
-				if (cmd.kind == live_command_kind_t::build_place) {
-					if (cmd.unit_type != live_build_placement_command.unit_type) continue;
-					if (cmd.build_order_type != live_build_placement_command.build_order_type) continue;
-				} else if (cmd.kind == live_command_kind_t::ability_liftoff_land_toggle) {
-					if (cmd.unit_type != live_build_placement_command.unit_type) continue;
-				}
-				armed_still_present = true;
-				break;
-			}
-			if (!armed_still_present) cancel_live_build_placement();
-		}
-	}
-
-	void refresh_live_commands_if_needed() {
-		if (is_live_game_mode && live_commands_state_frame != st.current_frame) {
-			live_commands_state_frame = st.current_frame;
-			live_commands_dirty = true;
-		}
-		if (live_commands_dirty) rebuild_live_commands();
-	}
-
-	bool has_local_player() const {
-		return local_player_id >= 0 && local_player_id < 8;
-	}
-
-	uint8_t local_visibility_mask() const {
-		if (enforce_local_visibility && has_local_player()) return (uint8_t)(1u << local_player_id);
-		return 0xff;
-	}
-
-	bool unit_is_local_controllable(const unit_t* u) const {
-		if (!u) return false;
-		if (!is_live_game_mode || !has_local_player()) return true;
-		return u->owner == local_player_id;
-	}
-
-	xy screen_to_map_pos(int mouse_x, int mouse_y) const {
-		return screen_pos + xy((fp16::integer(mouse_x) / view_scale).integer_part(), (fp16::integer(mouse_y) / view_scale).integer_part());
-	}
-
-	void sync_action_selection_from_current() {
-		if (!has_local_player()) return;
-		auto& selection = action_st.selection.at(local_player_id);
-		selection.clear();
-		for (auto uid : current_selection) {
-			unit_t* u = get_unit(uid);
-			if (!u || unit_dead(u) || us_hidden(u)) continue;
-			if (!unit_is_local_controllable(u)) continue;
-			if (selection.size() == 12) break;
-			selection.push_back(u);
-		}
-	}
-
-	void sync_current_selection_from_action() {
-		if (!has_local_player()) return;
-		current_selection_clear();
-		for (unit_t* u : selected_units(local_player_id)) {
-			if (!u || unit_dead(u) || us_hidden(u)) continue;
-			current_selection_add(u);
-		}
-	}
-
-	bool issue_local_targeted_order(xy map_pos, unit_t* target, bool queue) {
-		if (!is_live_game_mode || !has_local_player()) return false;
-		sync_action_selection_from_current();
-		if (action_st.selection.at(local_player_id).empty()) return false;
-
-		bool ok = false;
-		if (pending_order_mode == pending_order_mode_t::attack_move) {
-			ok = action_order(local_player_id, get_order_type(Orders::AttackMove), map_pos, target, nullptr, queue);
-		} else if (pending_order_mode == pending_order_mode_t::patrol) {
-			ok = action_patrol(local_player_id, map_pos, queue);
-		} else if (pending_order_mode == pending_order_mode_t::spell_scanner_sweep) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastScannerSweep), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_defensive_matrix) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastDefensiveMatrix), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_irradiate) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastIrradiate), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_emp_shockwave) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastEMPShockwave), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_yamato_gun) {
-			ok = action_order(local_player_id, get_order_type(Orders::FireYamatoGun), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_lockdown) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastLockdown), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_spider_mines) {
-			ok = action_order(local_player_id, get_order_type(Orders::PlaceMine), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_healing) {
-			ok = action_order(local_player_id, get_order_type(Orders::MedicHeal), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_restoration) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastRestoration), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_optical_flare) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastOpticalFlare), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_spawn_broodlings) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastSpawnBroodlings), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_parasite) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastParasite), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_dark_swarm) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastDarkSwarm), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_plague) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastPlague), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_consume) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastConsume), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_ensnare) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastEnsnare), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_psionic_storm) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastPsionicStorm), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_hallucination) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastHallucination), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_recall) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastRecall), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_stasis_field) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastStasisField), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_disruption_web) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastDisruptionWeb), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_mind_control) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastMindControl), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_feedback) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastFeedback), map_pos, target, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_maelstrom) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastMaelstrom), map_pos, nullptr, nullptr, false);
-		} else if (pending_order_mode == pending_order_mode_t::spell_infestation) {
-			ok = action_order(local_player_id, get_order_type(Orders::CastInfestation), map_pos, target, nullptr, false);
-		} else {
-			ok = action_default_order(local_player_id, map_pos, target, nullptr, queue);
-		}
-		pending_order_mode = pending_order_mode_t::none;
-		return ok;
-	}
-
-	bool execute_live_command(size_t index) {
-		refresh_live_commands_if_needed();
-		if (index >= live_commands.size()) return false;
-		if (!is_live_game_mode || !has_local_player()) return false;
-
-		auto& cmd = live_commands[index];
-		unit_t* source = get_single_local_selected_unit();
-		if (!live_command_is_enabled(cmd, source)) return false;
-		if (live_command_requires_single_source(cmd.kind) && !source) return false;
-
-		sync_action_selection_from_current();
-		if (action_st.selection.at(local_player_id).empty()) return false;
-
-		pending_order_mode = pending_order_mode_t::none;
-
-		bool ok = false;
-		switch (cmd.kind) {
-		case live_command_kind_t::train:
-			ok = action_train(local_player_id, cmd.unit_type);
-			break;
-		case live_command_kind_t::train_fighter:
-			ok = action_train_fighter(local_player_id);
-			break;
-		case live_command_kind_t::morph:
-			ok = action_morph(local_player_id, cmd.unit_type);
-			break;
-		case live_command_kind_t::morph_building:
-			ok = action_morph_building(local_player_id, cmd.unit_type);
-			break;
-		case live_command_kind_t::research:
-			ok = action_research(local_player_id, cmd.tech_type);
-			break;
-		case live_command_kind_t::upgrade:
-			ok = action_upgrade(local_player_id, cmd.upgrade_type);
-			break;
-		case live_command_kind_t::tactical_stop:
-			cancel_live_build_placement();
-			ok = action_stop(local_player_id, false);
-			break;
-		case live_command_kind_t::tactical_hold_position:
-			cancel_live_build_placement();
-			ok = action_hold_position(local_player_id, false);
-			break;
-		case live_command_kind_t::tactical_attack_move_mode:
-			cancel_live_build_placement();
-			pending_order_mode = pending_order_mode_t::attack_move;
-			ok = true;
-			break;
-		case live_command_kind_t::tactical_patrol_mode:
-			cancel_live_build_placement();
-			pending_order_mode = pending_order_mode_t::patrol;
-			ok = true;
-			break;
-		case live_command_kind_t::ability_cancel:
-		case live_command_kind_t::ability_burrow_toggle:
-		case live_command_kind_t::ability_siege_toggle:
-		case live_command_kind_t::ability_cloak_toggle:
-		case live_command_kind_t::ability_return_cargo:
-		case live_command_kind_t::ability_unload_all:
-		case live_command_kind_t::ability_liftoff_land_toggle:
-		case live_command_kind_t::ability_stim:
-		case live_command_kind_t::ability_morph_archon:
-		case live_command_kind_t::ability_morph_dark_archon:
-		case live_command_kind_t::ability_scanner_sweep:
-		case live_command_kind_t::ability_defensive_matrix:
-		case live_command_kind_t::ability_irradiate:
-		case live_command_kind_t::ability_emp_shockwave:
-		case live_command_kind_t::ability_yamato_gun:
-		case live_command_kind_t::ability_lockdown:
-		case live_command_kind_t::ability_spider_mines:
-		case live_command_kind_t::ability_healing:
-		case live_command_kind_t::ability_restoration:
-		case live_command_kind_t::ability_optical_flare:
-		case live_command_kind_t::ability_spawn_broodlings:
-		case live_command_kind_t::ability_parasite:
-		case live_command_kind_t::ability_dark_swarm:
-		case live_command_kind_t::ability_plague:
-		case live_command_kind_t::ability_consume:
-		case live_command_kind_t::ability_ensnare:
-		case live_command_kind_t::ability_psionic_storm:
-		case live_command_kind_t::ability_hallucination:
-		case live_command_kind_t::ability_recall:
-		case live_command_kind_t::ability_stasis_field:
-		case live_command_kind_t::ability_disruption_web:
-		case live_command_kind_t::ability_mind_control:
-		case live_command_kind_t::ability_feedback:
-		case live_command_kind_t::ability_maelstrom:
-		case live_command_kind_t::ability_infestation:
-			cancel_live_build_placement();
-			ok = execute_live_ability_command(cmd.kind, false);
-			break;
-		case live_command_kind_t::build_place:
-			if (live_build_placement_armed &&
-			    live_build_placement_command.unit_type == cmd.unit_type &&
-			    live_build_placement_command.build_order_type == cmd.build_order_type) {
-				cancel_live_build_placement();
-			} else {
-				live_build_placement_armed = true;
-				live_build_placement_command = cmd;
-			}
-			ok = true;
-			break;
-		}
-		if (ok) live_commands_dirty = true;
-		return ok;
-	}
-
-	bool try_place_live_build_command(xy map_pos) {
-		if (!live_build_placement_armed) return false;
-		if (!is_live_game_mode || !has_local_player()) return false;
-		unit_t* source = get_single_local_selected_unit();
-		if (!source) {
-			cancel_live_build_placement();
-			return false;
-		}
-
-		int tile_x = map_pos.x / 32;
-		int tile_y = map_pos.y / 32;
-		if (tile_x < 0 || tile_y < 0) return false;
-		if ((size_t)tile_x >= game_st.map_tile_width || (size_t)tile_y >= game_st.map_tile_height) return false;
-
-		xy_t<size_t> tile_pos = {(size_t)tile_x, (size_t)tile_y};
-		if (!live_build_placement_is_valid(source, live_build_placement_command, tile_pos)) return false;
-
-		sync_action_selection_from_current();
-		bool ok = false;
-		if (live_build_placement_command.kind == live_command_kind_t::build_place) {
-			ok = action_build(local_player_id, live_build_placement_command.build_order_type, live_build_placement_command.unit_type, tile_pos);
-		} else if (live_build_placement_command.kind == live_command_kind_t::ability_liftoff_land_toggle) {
-			const unit_type_t* land_type = live_build_placement_command.unit_type ? live_build_placement_command.unit_type : source->unit_type;
-			ok = action_land(local_player_id, map_pos, land_type);
-		}
-		if (ok) {
-			cancel_live_build_placement();
-			live_commands_dirty = true;
-		}
-		return ok;
-	}
-
-	bool is_moving_minimap = false;
-	bool is_moving_replay_slider = false;
-	bool is_paused = false;
-	bool is_drag_selecting = false;
-	bool is_dragging_screen = false;
-	int drag_select_from_x = 0;
-	int drag_select_from_y = 0;
-	int drag_select_to_x = 0;
-	int drag_select_to_y = 0;
-	xy drag_screen_pos;
-
-	void update() {
-		auto now = clock.now();
-		refresh_live_commands_if_needed();
-
-		if (now - last_fps >= std::chrono::seconds(1)) {
-			//ui::log("draw fps: %g\n", fps_counter / std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1>>>(now - last_fps).count());
-			fps_draw_last = fps_draw_counter;
-			last_fps = now;
-			fps_counter = 0;
-			fps_draw_counter = 0;
-		}
-		++fps_counter;
-		++fps_draw_counter;
-
-		auto minimap_area = get_minimap_area();
-		auto replay_slider_area = get_replay_slider_area();
-
-		auto move_minimap = [&](int mouse_x, int mouse_y) {
-			if (mouse_x < minimap_area.from.x) mouse_x = minimap_area.from.x;
-			else if (mouse_x >= minimap_area.to.x) mouse_x = minimap_area.to.x - 1;
-			if (mouse_y < minimap_area.from.y) mouse_y = minimap_area.from.y;
-			else if (mouse_y >= minimap_area.to.y) mouse_y = minimap_area.to.y - 1;
-			int x = mouse_x - minimap_area.from.x;
-			int y = mouse_y - minimap_area.from.y;
-			x = x * game_st.map_tile_width / (minimap_area.to.x - minimap_area.from.x);
-			y = y * game_st.map_tile_height / (minimap_area.to.y - minimap_area.from.y);
-			screen_pos = xy(32 * x - view_width / 2, 32 * y - view_height / 2);
-		};
-
-		auto check_move_minimap = [&](auto& e) {
-			if (e.mouse_x >= minimap_area.from.x && e.mouse_x < minimap_area.to.x) {
-				if (e.mouse_y >= minimap_area.from.y && e.mouse_y < minimap_area.to.y) {
-					is_moving_minimap = true;
-					move_minimap(e.mouse_x, e.mouse_y);
-				}
-			}
-		};
-
-		auto move_replay_slider = [&](int mouse_x, int mouse_y) {
-			(void)mouse_y;
-			int x = mouse_x - replay_slider_area.from.x;
-			int button_w = 16;
-			x -= button_w / 2;
-			int ow = (replay_slider_area.to.x - replay_slider_area.from.x) - button_w;
-			if (x < 0) x = 0;
-			if (x >= ow) x = ow - 1;
-			replay_frame = x * replay_st.end_frame / ow;
-		};
-
-		auto check_move_replay_slider = [&](auto& e) {
-			if (!is_replay_mode) return;
-			if (e.mouse_x >= replay_slider_area.from.x && e.mouse_x < replay_slider_area.to.x) {
-				if (e.mouse_y >= replay_slider_area.from.y && e.mouse_y < replay_slider_area.to.y) {
-					is_moving_replay_slider = true;
-					move_replay_slider(e.mouse_x, e.mouse_y);
-				}
-			}
-		};
-
-		auto issue_order_at_cursor = [&](int mouse_x, int mouse_y) {
-			if (!is_live_game_mode || !has_local_player()) return;
-			xy map_pos = screen_to_map_pos(mouse_x, mouse_y);
-			unit_t* target = select_get_unit_at(map_pos);
-			bool queue = wnd.get_key_state(225) || wnd.get_key_state(229);
-			issue_local_targeted_order(map_pos, target, queue);
-		};
-
-		auto end_drag_select = [&](bool double_clicked) {
-			bool shift = wnd.get_key_state(225) || wnd.get_key_state(229);
-			if (drag_select_from_x > drag_select_to_x) std::swap(drag_select_from_x, drag_select_to_x);
-			if (drag_select_from_y > drag_select_to_y) std::swap(drag_select_from_y, drag_select_to_y);
-			if (drag_select_to_x - drag_select_from_x <= 4 || drag_select_to_y - drag_select_from_y <= 4) {
-				unit_t* u = select_get_unit_at(screen_pos + xy(drag_select_from_x, drag_select_from_y));
-				if (u) {
-					if (!unit_is_local_controllable(u)) {
-						is_drag_selecting = false;
-						return;
-					}
-					bool ctrl = wnd.get_key_state(224) || wnd.get_key_state(228);
-					if (double_clicked || ctrl) {
-						if (!shift) current_selection_clear();
-						auto is_tank = [&](unit_t* a) {
-							return unit_is(a, UnitTypes::Terran_Siege_Tank_Siege_Mode) || unit_is(a, UnitTypes::Terran_Siege_Tank_Tank_Mode);
-						};
-						auto is_same_type = [&](unit_t* a, unit_t* b) {
-							if (unit_is_mineral_field(a) && unit_is_mineral_field(b)) return true;
-							if (is_tank(a) && is_tank(b)) return true;
-							return a->unit_type == b->unit_type;
-						};
-						for (unit_t* u2 : find_units({screen_pos, screen_pos + xy(view_width, view_height)})) {
-							if (u2->owner != u->owner) continue;
-							if (!is_same_type(u, u2)) continue;
-							current_selection_add(u2);
-						}
-					} else {
-						if (shift) {
-							if (current_selection_is_selected(u)) current_selection_remove(u);
-							else current_selection_add(u);
-						} else {
-							current_selection_clear();
-							current_selection_add(u);
-						}
-					}
-				}
-			} else {
-				if (!shift) current_selection_clear();
-				auto r = rect{{drag_select_from_x, drag_select_from_y}, {drag_select_to_x, drag_select_to_y}};
-				if (r.from.x > r.to.x) std::swap(r.from.x, r.to.x);
-				if (r.from.y > r.to.y) std::swap(r.from.y, r.to.y);
-				a_vector<unit_t*> new_units;
-				bool any_non_neutrals = false;
-				for (unit_t* u : find_units(translate_rect(r, screen_pos))) {
-					if (!unit_can_be_selected(u)) continue;
-					if (!unit_is_local_controllable(u)) continue;
-					new_units.push_back(u);
-					if (u->owner != 11) any_non_neutrals = true;
-				}
-				for (unit_t* u : new_units) {
-					if (u->owner == 11 && any_non_neutrals) continue;
-					current_selection_add(u);
-				}
-			}
-			is_drag_selecting = false;
-		};
-
-		if (wnd) {
-			native_window::event_t e;
-			while (wnd.peek_message(e)) {
-				switch (e.type) {
-				case native_window::event_t::type_quit:
-					if (exit_on_close) std::exit(0);
-					else window_closed = true;
-					break;
-				case native_window::event_t::type_resize:
-					resize(e.width, e.height);
-					break;
-				case native_window::event_t::type_mouse_button_down:
-					if (e.button == 1) {
-						check_move_minimap(e);
-						check_move_replay_slider(e);
-						bool consumed_live_ui = false;
-						if (!is_moving_minimap && !is_moving_replay_slider && is_live_game_mode) {
-							consumed_live_ui = live_ui_handles_left_click(e.mouse_x, e.mouse_y);
-						}
-						if (!is_moving_minimap && !is_moving_replay_slider && !consumed_live_ui) {
-							if (live_build_placement_armed && is_live_game_mode) {
-								try_place_live_build_command(screen_to_map_pos(e.mouse_x, e.mouse_y));
-							} else {
-								is_drag_selecting = true;
-								drag_select_from_x = e.mouse_x;
-								drag_select_from_y = e.mouse_y;
-								drag_select_to_x = e.mouse_x;
-								drag_select_to_y = e.mouse_y;
-							}
-						}
-					} else if (e.button == 3) {
-						if (is_live_game_mode) {
-							if (live_build_placement_armed) {
-								cancel_live_build_placement();
-								pending_order_mode = pending_order_mode_t::none;
-								break;
-							}
-							issue_order_at_cursor(e.mouse_x, e.mouse_y);
-							break;
-						}
-						is_dragging_screen = true;
-						drag_screen_pos = screen_pos + xy((fp16::integer(e.mouse_x) / view_scale).integer_part(), (fp16::integer(e.mouse_y) / view_scale).integer_part());
-					} else if (e.button == 2) {
-						is_dragging_screen = true;
-						drag_screen_pos = screen_pos + xy((fp16::integer(e.mouse_x) / view_scale).integer_part(), (fp16::integer(e.mouse_y) / view_scale).integer_part());
-					}
-					break;
-				case native_window::event_t::type_mouse_motion:
-					if (e.button_state & 1) {
-						if (is_moving_minimap) check_move_minimap(e);
-						if (is_moving_replay_slider) check_move_replay_slider(e);
-						if (is_drag_selecting) {
-							drag_select_to_x = e.mouse_x;
-							drag_select_to_y = e.mouse_y;
-						}
-					} else if (e.button_state & 4 || e.button_state & 2) {
-						if (is_dragging_screen) {
-							screen_pos = drag_screen_pos - xy((fp16::integer(e.mouse_x) / view_scale).integer_part(), (fp16::integer(e.mouse_y) / view_scale).integer_part());
-							//screen_pos -= xy((fp16::integer(e.mouse_x - drag_screen_x) / view_scale).integer_part(), (fp16::integer(e.mouse_y - drag_screen_y) / view_scale).integer_part());
-						}
-					}
-
-					if (is_drag_selecting && ~e.button_state & 1) end_drag_select(false);
-					break;
-				case native_window::event_t::type_mouse_button_up:
-					if (e.button == 1) {
-						if (is_moving_minimap) is_moving_minimap = false;
-						if (is_moving_replay_slider) is_moving_replay_slider = false;
-						if (is_drag_selecting) {
-							end_drag_select(e.clicks >= 2 && e.clicks % 2 == 0);
-						}
-					} else if (e.button == 3) {
-						is_dragging_screen = false;
-					} else if (e.button == 2) {
-						is_dragging_screen = false;
-					}
-					break;
-				case native_window::event_t::type_key_down:
-					//if (e.sym == 'q') {
-					//	use_new_images = !use_new_images;
-					//}
+    if (!is_replay_mode)
+      return {};
+    rect r;
+    int width = 192;
+    int height = 32;
+    r.from.x = (int)screen_width - 8 - width;
+    r.from.y = (int)screen_height - 8 - 128 - height;
+    r.to.x = r.from.x + width;
+    r.to.y = r.from.y + height;
+    if (r.from.x < 0 || r.from.y < 0)
+      return {};
+    return r;
+  }
+
+  rect get_live_ui_area() const {
+    if (!is_live_game_mode || !has_local_player())
+      return {};
+    int width = 168;
+    int height = 146;
+    rect r;
+    r.from.x = (int)screen_width - 8 - width;
+    r.from.y = (int)screen_height - 8 - height;
+    r.to = r.from + xy(width, height);
+    if (r.from.x < 0 || r.from.y < 0)
+      return {};
+    return r;
+  }
+
+  rect get_live_command_slot_area(size_t slot_n) const {
+    if (slot_n >= live_command_slots_n)
+      return {};
+    auto area = get_live_ui_area();
+    if (area == rect{})
+      return {};
+    int col = (int)(slot_n % 4);
+    int row = (int)(slot_n / 4);
+    int slot_w = 34;
+    int slot_h = 34;
+    int gap = 2;
+    int x = area.from.x + 8 + col * (slot_w + gap);
+    int y = area.from.y + 30 + row * (slot_h + gap);
+    return rect{xy(x, y), xy(x + slot_w, y + slot_h)};
+  }
+
+  size_t live_command_slot_at(int mouse_x, int mouse_y) const {
+    for (size_t i = 0; i != live_command_slots_n; ++i) {
+      auto r = get_live_command_slot_area(i);
+      if (r == rect{})
+        continue;
+      if (point_in_rect(r, mouse_x, mouse_y))
+        return i;
+    }
+    return (size_t)-1;
+  }
+
+  bool live_ui_handles_left_click(int mouse_x, int mouse_y) {
+    auto area = get_live_ui_area();
+    if (area == rect{})
+      return false;
+    if (!point_in_rect(area, mouse_x, mouse_y))
+      return false;
+
+    size_t slot_n = live_command_slot_at(mouse_x, mouse_y);
+    if (slot_n != (size_t)-1) {
+      if (slot_n < live_commands.size()) {
+        execute_live_command(slot_n);
+      }
+    }
+    return true;
+  }
+
+  void draw_digit_7seg(uint8_t *data, size_t data_pitch, xy p, int digit,
+                       uint8_t color) {
+    static const uint8_t masks[10] = {
+        0b0111111, // 0
+        0b0000110, // 1
+        0b1011011, // 2
+        0b1001111, // 3
+        0b1100110, // 4
+        0b1101101, // 5
+        0b1111101, // 6
+        0b0000111, // 7
+        0b1111111, // 8
+        0b1101111  // 9
+    };
+    if (digit < 0 || digit > 9)
+      return;
+    uint8_t mask = masks[digit];
+    auto seg = [&](int bit, rect r) {
+      if (mask & (1u << bit))
+        fill_rectangle(data, data_pitch, r, color);
+    };
+    // a,b,c,d,e,f,g
+    seg(0, rect{p + xy(1, 0), p + xy(6, 1)});
+    seg(1, rect{p + xy(6, 1), p + xy(7, 5)});
+    seg(2, rect{p + xy(6, 6), p + xy(7, 10)});
+    seg(3, rect{p + xy(1, 10), p + xy(6, 11)});
+    seg(4, rect{p + xy(0, 6), p + xy(1, 10)});
+    seg(5, rect{p + xy(0, 1), p + xy(1, 5)});
+    seg(6, rect{p + xy(1, 5), p + xy(6, 6)});
+  }
+
+  void draw_small_number(uint8_t *data, size_t data_pitch, xy p, int value,
+                         int min_digits, uint8_t color) {
+    if (value < 0)
+      value = 0;
+    int digits[8] = {};
+    int n_digits = 0;
+    do {
+      digits[n_digits++] = value % 10;
+      value /= 10;
+    } while (value && n_digits < 8);
+    while (n_digits < min_digits && n_digits < 8)
+      digits[n_digits++] = 0;
+    for (int i = n_digits - 1; i >= 0; --i) {
+      draw_digit_7seg(data, data_pitch, p, digits[i], color);
+      p.x += 8;
+    }
+  }
+
+  void draw_replay_slider_ui(uint8_t *data, size_t data_pitch) {
+    auto area = get_replay_slider_area();
+    if (area == rect{})
+      return;
+    if (replay_st.end_frame == 0)
+      return;
+    fill_rectangle(data, data_pitch, area, 1);
+    line_rectangle(data, data_pitch, area, 12);
+
+    int button_w = 16;
+    int button_h = 32;
+    int ow = (area.to.x - area.from.x) - button_w;
+    int ox = replay_frame * ow / replay_st.end_frame;
+
+    if (st.current_frame != replay_frame) {
+      int cox = st.current_frame * ow / replay_st.end_frame;
+      line_rectangle(data, data_pitch,
+                     rect{area.from + xy(cox + button_w / 2, 0),
+                          area.from + xy(cox + button_w / 2 + 1, button_h)},
+                     50);
+    }
+
+    fill_rectangle(data, data_pitch,
+                   rect{area.from + xy(ox, 0),
+                        area.from + xy(ox, 0) + xy(button_w, button_h)},
+                   10);
+    line_rectangle(data, data_pitch,
+                   rect{area.from + xy(ox, 0),
+                        area.from + xy(ox, 0) + xy(button_w, button_h)},
+                   51);
+  }
+
+  void draw_live_ui(uint8_t *data, size_t data_pitch) {
+    refresh_live_commands_if_needed();
+    auto area = get_live_ui_area();
+    if (area == rect{})
+      return;
+
+    fill_rectangle(data, data_pitch, area, 1);
+    line_rectangle(data, data_pitch, area, 12);
+
+    unit_t *source = get_single_local_selected_unit();
+
+    rect hud_area{area.from + xy(4, 4),
+                  area.from + xy(area.to.x - area.from.x - 4, 26)};
+    fill_rectangle(data, data_pitch, hud_area, 0);
+    line_rectangle(data, data_pitch, hud_area, 50);
+
+    if (has_local_player()) {
+      int owner = local_player_id;
+      int minerals = st.current_minerals[owner];
+      int gas = st.current_gas[owner];
+      int supply_used_raw = st.supply_used[owner][0].raw_value +
+                            st.supply_used[owner][1].raw_value +
+                            st.supply_used[owner][2].raw_value;
+      int supply_avail_raw = st.supply_available[owner][0].raw_value +
+                             st.supply_available[owner][1].raw_value +
+                             st.supply_available[owner][2].raw_value;
+      int supply_used = supply_used_raw / 2;
+      int supply_avail = supply_avail_raw / 2;
+
+      fill_rectangle(data, data_pitch,
+                     rect{area.from + xy(8, 8), area.from + xy(13, 13)}, 111);
+      draw_small_number(data, data_pitch, area.from + xy(16, 7), minerals, 3,
+                        255);
+
+      fill_rectangle(data, data_pitch,
+                     rect{area.from + xy(62, 8), area.from + xy(67, 13)}, 117);
+      draw_small_number(data, data_pitch, area.from + xy(70, 7), gas, 3, 255);
+
+      fill_rectangle(data, data_pitch,
+                     rect{area.from + xy(116, 8), area.from + xy(121, 13)}, 10);
+      draw_small_number(data, data_pitch, area.from + xy(124, 7), supply_used,
+                        2, 255);
+      fill_rectangle(data, data_pitch,
+                     rect{area.from + xy(140, 11), area.from + xy(142, 13)},
+                     255);
+      draw_small_number(data, data_pitch, area.from + xy(145, 7), supply_avail,
+                        2, 255);
+    }
+
+    for (size_t i = 0; i != live_command_slots_n; ++i) {
+      auto slot = get_live_command_slot_area(i);
+      if (slot == rect{})
+        continue;
+      fill_rectangle(data, data_pitch, slot, 3);
+      line_rectangle(data, data_pitch, slot, 50);
+      if (i >= live_commands.size())
+        continue;
+
+      const auto &cmd = live_commands[i];
+      bool enabled = live_command_is_enabled(cmd, source);
+      uint8_t fill = 20;
+      switch (cmd.kind) {
+      case live_command_kind_t::train:
+        fill = 79;
+        break;
+      case live_command_kind_t::train_fighter:
+        fill = 81;
+        break;
+      case live_command_kind_t::morph:
+        fill = 93;
+        break;
+      case live_command_kind_t::morph_building:
+        fill = 95;
+        break;
+      case live_command_kind_t::build_place:
+        fill = 117;
+        break;
+      case live_command_kind_t::research:
+        fill = 68;
+        break;
+      case live_command_kind_t::upgrade:
+        fill = 54;
+        break;
+      case live_command_kind_t::tactical_stop:
+        fill = 33;
+        break;
+      case live_command_kind_t::tactical_hold_position:
+        fill = 74;
+        break;
+      case live_command_kind_t::tactical_attack_move_mode:
+        fill = 140;
+        break;
+      case live_command_kind_t::tactical_patrol_mode:
+        fill = 111;
+        break;
+      case live_command_kind_t::ability_cancel:
+        fill = 33;
+        break;
+      case live_command_kind_t::ability_burrow_toggle:
+        fill = 48;
+        break;
+      case live_command_kind_t::ability_siege_toggle:
+        fill = 74;
+        break;
+      case live_command_kind_t::ability_cloak_toggle:
+        fill = 140;
+        break;
+      case live_command_kind_t::ability_return_cargo:
+        fill = 111;
+        break;
+      case live_command_kind_t::ability_unload_all:
+        fill = 102;
+        break;
+      case live_command_kind_t::ability_liftoff_land_toggle:
+        fill = 122;
+        break;
+      case live_command_kind_t::ability_stim:
+        fill = 162;
+        break;
+      case live_command_kind_t::ability_morph_archon:
+        fill = 175;
+        break;
+      case live_command_kind_t::ability_morph_dark_archon:
+        fill = 186;
+        break;
+      case live_command_kind_t::ability_scanner_sweep:
+        fill = 33;
+        break;
+      case live_command_kind_t::ability_defensive_matrix:
+        fill = 48;
+        break;
+      case live_command_kind_t::ability_irradiate:
+        fill = 74;
+        break;
+      case live_command_kind_t::ability_emp_shockwave:
+        fill = 93;
+        break;
+      case live_command_kind_t::ability_yamato_gun:
+        fill = 140;
+        break;
+      case live_command_kind_t::ability_lockdown:
+        fill = 111;
+        break;
+      case live_command_kind_t::ability_spider_mines:
+        fill = 102;
+        break;
+      case live_command_kind_t::ability_healing:
+        fill = 122;
+        break;
+      case live_command_kind_t::ability_restoration:
+        fill = 162;
+        break;
+      case live_command_kind_t::ability_optical_flare:
+        fill = 175;
+        break;
+      case live_command_kind_t::ability_spawn_broodlings:
+        fill = 186;
+        break;
+      case live_command_kind_t::ability_parasite:
+        fill = 33;
+        break;
+      case live_command_kind_t::ability_dark_swarm:
+        fill = 48;
+        break;
+      case live_command_kind_t::ability_plague:
+        fill = 74;
+        break;
+      case live_command_kind_t::ability_consume:
+        fill = 93;
+        break;
+      case live_command_kind_t::ability_ensnare:
+        fill = 140;
+        break;
+      case live_command_kind_t::ability_psionic_storm:
+        fill = 111;
+        break;
+      case live_command_kind_t::ability_hallucination:
+        fill = 102;
+        break;
+      case live_command_kind_t::ability_recall:
+        fill = 122;
+        break;
+      case live_command_kind_t::ability_stasis_field:
+        fill = 162;
+        break;
+      case live_command_kind_t::ability_disruption_web:
+        fill = 175;
+        break;
+      case live_command_kind_t::ability_mind_control:
+        fill = 186;
+        break;
+      case live_command_kind_t::ability_feedback:
+        fill = 33;
+        break;
+      case live_command_kind_t::ability_maelstrom:
+        fill = 48;
+        break;
+      case live_command_kind_t::ability_infestation:
+        fill = 74;
+        break;
+      }
+      if (!enabled)
+        fill = 14;
+      fill_rectangle(data, data_pitch,
+                     rect{slot.from + xy(2, 2), slot.to - xy(2, 2)}, fill);
+      if (live_build_placement_armed &&
+          ((cmd.kind == live_command_kind_t::build_place &&
+            live_build_placement_command.kind ==
+                live_command_kind_t::build_place &&
+            cmd.unit_type == live_build_placement_command.unit_type) ||
+           (cmd.kind == live_command_kind_t::ability_liftoff_land_toggle &&
+            live_build_placement_command.kind ==
+                live_command_kind_t::ability_liftoff_land_toggle &&
+            cmd.unit_type == live_build_placement_command.unit_type))) {
+        line_rectangle(data, data_pitch,
+                       rect{slot.from + xy(1, 1), slot.to - xy(1, 1)}, 255);
+      }
+      if ((cmd.kind == live_command_kind_t::tactical_attack_move_mode &&
+           pending_order_mode == pending_order_mode_t::attack_move) ||
+          (cmd.kind == live_command_kind_t::tactical_patrol_mode &&
+           pending_order_mode == pending_order_mode_t::patrol) ||
+          (cmd.kind == live_command_kind_t::ability_scanner_sweep &&
+           pending_order_mode == pending_order_mode_t::spell_scanner_sweep) ||
+          (cmd.kind == live_command_kind_t::ability_defensive_matrix &&
+           pending_order_mode ==
+               pending_order_mode_t::spell_defensive_matrix) ||
+          (cmd.kind == live_command_kind_t::ability_irradiate &&
+           pending_order_mode == pending_order_mode_t::spell_irradiate) ||
+          (cmd.kind == live_command_kind_t::ability_emp_shockwave &&
+           pending_order_mode == pending_order_mode_t::spell_emp_shockwave) ||
+          (cmd.kind == live_command_kind_t::ability_yamato_gun &&
+           pending_order_mode == pending_order_mode_t::spell_yamato_gun) ||
+          (cmd.kind == live_command_kind_t::ability_lockdown &&
+           pending_order_mode == pending_order_mode_t::spell_lockdown) ||
+          (cmd.kind == live_command_kind_t::ability_spider_mines &&
+           pending_order_mode == pending_order_mode_t::spell_spider_mines) ||
+          (cmd.kind == live_command_kind_t::ability_healing &&
+           pending_order_mode == pending_order_mode_t::spell_healing) ||
+          (cmd.kind == live_command_kind_t::ability_restoration &&
+           pending_order_mode == pending_order_mode_t::spell_restoration) ||
+          (cmd.kind == live_command_kind_t::ability_optical_flare &&
+           pending_order_mode == pending_order_mode_t::spell_optical_flare) ||
+          (cmd.kind == live_command_kind_t::ability_spawn_broodlings &&
+           pending_order_mode ==
+               pending_order_mode_t::spell_spawn_broodlings) ||
+          (cmd.kind == live_command_kind_t::ability_parasite &&
+           pending_order_mode == pending_order_mode_t::spell_parasite) ||
+          (cmd.kind == live_command_kind_t::ability_dark_swarm &&
+           pending_order_mode == pending_order_mode_t::spell_dark_swarm) ||
+          (cmd.kind == live_command_kind_t::ability_plague &&
+           pending_order_mode == pending_order_mode_t::spell_plague) ||
+          (cmd.kind == live_command_kind_t::ability_consume &&
+           pending_order_mode == pending_order_mode_t::spell_consume) ||
+          (cmd.kind == live_command_kind_t::ability_ensnare &&
+           pending_order_mode == pending_order_mode_t::spell_ensnare) ||
+          (cmd.kind == live_command_kind_t::ability_psionic_storm &&
+           pending_order_mode == pending_order_mode_t::spell_psionic_storm) ||
+          (cmd.kind == live_command_kind_t::ability_hallucination &&
+           pending_order_mode == pending_order_mode_t::spell_hallucination) ||
+          (cmd.kind == live_command_kind_t::ability_recall &&
+           pending_order_mode == pending_order_mode_t::spell_recall) ||
+          (cmd.kind == live_command_kind_t::ability_stasis_field &&
+           pending_order_mode == pending_order_mode_t::spell_stasis_field) ||
+          (cmd.kind == live_command_kind_t::ability_disruption_web &&
+           pending_order_mode == pending_order_mode_t::spell_disruption_web) ||
+          (cmd.kind == live_command_kind_t::ability_mind_control &&
+           pending_order_mode == pending_order_mode_t::spell_mind_control) ||
+          (cmd.kind == live_command_kind_t::ability_feedback &&
+           pending_order_mode == pending_order_mode_t::spell_feedback) ||
+          (cmd.kind == live_command_kind_t::ability_maelstrom &&
+           pending_order_mode == pending_order_mode_t::spell_maelstrom) ||
+          (cmd.kind == live_command_kind_t::ability_infestation &&
+           pending_order_mode == pending_order_mode_t::spell_infestation)) {
+        line_rectangle(data, data_pitch,
+                       rect{slot.from + xy(1, 1), slot.to - xy(1, 1)}, 255);
+      }
+      int payload_id = live_command_payload_id(cmd);
+      draw_small_number(data, data_pitch, slot.from + xy(4, 21), payload_id, 3,
+                        enabled ? 255 : 51);
+    }
+  }
+
+  void draw_ui(uint8_t *data, size_t data_pitch) {
+    if (is_replay_mode)
+      draw_replay_slider_ui(data, data_pitch);
+    else if (is_live_game_mode)
+      draw_live_ui(data, data_pitch);
+  }
+
+  // Draws a compact debug overlay in the top-left corner: frame number,
+  // draw FPS and current game speed multiplier.  Toggled by F3.
+  void draw_debug_overlay(uint8_t *data, size_t data_pitch) {
+    const int x = 4;
+    const int y = 4;
+    // Background box: 4 rows of 7-segment digits (8px wide, 11px tall each)
+    // plus 2px padding.  Row layout: frame, fps, speed_num, speed_den.
+    const int box_w = 96;
+    const int box_h = 4 * 13 + 4;
+    rect box{xy(x - 2, y - 2), xy(x - 2 + box_w, y - 2 + box_h)};
+    // Clamp to screen bounds.
+    if (box.to.x > (int)screen_width)
+      box.to.x = (int)screen_width;
+    if (box.to.y > (int)screen_height)
+      box.to.y = (int)screen_height;
+    fill_rectangle(data, data_pitch, box, 0);
+    line_rectangle(data, data_pitch, box, 14);
+
+    int frame = st.current_frame;
+    draw_small_number(data, data_pitch, xy(x, y + 0 * 13), frame, 1, 255);
+
+    int fps = fps_draw_last;
+    draw_small_number(data, data_pitch, xy(x, y + 1 * 13), fps, 2, 117);
+
+    // Display game speed as a fraction of normal (fp8 integer(1) == normal).
+    // Normal = 1x, 2x, 4x … up to 128x; or 1/2x displayed as the raw
+    // fp8 numerator over 256.
+    int speed_num = game_speed.raw_value;
+    int speed_den = 256;
+    // Simplify by dividing out common factor of 256 for integer speeds.
+    if (speed_num > 0 && (speed_num & 0xff) == 0) {
+      speed_num >>= 8;
+      speed_den = 1;
+    }
+    draw_small_number(data, data_pitch, xy(x, y + 2 * 13), speed_num, 1, 140);
+    if (speed_den > 1) {
+      draw_small_number(data, data_pitch, xy(x + 24, y + 2 * 13), speed_den, 1,
+                        50);
+    }
+
+    // Paused indicator: a solid bright block in row 3.
+    if (is_paused) {
+      fill_rectangle(data, data_pitch,
+                     rect{xy(x, y + 3 * 13), xy(x + 16, y + 3 * 13 + 9)}, 162);
+    }
+  }
+
+  // Draw active HUD text messages (trigger display text / transmission /
+  // victory-defeat banners) at the bottom-centre of the game viewport.
+  // Each message is a row of 7-segment digits for the characters it can
+  // represent; unknown characters are skipped.  Messages expire after their
+  // configured display duration.
+  void draw_hud_messages(uint8_t *data, size_t data_pitch) {
+    int active = 0;
+    for (int i = 0; i < k_hud_max_lines; ++i) {
+      if (hud_messages[i].expiry_frame > 0 &&
+          st.current_frame < hud_messages[i].expiry_frame) {
+        ++active;
+      }
+    }
+    if (active == 0)
+      return;
+
+    // Layout: render from the bottom of the screen, most-recent on top.
+    // Each line is a narrow dark banner rendered via draw_small_number rows
+    // (7-segment font, each digit 8px wide, 11px tall).
+    const int margin = 4;
+    const int banner_padding = 3;
+    const int char_w = 8;
+    const int char_h = 11;
+    const int banner_h = char_h + 2 * banner_padding;
+    int y_bottom = (int)screen_height - margin - banner_padding;
+
+    for (int slot = hud_next_slot - 1;
+         slot >= hud_next_slot - k_hud_max_lines && active > 0; --slot) {
+      int idx = ((slot % k_hud_max_lines) + k_hud_max_lines) % k_hud_max_lines;
+      const hud_message_t &hm = hud_messages[idx];
+      if (hm.expiry_frame <= 0 || st.current_frame >= hm.expiry_frame)
+        continue;
+      --active;
+
+      // Use at most screen_width - 2*margin characters worth of width.
+      int max_chars = ((int)screen_width - 2 * margin) / char_w;
+      int show_chars = std::min((int)hm.text.size(), max_chars);
+      int banner_w = show_chars * char_w + 2 * banner_padding;
+      int bx = ((int)screen_width - banner_w) / 2;
+      int by = y_bottom - banner_h;
+
+      rect box{xy(bx, by), xy(bx + banner_w, by + banner_h)};
+      fill_rectangle(data, data_pitch, box, 0);
+      line_rectangle(data, data_pitch, box, 14);
+
+      // Render characters as digit blocks where possible.
+      xy p{bx + banner_padding, by + banner_padding};
+      for (int ci = 0; ci < show_chars; ++ci) {
+        char c = hm.text[ci];
+        if (c >= '0' && c <= '9') {
+          draw_digit_7seg(data, data_pitch, p, c - '0', 255);
+        } else if (c != ' ') {
+          // Non-digit, non-space: draw a simple bright block as a character
+          // indicator.
+          fill_rectangle(data, data_pitch, rect{p + xy(2, 3), p + xy(6, 9)},
+                         255);
+        }
+        p.x += char_w;
+      }
+
+      y_bottom = by - margin;
+    }
+  }
+
+  virtual void draw_callback(uint8_t *data, size_t data_pitch) {}
+
+  a_vector<const image_t *> image_draw_queue;
+
+  bool use_new_images = false;
+
+  bool new_images_index_loaded = false;
+
+  a_vector<char> grp_new_image_state = a_vector<char>((size_t)ImageTypes::None);
+  a_unordered_set<a_string> new_images_index;
+  string_table_data images_tbl;
+
+  a_vector<a_vector<std::unique_ptr<native_window_drawing::surface>>>
+      new_images;
+  a_vector<a_vector<std::unique_ptr<native_window_drawing::surface>>>
+      new_images_flipped;
+
+  bool is_new_image(const image_t *image) {
+    if (!use_new_images)
+      return false;
+    if (!new_images_index_loaded) {
+      new_images_index_loaded = true;
+      async_read_file("index.txt", [this](const uint8_t *data, size_t len) {
+        if (!data) {
+          ui::log("failed to load index.txt :(\n");
+          return;
+        }
+        char *c = (char *)data;
+        char *e = (char *)data + len;
+        while (c != e && (*c == '\r' || *c == '\n' || *c == ' '))
+          ++c;
+        while (c != e) {
+          char *s = c;
+          while (c != e && *c != '\r' && *c != '\n' && *c != ' ')
+            ++c;
+          a_string fn(s, c - s);
+          while (c != e && (*c == '\r' || *c == '\n' || *c == ' '))
+            ++c;
+          for (char &c : fn) {
+            if (c == '\\')
+              c = '/';
+          }
+          if (!fn.empty() && fn.front() == '/')
+            fn.erase(fn.begin());
+          if (!fn.empty() && fn.back() == '/')
+            fn.erase(std::prev(fn.end()));
+          ui::log("index entry '%s'\n", fn);
+          new_images_index.insert(std::move(fn));
+        }
+      });
+    }
+    if (new_images_index.empty())
+      return false;
+    size_t index = image->grp - global_st.grps.data();
+    auto &state = grp_new_image_state.at(index);
+    if (state == 0) {
+      state = 2;
+      a_string fn = images_tbl.at(image->image_type->grp_filename_index);
+      for (char &c : fn) {
+        if (c == '\\')
+          c = '/';
+      }
+      for (auto i = fn.rbegin(); i != fn.rend(); ++i) {
+        if (*i == '.') {
+          fn.erase(std::prev(i.base()), fn.end());
+        }
+        if (*i == '/')
+          break;
+      }
+      if (!fn.empty() && fn.front() == '/')
+        fn.erase(fn.begin());
+      fn = "unit/" + fn;
+      ui::log("checking '%s' (image %d, grp %u)\n", fn,
+              (int)image->image_type->id, index);
+      if (new_images_index.count(fn)) {
+        size_t frames = image->grp->frames.size();
+        if (new_images.size() <= index)
+          new_images.resize(index + 1);
+        new_images[index].resize(frames);
+        if (new_images_flipped.size() <= index)
+          new_images_flipped.resize(index + 1);
+        new_images_flipped[index].resize(frames);
+        ui::log("loading %d frames...\n", frames);
+        auto frames_left = std::make_shared<size_t>(frames);
+        for (size_t i = 0; i != frames; ++i) {
+          a_string frame_fn = format("%s/%02u.png", fn, i);
+          async_read_file(frame_fn, [this, frame_fn, index, i, frames_left](
+                                        const uint8_t *data, size_t len) {
+            if (!data) {
+              ui::log("failed to load '%s'\n", frame_fn);
+              return;
+            }
+            new_images.at(index).at(i) =
+                native_window_drawing::load_image(data, len);
+            --*frames_left;
+            if (*frames_left == 0) {
+              grp_new_image_state.at(index) = 1;
+
+              ui::log("grp %d successfully loaded %d frames\n", index,
+                      new_images.at(index).size());
+            }
+          });
+        }
+      }
+    }
+    // ui::log("index %d state %d\n", index, state);
+    return state == 1;
+  }
+
+  native_window_drawing::surface *get_new_image_surface(const image_t *image,
+                                                        bool flipped) {
+    size_t index = image->grp - global_st.grps.data();
+    size_t frame = image->frame_index;
+    if (flipped) {
+      auto &r = new_images_flipped.at(index).at(frame);
+      if (!r) {
+        auto *s = new_images.at(index).at(frame).get();
+        if (!s)
+          return nullptr;
+        r = flip_image(s);
+      }
+      return r.get();
+    } else {
+      return new_images.at(index).at(frame).get();
+    }
+  }
+
+  std::unique_ptr<native_window_drawing::surface> tmp_surface;
+
+  void draw_new_image(const image_t *image) {
+    xy map_pos = get_image_center_map_position(image);
+
+    int screen_x = map_pos.x - screen_pos.x;
+    int screen_y = map_pos.y - screen_pos.y;
+
+    auto *surface = get_new_image_surface(
+        image, i_flag(image, image_t::flag_horizontally_flipped));
+    if (!surface) {
+      ui::log("ERROR: new image %d (grp %d) frame %d does not exist\n",
+              (int)image->image_type->id, image->grp - global_st.grps.data(),
+              image->frame_index);
+      return;
+    }
+
+    auto scale = 114_fp8;
+
+    size_t w = (fp8::integer(surface->w) * scale).integer_part();
+    size_t h = (fp8::integer(surface->w) * scale).integer_part();
+
+    size_t orig_w = w;
+    size_t orig_h = h;
+
+    screen_x -= w / 2;
+    screen_y -= w / 2;
+
+    if (screen_x >= (int)screen_width || screen_y >= (int)screen_height)
+      return;
+    if (screen_x + (int)w <= 0 || screen_y + (int)h <= 0)
+      return;
+
+    size_t offset_x = 0;
+    size_t offset_y = 0;
+    if (screen_x < 0) {
+      offset_x = -screen_x;
+      w += screen_x;
+      screen_x = 0;
+    }
+    if (screen_y < 0) {
+      offset_y = -screen_y;
+      h += screen_y;
+      screen_y = 0;
+    }
+
+    w = std::min(w, screen_width - screen_x);
+    h = std::min(h, screen_height - screen_y);
+
+    if (image->modifier == 10) {
+      if (!tmp_surface || (size_t)tmp_surface->w < orig_w ||
+          (size_t)tmp_surface->h < orig_h) {
+        tmp_surface =
+            native_window_drawing::create_rgba_surface(orig_w, orig_h);
+      }
+      surface->set_blend_mode(native_window_drawing::blend_mode::none);
+      surface->blit_scaled(&*tmp_surface, 0, 0, orig_w, orig_h);
+
+      size_t src_pitch = tmp_surface->pitch / 4;
+      size_t dst_pitch = rgba_surface->pitch / 4;
+      uint32_t *src = (uint32_t *)tmp_surface->lock();
+      uint32_t *dst = (uint32_t *)rgba_surface->lock();
+
+      src += src_pitch * offset_y + offset_x;
+      dst += dst_pitch * screen_y + screen_x;
+
+      size_t src_skip = src_pitch - w;
+      size_t dst_skip = dst_pitch - w;
+
+      for (size_t y = h; y--;) {
+
+        for (size_t x = w; x--;) {
+          uint32_t s = *src;
+          uint32_t d = *dst;
+          if (s >> 24 >= 16)
+            *dst = (d & 0xfefefe) / 2 | 0xff000000;
+          ++src;
+          ++dst;
+        }
+
+        src += src_skip;
+        dst += dst_skip;
+      }
+
+      tmp_surface->unlock();
+      rgba_surface->unlock();
+
+    } else {
+      surface->set_blend_mode(native_window_drawing::blend_mode::alpha);
+      surface->blit_scaled(&*rgba_surface, screen_x - offset_x,
+                           screen_y - offset_y, orig_w, orig_h);
+    }
+  }
+
+  void draw_image_queue() {
+    for (auto *image : image_draw_queue) {
+      draw_new_image(image);
+    }
+  }
+
+  fp8 game_speed = fp8::integer(1);
+
+  bool show_debug_overlay = false;
+
+  std::unique_ptr<native_window_drawing::surface> window_surface;
+  std::unique_ptr<native_window_drawing::surface> indexed_surface;
+  std::unique_ptr<native_window_drawing::surface> rgba_surface;
+  native_window_drawing::palette *palette = nullptr;
+  std::chrono::high_resolution_clock clock;
+  std::chrono::high_resolution_clock::time_point last_draw;
+  std::chrono::high_resolution_clock::time_point last_input_poll;
+  std::chrono::high_resolution_clock::time_point last_fps;
+  int fps_counter = 0;
+  // Smoothed draw FPS tracked independently from the sim fps_counter.
+  int fps_draw_counter = 0;
+  int fps_draw_last = 0;
+  size_t scroll_speed_n = 0;
+
+  void resize(int width, int height) {
+    if (!wnd && create_window)
+      wnd.create("OpenBW", 0, 0, width, height);
+    screen_width = width;
+    screen_height = height;
+    // view_scale = fp16::integer(1) - (fp16::integer(1) / 4);
+    view_scale = fp16::integer(1);
+    view_width = (fp16::integer(screen_width) / view_scale).integer_part();
+    view_height = (fp16::integer(screen_height) / view_scale).integer_part();
+    view_scale = (ufp16::integer(screen_width) / view_width).as_signed();
+    window_surface.reset();
+    indexed_surface.reset();
+    rgba_surface.reset();
+  }
+
+  a_vector<unit_id> current_selection;
+
+  bool current_selection_is_selected(unit_t *u) {
+    auto uid = get_unit_id(u);
+    return std::find(current_selection.begin(), current_selection.end(), uid) !=
+           current_selection.end();
+  }
+
+  void current_selection_add(unit_t *u) {
+    if (!u)
+      return;
+    if (!unit_is_local_controllable(u))
+      return;
+    auto uid = get_unit_id(u);
+    if (std::find(current_selection.begin(), current_selection.end(), uid) !=
+        current_selection.end())
+      return;
+    current_selection.push_back(uid);
+    live_commands_dirty = true;
+  }
+
+  void current_selection_clear() {
+    if (!current_selection.empty())
+      live_commands_dirty = true;
+    current_selection.clear();
+    cancel_live_build_placement();
+  }
+
+  void current_selection_remove(const unit_t *u) {
+    auto uid = get_unit_id(u);
+    auto i = std::find(current_selection.begin(), current_selection.end(), uid);
+    if (i != current_selection.end()) {
+      current_selection.erase(i);
+      live_commands_dirty = true;
+      cancel_live_build_placement();
+    }
+  }
+
+  enum class pending_order_mode_t {
+    none,
+    attack_move,
+    patrol,
+    // Targeted spell modes: right-click issues the corresponding order.
+    // Point-targeted (no unit required): scanner_sweep, defensive_matrix,
+    // dark_swarm, plague, ensnare, psionic_storm, disruption_web,
+    // emp_shockwave, spider_mines, recall, stasis_field, maelstrom,
+    // hallucination, consume.
+    // Unit-targeted (clicks on a unit): irradiate, lockdown, yamato_gun,
+    // restoration, optical_flare, spawn_broodlings, parasite, feedback,
+    // mind_control, healing.
+    spell_scanner_sweep,
+    spell_defensive_matrix,
+    spell_irradiate,
+    spell_emp_shockwave,
+    spell_yamato_gun,
+    spell_lockdown,
+    spell_spider_mines,
+    spell_healing,
+    spell_restoration,
+    spell_optical_flare,
+    spell_spawn_broodlings,
+    spell_parasite,
+    spell_dark_swarm,
+    spell_plague,
+    spell_consume,
+    spell_ensnare,
+    spell_psionic_storm,
+    spell_hallucination,
+    spell_recall,
+    spell_stasis_field,
+    spell_disruption_web,
+    spell_mind_control,
+    spell_feedback,
+    spell_maelstrom,
+    spell_infestation,
+  };
+
+  enum class live_command_kind_t {
+    train,
+    train_fighter,
+    morph,
+    morph_building,
+    build_place,
+    research,
+    upgrade,
+    tactical_stop,
+    tactical_hold_position,
+    tactical_attack_move_mode,
+    tactical_patrol_mode,
+    ability_cancel,
+    ability_burrow_toggle,
+    ability_siege_toggle,
+    ability_cloak_toggle,
+    ability_return_cargo,
+    ability_unload_all,
+    ability_liftoff_land_toggle,
+    ability_stim,
+    ability_morph_archon,
+    ability_morph_dark_archon,
+    // Targeted spells (activate targeting mode; right-click issues order).
+    ability_scanner_sweep,
+    ability_defensive_matrix,
+    ability_irradiate,
+    ability_emp_shockwave,
+    ability_yamato_gun,
+    ability_lockdown,
+    ability_spider_mines,
+    ability_healing,
+    ability_restoration,
+    ability_optical_flare,
+    ability_spawn_broodlings,
+    ability_parasite,
+    ability_dark_swarm,
+    ability_plague,
+    ability_consume,
+    ability_ensnare,
+    ability_psionic_storm,
+    ability_hallucination,
+    ability_recall,
+    ability_stasis_field,
+    ability_disruption_web,
+    ability_mind_control,
+    ability_feedback,
+    ability_maelstrom,
+    ability_infestation,
+  };
+
+  struct live_command_t {
+    live_command_kind_t kind = live_command_kind_t::train;
+    const unit_type_t *unit_type = nullptr;
+    const tech_type_t *tech_type = nullptr;
+    const upgrade_type_t *upgrade_type = nullptr;
+    const order_type_t *build_order_type = nullptr;
+  };
+
+  static constexpr size_t live_command_slots_n = 12;
+  a_vector<live_command_t> live_commands;
+  bool live_commands_dirty = true;
+  int live_commands_state_frame = -1;
+  bool live_build_placement_armed = false;
+  live_command_t live_build_placement_command;
+
+  pending_order_mode_t pending_order_mode = pending_order_mode_t::none;
+
+  void cancel_live_build_placement() { live_build_placement_armed = false; }
+
+  bool point_in_rect(rect r, int x, int y) const {
+    return x >= r.from.x && x < r.to.x && y >= r.from.y && y < r.to.y;
+  }
+
+  unit_t *get_single_local_selected_unit() {
+    if (!has_local_player())
+      return nullptr;
+    unit_t *result = nullptr;
+    for (auto uid : current_selection) {
+      unit_t *u = get_unit(uid);
+      if (!u || unit_dead(u) || us_hidden(u))
+        continue;
+      if (!unit_is_local_controllable(u))
+        continue;
+      if (result)
+        return nullptr;
+      result = u;
+    }
+    return result;
+  }
+
+  template <typename pred_F> bool any_local_selected_unit(pred_F &&pred) {
+    if (!has_local_player())
+      return false;
+    for (auto uid : current_selection) {
+      unit_t *u = get_unit(uid);
+      if (!u || unit_dead(u) || us_hidden(u))
+        continue;
+      if (!unit_is_local_controllable(u))
+        continue;
+      if (pred(u))
+        return true;
+    }
+    return false;
+  }
+
+  bool has_local_controllable_selection() {
+    return any_local_selected_unit([](const unit_t *) { return true; });
+  }
+
+  const order_type_t *hold_order_for_unit(const unit_t *source) const {
+    if (unit_is_carrier(source))
+      return get_order_type(Orders::CarrierHoldPosition);
+    if (unit_is_reaver(source))
+      return get_order_type(Orders::ReaverHoldPosition);
+    if (unit_is_queen(source))
+      return get_order_type(Orders::QueenHoldPosition);
+    if (unit_is(source, UnitTypes::Zerg_Scourge) ||
+        unit_is(source, UnitTypes::Zerg_Infested_Terran))
+      return get_order_type(Orders::SuicideHoldPosition);
+    if (unit_is(source, UnitTypes::Terran_Medic))
+      return get_order_type(Orders::MedicHoldPosition);
+    return get_order_type(Orders::HoldPosition);
+  }
+
+  bool live_command_can_tactical_stop() {
+    const order_type_t *order = get_order_type(Orders::Stop);
+    return any_local_selected_unit([&](const unit_t *source) {
+      return unit_can_receive_order(source, order, local_player_id);
+    });
+  }
+
+  bool live_command_can_tactical_hold_position() {
+    return any_local_selected_unit([&](const unit_t *source) {
+      return unit_can_receive_order(source, hold_order_for_unit(source),
+                                    local_player_id);
+    });
+  }
+
+  bool live_command_can_tactical_attack_move_mode() {
+    const order_type_t *order = get_order_type(Orders::AttackMove);
+    return any_local_selected_unit([&](const unit_t *source) {
+      return unit_can_receive_order(source, order, local_player_id);
+    });
+  }
+
+  bool live_command_can_tactical_patrol_mode() {
+    const order_type_t *order = get_order_type(Orders::Patrol);
+    return any_local_selected_unit([&](const unit_t *source) {
+      return unit_can_receive_order(source, order, local_player_id);
+    });
+  }
+
+  const order_type_t *
+  resolve_live_build_order(const unit_t *u,
+                           const unit_type_t *unit_type) const {
+    if (!u || !unit_type)
+      return nullptr;
+    if (ut_addon(unit_type))
+      return get_order_type(Orders::PlaceAddon);
+    if (!ut_worker(u))
+      return nullptr;
+    auto race = unit_race(u);
+    if (race == race_t::terran)
+      return get_order_type(Orders::PlaceBuilding);
+    if (race == race_t::zerg)
+      return get_order_type(Orders::DroneStartBuild);
+    if (race == race_t::protoss)
+      return get_order_type(Orders::PlaceProtossBuilding);
+    return nullptr;
+  }
+
+  bool live_build_placement_is_valid(unit_t *u, const live_command_t &cmd,
+                                     xy_t<size_t> tile_pos) const {
+    if (!u || !cmd.unit_type)
+      return false;
+    if (cmd.kind == live_command_kind_t::ability_liftoff_land_toggle) {
+      if (!ut_flying_building(u) || !u_flying(u))
+        return false;
+      if (!unit_can_receive_order(u, get_order_type(Orders::BuildingLand),
+                                  local_player_id))
+        return false;
+      xy pos(int(32 * tile_pos.x) + cmd.unit_type->placement_size.x / 2,
+             int(32 * tile_pos.y) + cmd.unit_type->placement_size.y / 2);
+      return can_place_building(u, local_player_id, cmd.unit_type, pos, false,
+                                false);
+    }
+    if (cmd.kind != live_command_kind_t::build_place || !cmd.build_order_type)
+      return false;
+    if (!unit_build_order_valid(u, cmd.build_order_type, cmd.unit_type,
+                                local_player_id))
+      return false;
+    if (ut_addon(cmd.unit_type)) {
+      xy addon_pos(int(32 * tile_pos.x) + cmd.unit_type->placement_size.x / 2,
+                   int(32 * tile_pos.y) + cmd.unit_type->placement_size.y / 2);
+      if (!can_place_building(u, local_player_id, cmd.unit_type, addon_pos,
+                              false, false))
+        return false;
+      xy builder_pos(int(32 * tile_pos.x + u->unit_type->placement_size.x / 2),
+                     int(32 * tile_pos.y + u->unit_type->placement_size.y / 2));
+      builder_pos.x -= cmd.unit_type->addon_position.x / 32 * 32;
+      builder_pos.y -= cmd.unit_type->addon_position.y / 32 * 32;
+      return can_place_building(u, local_player_id, u->unit_type, builder_pos,
+                                false, false);
+    }
+    xy pos(int(32 * tile_pos.x) + cmd.unit_type->placement_size.x / 2,
+           int(32 * tile_pos.y) + cmd.unit_type->placement_size.y / 2);
+    return can_place_building(u, local_player_id, cmd.unit_type, pos, false,
+                              false);
+  }
+
+  bool live_command_is_enabled(const live_command_t &cmd,
+                               const unit_t *source) {
+    switch (cmd.kind) {
+    case live_command_kind_t::tactical_stop:
+      return live_command_can_tactical_stop();
+    case live_command_kind_t::tactical_hold_position:
+      return live_command_can_tactical_hold_position();
+    case live_command_kind_t::tactical_attack_move_mode:
+      return live_command_can_tactical_attack_move_mode();
+    case live_command_kind_t::tactical_patrol_mode:
+      return live_command_can_tactical_patrol_mode();
+    default:
+      break;
+    }
+    if (!source || source->owner != local_player_id)
+      return false;
+    switch (cmd.kind) {
+    case live_command_kind_t::train:
+      return cmd.unit_type && unit_can_build(source, cmd.unit_type) &&
+             has_available_resources_for(local_player_id, cmd.unit_type);
+    case live_command_kind_t::train_fighter:
+      return cmd.unit_type && unit_can_build(source, cmd.unit_type) &&
+             has_available_resources_for(local_player_id, cmd.unit_type);
+    case live_command_kind_t::morph:
+      return cmd.unit_type && unit_can_build(source, cmd.unit_type) &&
+             has_available_resources_for(local_player_id, cmd.unit_type);
+    case live_command_kind_t::morph_building:
+      return cmd.unit_type && unit_can_build(source, cmd.unit_type) &&
+             has_available_resources_for(local_player_id, cmd.unit_type);
+    case live_command_kind_t::build_place:
+      return cmd.unit_type && cmd.build_order_type &&
+             unit_build_order_valid(source, cmd.build_order_type, cmd.unit_type,
+                                    local_player_id) &&
+             has_available_resources_for(local_player_id, cmd.unit_type);
+    case live_command_kind_t::research:
+      return cmd.tech_type &&
+             unit_can_research(source, cmd.tech_type, local_player_id) &&
+             has_available_resources_for(local_player_id, cmd.tech_type);
+    case live_command_kind_t::upgrade:
+      return cmd.upgrade_type &&
+             unit_can_upgrade(source, cmd.upgrade_type, local_player_id) &&
+             has_available_resources_for(local_player_id, cmd.upgrade_type);
+    case live_command_kind_t::tactical_stop:
+    case live_command_kind_t::tactical_hold_position:
+    case live_command_kind_t::tactical_attack_move_mode:
+    case live_command_kind_t::tactical_patrol_mode:
+      return false;
+    case live_command_kind_t::ability_cancel:
+      return live_command_can_cancel(source);
+    case live_command_kind_t::ability_burrow_toggle:
+      return live_command_can_burrow_toggle(source);
+    case live_command_kind_t::ability_siege_toggle:
+      return live_command_can_siege_toggle(source);
+    case live_command_kind_t::ability_cloak_toggle:
+      return live_command_can_cloak_toggle(source);
+    case live_command_kind_t::ability_return_cargo:
+      return live_command_can_return_cargo(source);
+    case live_command_kind_t::ability_unload_all:
+      return live_command_can_unload_all(source);
+    case live_command_kind_t::ability_liftoff_land_toggle:
+      return live_command_can_liftoff_land_toggle(source);
+    case live_command_kind_t::ability_stim:
+      return live_command_can_stim(source);
+    case live_command_kind_t::ability_morph_archon:
+      return live_command_can_morph_archon(source);
+    case live_command_kind_t::ability_morph_dark_archon:
+      return live_command_can_morph_dark_archon(source);
+    case live_command_kind_t::ability_scanner_sweep:
+      return live_command_can_scanner_sweep(source);
+    case live_command_kind_t::ability_defensive_matrix:
+      return live_command_can_defensive_matrix(source);
+    case live_command_kind_t::ability_irradiate:
+      return live_command_can_irradiate(source);
+    case live_command_kind_t::ability_emp_shockwave:
+      return live_command_can_emp_shockwave(source);
+    case live_command_kind_t::ability_yamato_gun:
+      return live_command_can_yamato_gun(source);
+    case live_command_kind_t::ability_lockdown:
+      return live_command_can_lockdown(source);
+    case live_command_kind_t::ability_spider_mines:
+      return live_command_can_spider_mines(source);
+    case live_command_kind_t::ability_healing:
+      return live_command_can_healing(source);
+    case live_command_kind_t::ability_restoration:
+      return live_command_can_restoration(source);
+    case live_command_kind_t::ability_optical_flare:
+      return live_command_can_optical_flare(source);
+    case live_command_kind_t::ability_spawn_broodlings:
+      return live_command_can_spawn_broodlings(source);
+    case live_command_kind_t::ability_parasite:
+      return live_command_can_parasite(source);
+    case live_command_kind_t::ability_dark_swarm:
+      return live_command_can_dark_swarm(source);
+    case live_command_kind_t::ability_plague:
+      return live_command_can_plague(source);
+    case live_command_kind_t::ability_consume:
+      return live_command_can_consume(source);
+    case live_command_kind_t::ability_ensnare:
+      return live_command_can_ensnare(source);
+    case live_command_kind_t::ability_psionic_storm:
+      return live_command_can_psionic_storm(source);
+    case live_command_kind_t::ability_hallucination:
+      return live_command_can_hallucination(source);
+    case live_command_kind_t::ability_recall:
+      return live_command_can_recall(source);
+    case live_command_kind_t::ability_stasis_field:
+      return live_command_can_stasis_field(source);
+    case live_command_kind_t::ability_disruption_web:
+      return live_command_can_disruption_web(source);
+    case live_command_kind_t::ability_mind_control:
+      return live_command_can_mind_control(source);
+    case live_command_kind_t::ability_feedback:
+      return live_command_can_feedback(source);
+    case live_command_kind_t::ability_maelstrom:
+      return live_command_can_maelstrom(source);
+    case live_command_kind_t::ability_infestation:
+      return live_command_can_infestation(source);
+    }
+    return false;
+  }
+
+  int live_command_payload_id(const live_command_t &cmd) const {
+    switch (cmd.kind) {
+    case live_command_kind_t::train:
+    case live_command_kind_t::train_fighter:
+    case live_command_kind_t::morph:
+    case live_command_kind_t::morph_building:
+    case live_command_kind_t::build_place:
+      return cmd.unit_type ? (int)cmd.unit_type->id : 0;
+    case live_command_kind_t::research:
+      return cmd.tech_type ? (int)cmd.tech_type->id : 0;
+    case live_command_kind_t::upgrade:
+      return cmd.upgrade_type ? (int)cmd.upgrade_type->id : 0;
+    case live_command_kind_t::tactical_stop:
+      return 911;
+    case live_command_kind_t::tactical_hold_position:
+      return 912;
+    case live_command_kind_t::tactical_attack_move_mode:
+      return 913;
+    case live_command_kind_t::tactical_patrol_mode:
+      return 914;
+    case live_command_kind_t::ability_cancel:
+      return 901;
+    case live_command_kind_t::ability_burrow_toggle:
+      return 902;
+    case live_command_kind_t::ability_siege_toggle:
+      return 903;
+    case live_command_kind_t::ability_cloak_toggle:
+      return 904;
+    case live_command_kind_t::ability_return_cargo:
+      return 905;
+    case live_command_kind_t::ability_unload_all:
+      return 906;
+    case live_command_kind_t::ability_liftoff_land_toggle:
+      return 910;
+    case live_command_kind_t::ability_stim:
+      return 907;
+    case live_command_kind_t::ability_morph_archon:
+      return 908;
+    case live_command_kind_t::ability_morph_dark_archon:
+      return 909;
+    case live_command_kind_t::ability_scanner_sweep:
+      return 920;
+    case live_command_kind_t::ability_defensive_matrix:
+      return 921;
+    case live_command_kind_t::ability_irradiate:
+      return 922;
+    case live_command_kind_t::ability_emp_shockwave:
+      return 923;
+    case live_command_kind_t::ability_yamato_gun:
+      return 924;
+    case live_command_kind_t::ability_lockdown:
+      return 925;
+    case live_command_kind_t::ability_spider_mines:
+      return 926;
+    case live_command_kind_t::ability_healing:
+      return 927;
+    case live_command_kind_t::ability_restoration:
+      return 928;
+    case live_command_kind_t::ability_optical_flare:
+      return 929;
+    case live_command_kind_t::ability_spawn_broodlings:
+      return 930;
+    case live_command_kind_t::ability_parasite:
+      return 931;
+    case live_command_kind_t::ability_dark_swarm:
+      return 932;
+    case live_command_kind_t::ability_plague:
+      return 933;
+    case live_command_kind_t::ability_consume:
+      return 934;
+    case live_command_kind_t::ability_ensnare:
+      return 935;
+    case live_command_kind_t::ability_psionic_storm:
+      return 936;
+    case live_command_kind_t::ability_hallucination:
+      return 937;
+    case live_command_kind_t::ability_recall:
+      return 938;
+    case live_command_kind_t::ability_stasis_field:
+      return 939;
+    case live_command_kind_t::ability_disruption_web:
+      return 940;
+    case live_command_kind_t::ability_mind_control:
+      return 941;
+    case live_command_kind_t::ability_feedback:
+      return 942;
+    case live_command_kind_t::ability_maelstrom:
+      return 943;
+    case live_command_kind_t::ability_infestation:
+      return 944;
+    }
+    return 0;
+  }
+
+  bool live_command_requires_single_source(live_command_kind_t kind) const {
+    switch (kind) {
+    case live_command_kind_t::tactical_stop:
+    case live_command_kind_t::tactical_hold_position:
+    case live_command_kind_t::tactical_attack_move_mode:
+    case live_command_kind_t::tactical_patrol_mode:
+      return false;
+    default:
+      return true;
+    }
+  }
+
+  const tech_type_t *live_cloak_tech_for_unit(const unit_t *source) const {
+    if (!source)
+      return nullptr;
+    if (unit_is_ghost(source))
+      return get_tech_type(TechTypes::Personnel_Cloaking);
+    if (unit_is_wraith(source))
+      return get_tech_type(TechTypes::Cloaking_Field);
+    return nullptr;
+  }
+
+  bool live_command_can_cancel(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!u_completed(source))
+      return true;
+    if (unit_is_researching(source) || unit_is_upgrading(source))
+      return true;
+    if (source->secondary_order_type &&
+        source->secondary_order_type->id == Orders::BuildAddon &&
+        source->current_build_unit && !u_completed(source->current_build_unit))
+      return true;
+    if (source->order_type &&
+        (source->order_type->id == Orders::ZergUnitMorph ||
+         source->order_type->id == Orders::ZergBuildingMorph))
+      return true;
+    if (live_command_can_cancel_nuke(source))
+      return true;
+    return !source->build_queue.empty();
+  }
+
+  bool live_command_can_burrow_toggle(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    const tech_type_t *burrow_tech = get_tech_type(TechTypes::Burrowing);
+    if (!unit_can_use_tech(source, burrow_tech, local_player_id))
+      return false;
+    if (u_burrowed(source))
+      return ut_can_burrow(source);
+    return true;
+  }
+
+  bool live_command_can_siege_toggle(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!unit_is_sieged_tank(source) && !unit_is_unsieged_tank(source))
+      return false;
+    return unit_can_use_tech(source, get_tech_type(TechTypes::Tank_Siege_Mode),
+                             local_player_id);
+  }
+
+  bool live_command_can_cloak_toggle(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    const tech_type_t *tech = live_cloak_tech_for_unit(source);
+    if (!tech)
+      return false;
+    if (!unit_can_use_tech(source, tech, local_player_id))
+      return false;
+    if (u_requires_detector(source))
+      return true;
+    return source->energy >= fp8::integer(tech->energy_cost);
+  }
+
+  bool live_command_can_return_cargo(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    const order_type_t *order = nullptr;
+    if (source->carrying_flags & 2)
+      order = get_order_type(Orders::ReturnMinerals);
+    else if (source->carrying_flags & 1)
+      order = get_order_type(Orders::ReturnGas);
+    if (!order)
+      return false;
+    return unit_can_receive_order(source, order, local_player_id);
+  }
+
+  bool live_command_can_unload_all(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (loaded_units(source).empty())
+      return false;
+    return unit_can_receive_order(source, get_order_type(Orders::Unload),
+                                  local_player_id);
+  }
+
+  bool live_command_can_liftoff_land_toggle(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!ut_flying_building(source))
+      return false;
+    if (u_flying(source))
+      return unit_can_receive_order(
+          source, get_order_type(Orders::BuildingLand), local_player_id);
+    return unit_can_receive_order(
+        source, get_order_type(Orders::BuildingLiftoff), local_player_id);
+  }
+
+  bool live_command_can_cancel_nuke(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!unit_is_ghost(source))
+      return false;
+    return source->connected_unit &&
+           unit_is(source->connected_unit, UnitTypes::Terran_Nuclear_Missile);
+  }
+
+  bool live_command_can_stim(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    return unit_can_use_tech(source, get_tech_type(TechTypes::Stim_Packs),
+                             local_player_id);
+  }
+
+  bool live_command_can_morph_archon(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!unit_is(source, UnitTypes::Protoss_High_Templar))
+      return false;
+    return unit_can_use_tech(source, get_tech_type(TechTypes::Archon_Warp),
+                             local_player_id);
+  }
+
+  bool live_command_can_morph_dark_archon(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!unit_is(source, UnitTypes::Protoss_Dark_Templar))
+      return false;
+    return unit_can_use_tech(source, get_tech_type(TechTypes::Dark_Archon_Meld),
+                             local_player_id);
+  }
+
+  // Returns true when the source unit can use a tech that requires a map
+  // target (position or unit), given that the tech is unlocked and the unit
+  // has enough energy.
+  bool live_command_can_use_tech(const unit_t *source,
+                                 TechTypes tech_id) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    const tech_type_t *tech = get_tech_type(tech_id);
+    if (!unit_can_use_tech(source, tech, local_player_id))
+      return false;
+    return source->energy >= fp8::integer(tech->energy_cost);
+  }
+
+  bool live_command_can_scanner_sweep(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!unit_is(source, UnitTypes::Terran_Comsat_Station))
+      return false;
+    return live_command_can_use_tech(source, TechTypes::Scanner_Sweep);
+  }
+  bool live_command_can_defensive_matrix(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Defensive_Matrix);
+  }
+  bool live_command_can_irradiate(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Irradiate);
+  }
+  bool live_command_can_emp_shockwave(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::EMP_Shockwave);
+  }
+  bool live_command_can_yamato_gun(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Yamato_Gun);
+  }
+  bool live_command_can_lockdown(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Lockdown);
+  }
+  bool live_command_can_spider_mines(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!unit_is(source, UnitTypes::Terran_Vulture))
+      return false;
+    if (!unit_can_use_tech(source, get_tech_type(TechTypes::Spider_Mines),
+                           local_player_id))
+      return false;
+    return source->vulture.spider_mine_count > 0;
+  }
+  bool live_command_can_healing(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!unit_is(source, UnitTypes::Terran_Medic))
+      return false;
+    return live_command_can_use_tech(source, TechTypes::Healing);
+  }
+  bool live_command_can_restoration(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Restoration);
+  }
+  bool live_command_can_optical_flare(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Optical_Flare);
+  }
+  bool live_command_can_spawn_broodlings(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Spawn_Broodlings);
+  }
+  bool live_command_can_parasite(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Parasite);
+  }
+  bool live_command_can_dark_swarm(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Dark_Swarm);
+  }
+  bool live_command_can_plague(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Plague);
+  }
+  bool live_command_can_consume(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Consume);
+  }
+  bool live_command_can_ensnare(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Ensnare);
+  }
+  bool live_command_can_psionic_storm(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Psionic_Storm);
+  }
+  bool live_command_can_hallucination(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Hallucination);
+  }
+  bool live_command_can_recall(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Recall);
+  }
+  bool live_command_can_stasis_field(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Stasis_Field);
+  }
+  bool live_command_can_disruption_web(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Disruption_Web);
+  }
+  bool live_command_can_mind_control(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Mind_Control);
+  }
+  bool live_command_can_feedback(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Feedback);
+  }
+  bool live_command_can_maelstrom(const unit_t *source) const {
+    return live_command_can_use_tech(source, TechTypes::Maelstrom);
+  }
+  bool live_command_can_infestation(const unit_t *source) const {
+    if (!source || source->owner != local_player_id)
+      return false;
+    if (!unit_is(source, UnitTypes::Zerg_Queen))
+      return false;
+    return live_command_can_use_tech(source, TechTypes::Infestation);
+  }
+
+  bool execute_live_cancel_command() {
+    if (action_cancel_research(local_player_id))
+      return true;
+    if (action_cancel_upgrade(local_player_id))
+      return true;
+    if (action_cancel_addon(local_player_id))
+      return true;
+    if (action_cancel_build_queue(local_player_id, 254))
+      return true;
+    if (action_cancel_nuke(local_player_id))
+      return true;
+    if (action_cancel_morph(local_player_id))
+      return true;
+    return action_cancel_building_unit(local_player_id);
+  }
+
+  bool execute_live_ability_command(live_command_kind_t kind, bool queue) {
+    unit_t *source = get_single_local_selected_unit();
+    if (!source)
+      return false;
+    switch (kind) {
+    case live_command_kind_t::ability_cancel:
+      return execute_live_cancel_command();
+    case live_command_kind_t::ability_burrow_toggle:
+      if (u_burrowed(source))
+        return action_unburrow(local_player_id);
+      return action_burrow(local_player_id, queue);
+    case live_command_kind_t::ability_siege_toggle:
+      if (unit_is_sieged_tank(source))
+        return action_unsiege(local_player_id, queue);
+      return action_siege(local_player_id, queue);
+    case live_command_kind_t::ability_cloak_toggle:
+      if (u_requires_detector(source))
+        return action_decloak(local_player_id);
+      return action_cloak(local_player_id);
+    case live_command_kind_t::ability_return_cargo:
+      return action_return_cargo(local_player_id, queue);
+    case live_command_kind_t::ability_unload_all:
+      return action_unload_all(local_player_id, queue);
+    case live_command_kind_t::ability_liftoff_land_toggle:
+      if (!ut_flying_building(source))
+        return false;
+      if (u_flying(source)) {
+        live_build_placement_armed = true;
+        live_build_placement_command = {};
+        live_build_placement_command.kind =
+            live_command_kind_t::ability_liftoff_land_toggle;
+        live_build_placement_command.unit_type = source->unit_type;
+        return true;
+      }
+      return action_liftoff(local_player_id, source->sprite->position);
+    case live_command_kind_t::ability_stim:
+      return action_stim_pack(local_player_id);
+    case live_command_kind_t::ability_morph_archon:
+      return action_morph_archon(local_player_id);
+    case live_command_kind_t::ability_morph_dark_archon:
+      return action_morph_dark_archon(local_player_id);
+    // Targeted spells: arm a pending order mode so the next right-click
+    // dispatches the correct order.
+    case live_command_kind_t::ability_scanner_sweep:
+      pending_order_mode = pending_order_mode_t::spell_scanner_sweep;
+      return true;
+    case live_command_kind_t::ability_defensive_matrix:
+      pending_order_mode = pending_order_mode_t::spell_defensive_matrix;
+      return true;
+    case live_command_kind_t::ability_irradiate:
+      pending_order_mode = pending_order_mode_t::spell_irradiate;
+      return true;
+    case live_command_kind_t::ability_emp_shockwave:
+      pending_order_mode = pending_order_mode_t::spell_emp_shockwave;
+      return true;
+    case live_command_kind_t::ability_yamato_gun:
+      pending_order_mode = pending_order_mode_t::spell_yamato_gun;
+      return true;
+    case live_command_kind_t::ability_lockdown:
+      pending_order_mode = pending_order_mode_t::spell_lockdown;
+      return true;
+    case live_command_kind_t::ability_spider_mines:
+      pending_order_mode = pending_order_mode_t::spell_spider_mines;
+      return true;
+    case live_command_kind_t::ability_healing:
+      pending_order_mode = pending_order_mode_t::spell_healing;
+      return true;
+    case live_command_kind_t::ability_restoration:
+      pending_order_mode = pending_order_mode_t::spell_restoration;
+      return true;
+    case live_command_kind_t::ability_optical_flare:
+      pending_order_mode = pending_order_mode_t::spell_optical_flare;
+      return true;
+    case live_command_kind_t::ability_spawn_broodlings:
+      pending_order_mode = pending_order_mode_t::spell_spawn_broodlings;
+      return true;
+    case live_command_kind_t::ability_parasite:
+      pending_order_mode = pending_order_mode_t::spell_parasite;
+      return true;
+    case live_command_kind_t::ability_dark_swarm:
+      pending_order_mode = pending_order_mode_t::spell_dark_swarm;
+      return true;
+    case live_command_kind_t::ability_plague:
+      pending_order_mode = pending_order_mode_t::spell_plague;
+      return true;
+    case live_command_kind_t::ability_consume:
+      pending_order_mode = pending_order_mode_t::spell_consume;
+      return true;
+    case live_command_kind_t::ability_ensnare:
+      pending_order_mode = pending_order_mode_t::spell_ensnare;
+      return true;
+    case live_command_kind_t::ability_psionic_storm:
+      pending_order_mode = pending_order_mode_t::spell_psionic_storm;
+      return true;
+    case live_command_kind_t::ability_hallucination:
+      pending_order_mode = pending_order_mode_t::spell_hallucination;
+      return true;
+    case live_command_kind_t::ability_recall:
+      pending_order_mode = pending_order_mode_t::spell_recall;
+      return true;
+    case live_command_kind_t::ability_stasis_field:
+      pending_order_mode = pending_order_mode_t::spell_stasis_field;
+      return true;
+    case live_command_kind_t::ability_disruption_web:
+      pending_order_mode = pending_order_mode_t::spell_disruption_web;
+      return true;
+    case live_command_kind_t::ability_mind_control:
+      pending_order_mode = pending_order_mode_t::spell_mind_control;
+      return true;
+    case live_command_kind_t::ability_feedback:
+      pending_order_mode = pending_order_mode_t::spell_feedback;
+      return true;
+    case live_command_kind_t::ability_maelstrom:
+      pending_order_mode = pending_order_mode_t::spell_maelstrom;
+      return true;
+    case live_command_kind_t::ability_infestation:
+      pending_order_mode = pending_order_mode_t::spell_infestation;
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool issue_live_ability_hotkey(live_command_kind_t kind, bool queue) {
+    if (!is_live_game_mode || !has_local_player())
+      return false;
+    sync_action_selection_from_current();
+    if (action_st.selection.at(local_player_id).empty())
+      return false;
+    pending_order_mode = pending_order_mode_t::none;
+    cancel_live_build_placement();
+    bool ok = execute_live_ability_command(kind, queue);
+    if (ok)
+      live_commands_dirty = true;
+    return ok;
+  }
+
+  void rebuild_live_commands() {
+    live_commands.clear();
+    live_commands_dirty = false;
+
+    if (!is_live_game_mode || !has_local_player()) {
+      cancel_live_build_placement();
+      return;
+    }
+    if (!has_local_controllable_selection()) {
+      cancel_live_build_placement();
+      return;
+    }
+
+    auto add_tactical = [&](live_command_kind_t kind, bool enabled) {
+      if (!enabled)
+        return;
+      if (live_commands.size() >= live_command_slots_n)
+        return;
+      live_command_t cmd;
+      cmd.kind = kind;
+      live_commands.push_back(cmd);
+    };
+
+    unit_t *source = get_single_local_selected_unit();
+    if (!source || source->owner != local_player_id) {
+      add_tactical(live_command_kind_t::tactical_stop,
+                   live_command_can_tactical_stop());
+      add_tactical(live_command_kind_t::tactical_hold_position,
+                   live_command_can_tactical_hold_position());
+      add_tactical(live_command_kind_t::tactical_attack_move_mode,
+                   live_command_can_tactical_attack_move_mode());
+      add_tactical(live_command_kind_t::tactical_patrol_mode,
+                   live_command_can_tactical_patrol_mode());
+      cancel_live_build_placement();
+      return;
+    }
+
+    auto add_ability = [&](live_command_kind_t kind, bool enabled) {
+      if (!enabled)
+        return;
+      if (live_commands.size() >= live_command_slots_n)
+        return;
+      live_command_t cmd;
+      cmd.kind = kind;
+      if (kind == live_command_kind_t::ability_liftoff_land_toggle)
+        cmd.unit_type = source->unit_type;
+      live_commands.push_back(cmd);
+    };
+
+    add_ability(live_command_kind_t::ability_cancel,
+                live_command_can_cancel(source));
+    add_ability(live_command_kind_t::ability_burrow_toggle,
+                live_command_can_burrow_toggle(source));
+    add_ability(live_command_kind_t::ability_siege_toggle,
+                live_command_can_siege_toggle(source));
+    add_ability(live_command_kind_t::ability_cloak_toggle,
+                live_command_can_cloak_toggle(source));
+    add_ability(live_command_kind_t::ability_return_cargo,
+                live_command_can_return_cargo(source));
+    add_ability(live_command_kind_t::ability_unload_all,
+                live_command_can_unload_all(source));
+    add_ability(live_command_kind_t::ability_liftoff_land_toggle,
+                live_command_can_liftoff_land_toggle(source));
+    add_ability(live_command_kind_t::ability_stim,
+                live_command_can_stim(source));
+    add_ability(live_command_kind_t::ability_morph_archon,
+                live_command_can_morph_archon(source));
+    add_ability(live_command_kind_t::ability_morph_dark_archon,
+                live_command_can_morph_dark_archon(source));
+    add_ability(live_command_kind_t::ability_scanner_sweep,
+                live_command_can_scanner_sweep(source));
+    add_ability(live_command_kind_t::ability_defensive_matrix,
+                live_command_can_defensive_matrix(source));
+    add_ability(live_command_kind_t::ability_irradiate,
+                live_command_can_irradiate(source));
+    add_ability(live_command_kind_t::ability_emp_shockwave,
+                live_command_can_emp_shockwave(source));
+    add_ability(live_command_kind_t::ability_yamato_gun,
+                live_command_can_yamato_gun(source));
+    add_ability(live_command_kind_t::ability_lockdown,
+                live_command_can_lockdown(source));
+    add_ability(live_command_kind_t::ability_spider_mines,
+                live_command_can_spider_mines(source));
+    add_ability(live_command_kind_t::ability_healing,
+                live_command_can_healing(source));
+    add_ability(live_command_kind_t::ability_restoration,
+                live_command_can_restoration(source));
+    add_ability(live_command_kind_t::ability_optical_flare,
+                live_command_can_optical_flare(source));
+    add_ability(live_command_kind_t::ability_spawn_broodlings,
+                live_command_can_spawn_broodlings(source));
+    add_ability(live_command_kind_t::ability_parasite,
+                live_command_can_parasite(source));
+    add_ability(live_command_kind_t::ability_dark_swarm,
+                live_command_can_dark_swarm(source));
+    add_ability(live_command_kind_t::ability_plague,
+                live_command_can_plague(source));
+    add_ability(live_command_kind_t::ability_consume,
+                live_command_can_consume(source));
+    add_ability(live_command_kind_t::ability_ensnare,
+                live_command_can_ensnare(source));
+    add_ability(live_command_kind_t::ability_psionic_storm,
+                live_command_can_psionic_storm(source));
+    add_ability(live_command_kind_t::ability_hallucination,
+                live_command_can_hallucination(source));
+    add_ability(live_command_kind_t::ability_recall,
+                live_command_can_recall(source));
+    add_ability(live_command_kind_t::ability_stasis_field,
+                live_command_can_stasis_field(source));
+    add_ability(live_command_kind_t::ability_disruption_web,
+                live_command_can_disruption_web(source));
+    add_ability(live_command_kind_t::ability_mind_control,
+                live_command_can_mind_control(source));
+    add_ability(live_command_kind_t::ability_feedback,
+                live_command_can_feedback(source));
+    add_ability(live_command_kind_t::ability_maelstrom,
+                live_command_can_maelstrom(source));
+    add_ability(live_command_kind_t::ability_infestation,
+                live_command_can_infestation(source));
+
+    for (const auto &v : game_st.unit_types.vec) {
+      const unit_type_t *unit_type = &v;
+      if (!unit_can_build(source, unit_type))
+        continue;
+
+      live_command_t cmd;
+      cmd.unit_type = unit_type;
+      if (ut_building(unit_type)) {
+        if (unit_is_zerg_building(source) && unit_is_zerg_building(unit_type)) {
+          cmd.kind = live_command_kind_t::morph_building;
+        } else {
+          cmd.build_order_type = resolve_live_build_order(source, unit_type);
+          if (!cmd.build_order_type)
+            continue;
+          cmd.kind = live_command_kind_t::build_place;
+        }
+      } else {
+        if (unit_is(source, UnitTypes::Zerg_Larva) ||
+            unit_is(source, UnitTypes::Zerg_Mutalisk) ||
+            unit_is(source, UnitTypes::Zerg_Hydralisk)) {
+          cmd.kind = live_command_kind_t::morph;
+        } else if ((unit_is_carrier(source) &&
+                    unit_is(unit_type, UnitTypes::Protoss_Interceptor)) ||
+                   (unit_is_reaver(source) &&
+                    unit_is(unit_type, UnitTypes::Protoss_Scarab))) {
+          cmd.kind = live_command_kind_t::train_fighter;
+        } else {
+          cmd.kind = live_command_kind_t::train;
+        }
+      }
+
+      live_commands.push_back(cmd);
+      if (live_commands.size() >= live_command_slots_n)
+        break;
+    }
+
+    if (live_commands.size() < live_command_slots_n) {
+      for (const auto &v : game_st.tech_types.vec) {
+        const tech_type_t *tech_type = &v;
+        if (!unit_can_research(source, tech_type, local_player_id))
+          continue;
+        live_command_t cmd;
+        cmd.kind = live_command_kind_t::research;
+        cmd.tech_type = tech_type;
+        live_commands.push_back(cmd);
+        if (live_commands.size() >= live_command_slots_n)
+          break;
+      }
+    }
+
+    if (live_commands.size() < live_command_slots_n) {
+      for (const auto &v : game_st.upgrade_types.vec) {
+        const upgrade_type_t *upgrade_type = &v;
+        if (!unit_can_upgrade(source, upgrade_type, local_player_id))
+          continue;
+        live_command_t cmd;
+        cmd.kind = live_command_kind_t::upgrade;
+        cmd.upgrade_type = upgrade_type;
+        live_commands.push_back(cmd);
+        if (live_commands.size() >= live_command_slots_n)
+          break;
+      }
+    }
+
+    if (live_build_placement_armed) {
+      bool armed_still_present = false;
+      for (const auto &cmd : live_commands) {
+        if (cmd.kind != live_build_placement_command.kind)
+          continue;
+        if (cmd.kind == live_command_kind_t::build_place) {
+          if (cmd.unit_type != live_build_placement_command.unit_type)
+            continue;
+          if (cmd.build_order_type !=
+              live_build_placement_command.build_order_type)
+            continue;
+        } else if (cmd.kind ==
+                   live_command_kind_t::ability_liftoff_land_toggle) {
+          if (cmd.unit_type != live_build_placement_command.unit_type)
+            continue;
+        }
+        armed_still_present = true;
+        break;
+      }
+      if (!armed_still_present)
+        cancel_live_build_placement();
+    }
+  }
+
+  void refresh_live_commands_if_needed() {
+    if (is_live_game_mode && live_commands_state_frame != st.current_frame) {
+      live_commands_state_frame = st.current_frame;
+      live_commands_dirty = true;
+    }
+    if (live_commands_dirty)
+      rebuild_live_commands();
+  }
+
+  bool has_local_player() const {
+    return local_player_id >= 0 && local_player_id < 8;
+  }
+
+  uint8_t local_visibility_mask() const {
+    if (enforce_local_visibility && has_local_player())
+      return (uint8_t)(1u << local_player_id);
+    return 0xff;
+  }
+
+  bool unit_is_local_controllable(const unit_t *u) const {
+    if (!u)
+      return false;
+    if (!is_live_game_mode || !has_local_player())
+      return true;
+    return u->owner == local_player_id;
+  }
+
+  xy screen_to_map_pos(int mouse_x, int mouse_y) const {
+    return screen_pos +
+           xy((fp16::integer(mouse_x) / view_scale).integer_part(),
+              (fp16::integer(mouse_y) / view_scale).integer_part());
+  }
+
+  void sync_action_selection_from_current() {
+    if (!has_local_player())
+      return;
+    auto &selection = action_st.selection.at(local_player_id);
+    selection.clear();
+    for (auto uid : current_selection) {
+      unit_t *u = get_unit(uid);
+      if (!u || unit_dead(u) || us_hidden(u))
+        continue;
+      if (!unit_is_local_controllable(u))
+        continue;
+      if (selection.size() == 12)
+        break;
+      selection.push_back(u);
+    }
+  }
+
+  void sync_current_selection_from_action() {
+    if (!has_local_player())
+      return;
+    current_selection_clear();
+    for (unit_t *u : selected_units(local_player_id)) {
+      if (!u || unit_dead(u) || us_hidden(u))
+        continue;
+      current_selection_add(u);
+    }
+  }
+
+  bool issue_local_targeted_order(xy map_pos, unit_t *target, bool queue) {
+    if (!is_live_game_mode || !has_local_player())
+      return false;
+    sync_action_selection_from_current();
+    if (action_st.selection.at(local_player_id).empty())
+      return false;
+
+    bool ok = false;
+    if (pending_order_mode == pending_order_mode_t::attack_move) {
+      ok = action_order(local_player_id, get_order_type(Orders::AttackMove),
+                        map_pos, target, nullptr, queue);
+    } else if (pending_order_mode == pending_order_mode_t::patrol) {
+      ok = action_patrol(local_player_id, map_pos, queue);
+    } else if (pending_order_mode ==
+               pending_order_mode_t::spell_scanner_sweep) {
+      ok = action_order(local_player_id,
+                        get_order_type(Orders::CastScannerSweep), map_pos,
+                        nullptr, nullptr, false);
+    } else if (pending_order_mode ==
+               pending_order_mode_t::spell_defensive_matrix) {
+      ok = action_order(local_player_id,
+                        get_order_type(Orders::CastDefensiveMatrix), map_pos,
+                        target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_irradiate) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastIrradiate),
+                        map_pos, target, nullptr, false);
+    } else if (pending_order_mode ==
+               pending_order_mode_t::spell_emp_shockwave) {
+      ok = action_order(local_player_id,
+                        get_order_type(Orders::CastEMPShockwave), map_pos,
+                        nullptr, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_yamato_gun) {
+      ok = action_order(local_player_id, get_order_type(Orders::FireYamatoGun),
+                        map_pos, target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_lockdown) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastLockdown),
+                        map_pos, target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_spider_mines) {
+      ok = action_order(local_player_id, get_order_type(Orders::PlaceMine),
+                        map_pos, nullptr, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_healing) {
+      ok = action_order(local_player_id, get_order_type(Orders::MedicHeal),
+                        map_pos, target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_restoration) {
+      ok =
+          action_order(local_player_id, get_order_type(Orders::CastRestoration),
+                       map_pos, target, nullptr, false);
+    } else if (pending_order_mode ==
+               pending_order_mode_t::spell_optical_flare) {
+      ok = action_order(local_player_id,
+                        get_order_type(Orders::CastOpticalFlare), map_pos,
+                        target, nullptr, false);
+    } else if (pending_order_mode ==
+               pending_order_mode_t::spell_spawn_broodlings) {
+      ok = action_order(local_player_id,
+                        get_order_type(Orders::CastSpawnBroodlings), map_pos,
+                        target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_parasite) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastParasite),
+                        map_pos, target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_dark_swarm) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastDarkSwarm),
+                        map_pos, nullptr, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_plague) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastPlague),
+                        map_pos, nullptr, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_consume) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastConsume),
+                        map_pos, target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_ensnare) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastEnsnare),
+                        map_pos, nullptr, nullptr, false);
+    } else if (pending_order_mode ==
+               pending_order_mode_t::spell_psionic_storm) {
+      ok = action_order(local_player_id,
+                        get_order_type(Orders::CastPsionicStorm), map_pos,
+                        nullptr, nullptr, false);
+    } else if (pending_order_mode ==
+               pending_order_mode_t::spell_hallucination) {
+      ok = action_order(local_player_id,
+                        get_order_type(Orders::CastHallucination), map_pos,
+                        target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_recall) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastRecall),
+                        map_pos, nullptr, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_stasis_field) {
+      ok =
+          action_order(local_player_id, get_order_type(Orders::CastStasisField),
+                       map_pos, nullptr, nullptr, false);
+    } else if (pending_order_mode ==
+               pending_order_mode_t::spell_disruption_web) {
+      ok = action_order(local_player_id,
+                        get_order_type(Orders::CastDisruptionWeb), map_pos,
+                        nullptr, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_mind_control) {
+      ok =
+          action_order(local_player_id, get_order_type(Orders::CastMindControl),
+                       map_pos, target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_feedback) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastFeedback),
+                        map_pos, target, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_maelstrom) {
+      ok = action_order(local_player_id, get_order_type(Orders::CastMaelstrom),
+                        map_pos, nullptr, nullptr, false);
+    } else if (pending_order_mode == pending_order_mode_t::spell_infestation) {
+      ok =
+          action_order(local_player_id, get_order_type(Orders::CastInfestation),
+                       map_pos, target, nullptr, false);
+    } else {
+      ok = action_default_order(local_player_id, map_pos, target, nullptr,
+                                queue);
+    }
+    pending_order_mode = pending_order_mode_t::none;
+    return ok;
+  }
+
+  bool execute_live_command(size_t index) {
+    refresh_live_commands_if_needed();
+    if (index >= live_commands.size())
+      return false;
+    if (!is_live_game_mode || !has_local_player())
+      return false;
+
+    auto &cmd = live_commands[index];
+    unit_t *source = get_single_local_selected_unit();
+    if (!live_command_is_enabled(cmd, source))
+      return false;
+    if (live_command_requires_single_source(cmd.kind) && !source)
+      return false;
+
+    sync_action_selection_from_current();
+    if (action_st.selection.at(local_player_id).empty())
+      return false;
+
+    pending_order_mode = pending_order_mode_t::none;
+
+    bool ok = false;
+    switch (cmd.kind) {
+    case live_command_kind_t::train:
+      ok = action_train(local_player_id, cmd.unit_type);
+      break;
+    case live_command_kind_t::train_fighter:
+      ok = action_train_fighter(local_player_id);
+      break;
+    case live_command_kind_t::morph:
+      ok = action_morph(local_player_id, cmd.unit_type);
+      break;
+    case live_command_kind_t::morph_building:
+      ok = action_morph_building(local_player_id, cmd.unit_type);
+      break;
+    case live_command_kind_t::research:
+      ok = action_research(local_player_id, cmd.tech_type);
+      break;
+    case live_command_kind_t::upgrade:
+      ok = action_upgrade(local_player_id, cmd.upgrade_type);
+      break;
+    case live_command_kind_t::tactical_stop:
+      cancel_live_build_placement();
+      ok = action_stop(local_player_id, false);
+      break;
+    case live_command_kind_t::tactical_hold_position:
+      cancel_live_build_placement();
+      ok = action_hold_position(local_player_id, false);
+      break;
+    case live_command_kind_t::tactical_attack_move_mode:
+      cancel_live_build_placement();
+      pending_order_mode = pending_order_mode_t::attack_move;
+      ok = true;
+      break;
+    case live_command_kind_t::tactical_patrol_mode:
+      cancel_live_build_placement();
+      pending_order_mode = pending_order_mode_t::patrol;
+      ok = true;
+      break;
+    case live_command_kind_t::ability_cancel:
+    case live_command_kind_t::ability_burrow_toggle:
+    case live_command_kind_t::ability_siege_toggle:
+    case live_command_kind_t::ability_cloak_toggle:
+    case live_command_kind_t::ability_return_cargo:
+    case live_command_kind_t::ability_unload_all:
+    case live_command_kind_t::ability_liftoff_land_toggle:
+    case live_command_kind_t::ability_stim:
+    case live_command_kind_t::ability_morph_archon:
+    case live_command_kind_t::ability_morph_dark_archon:
+    case live_command_kind_t::ability_scanner_sweep:
+    case live_command_kind_t::ability_defensive_matrix:
+    case live_command_kind_t::ability_irradiate:
+    case live_command_kind_t::ability_emp_shockwave:
+    case live_command_kind_t::ability_yamato_gun:
+    case live_command_kind_t::ability_lockdown:
+    case live_command_kind_t::ability_spider_mines:
+    case live_command_kind_t::ability_healing:
+    case live_command_kind_t::ability_restoration:
+    case live_command_kind_t::ability_optical_flare:
+    case live_command_kind_t::ability_spawn_broodlings:
+    case live_command_kind_t::ability_parasite:
+    case live_command_kind_t::ability_dark_swarm:
+    case live_command_kind_t::ability_plague:
+    case live_command_kind_t::ability_consume:
+    case live_command_kind_t::ability_ensnare:
+    case live_command_kind_t::ability_psionic_storm:
+    case live_command_kind_t::ability_hallucination:
+    case live_command_kind_t::ability_recall:
+    case live_command_kind_t::ability_stasis_field:
+    case live_command_kind_t::ability_disruption_web:
+    case live_command_kind_t::ability_mind_control:
+    case live_command_kind_t::ability_feedback:
+    case live_command_kind_t::ability_maelstrom:
+    case live_command_kind_t::ability_infestation:
+      cancel_live_build_placement();
+      ok = execute_live_ability_command(cmd.kind, false);
+      break;
+    case live_command_kind_t::build_place:
+      if (live_build_placement_armed &&
+          live_build_placement_command.unit_type == cmd.unit_type &&
+          live_build_placement_command.build_order_type ==
+              cmd.build_order_type) {
+        cancel_live_build_placement();
+      } else {
+        live_build_placement_armed = true;
+        live_build_placement_command = cmd;
+      }
+      ok = true;
+      break;
+    }
+    if (ok)
+      live_commands_dirty = true;
+    return ok;
+  }
+
+  bool try_place_live_build_command(xy map_pos) {
+    if (!live_build_placement_armed)
+      return false;
+    if (!is_live_game_mode || !has_local_player())
+      return false;
+    unit_t *source = get_single_local_selected_unit();
+    if (!source) {
+      cancel_live_build_placement();
+      return false;
+    }
+
+    int tile_x = map_pos.x / 32;
+    int tile_y = map_pos.y / 32;
+    if (tile_x < 0 || tile_y < 0)
+      return false;
+    if ((size_t)tile_x >= game_st.map_tile_width ||
+        (size_t)tile_y >= game_st.map_tile_height)
+      return false;
+
+    xy_t<size_t> tile_pos = {(size_t)tile_x, (size_t)tile_y};
+    if (!live_build_placement_is_valid(source, live_build_placement_command,
+                                       tile_pos))
+      return false;
+
+    sync_action_selection_from_current();
+    bool ok = false;
+    if (live_build_placement_command.kind == live_command_kind_t::build_place) {
+      ok = action_build(local_player_id,
+                        live_build_placement_command.build_order_type,
+                        live_build_placement_command.unit_type, tile_pos);
+    } else if (live_build_placement_command.kind ==
+               live_command_kind_t::ability_liftoff_land_toggle) {
+      const unit_type_t *land_type =
+          live_build_placement_command.unit_type
+              ? live_build_placement_command.unit_type
+              : source->unit_type;
+      ok = action_land(local_player_id, map_pos, land_type);
+    }
+    if (ok) {
+      cancel_live_build_placement();
+      live_commands_dirty = true;
+    }
+    return ok;
+  }
+
+  bool is_moving_minimap = false;
+  bool is_moving_replay_slider = false;
+  bool is_paused = false;
+  bool is_drag_selecting = false;
+  bool is_dragging_screen = false;
+  int drag_select_from_x = 0;
+  int drag_select_from_y = 0;
+  int drag_select_to_x = 0;
+  int drag_select_to_y = 0;
+  xy drag_screen_pos;
+
+  void update() {
+    auto now = clock.now();
+    refresh_live_commands_if_needed();
+
+    if (now - last_fps >= std::chrono::seconds(1)) {
+      // ui::log("draw fps: %g\n", fps_counter /
+      // std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1,
+      // 1>>>(now - last_fps).count());
+      fps_draw_last = fps_draw_counter;
+      last_fps = now;
+      fps_counter = 0;
+      fps_draw_counter = 0;
+    }
+    ++fps_counter;
+    ++fps_draw_counter;
+
+    auto minimap_area = get_minimap_area();
+    auto replay_slider_area = get_replay_slider_area();
+
+    auto move_minimap = [&](int mouse_x, int mouse_y) {
+      if (mouse_x < minimap_area.from.x)
+        mouse_x = minimap_area.from.x;
+      else if (mouse_x >= minimap_area.to.x)
+        mouse_x = minimap_area.to.x - 1;
+      if (mouse_y < minimap_area.from.y)
+        mouse_y = minimap_area.from.y;
+      else if (mouse_y >= minimap_area.to.y)
+        mouse_y = minimap_area.to.y - 1;
+      int x = mouse_x - minimap_area.from.x;
+      int y = mouse_y - minimap_area.from.y;
+      x = x * game_st.map_tile_width /
+          (minimap_area.to.x - minimap_area.from.x);
+      y = y * game_st.map_tile_height /
+          (minimap_area.to.y - minimap_area.from.y);
+      screen_pos = xy(32 * x - view_width / 2, 32 * y - view_height / 2);
+    };
+
+    auto check_move_minimap = [&](auto &e) {
+      if (e.mouse_x >= minimap_area.from.x && e.mouse_x < minimap_area.to.x) {
+        if (e.mouse_y >= minimap_area.from.y && e.mouse_y < minimap_area.to.y) {
+          is_moving_minimap = true;
+          move_minimap(e.mouse_x, e.mouse_y);
+        }
+      }
+    };
+
+    auto move_replay_slider = [&](int mouse_x, int mouse_y) {
+      (void)mouse_y;
+      int x = mouse_x - replay_slider_area.from.x;
+      int button_w = 16;
+      x -= button_w / 2;
+      int ow = (replay_slider_area.to.x - replay_slider_area.from.x) - button_w;
+      if (x < 0)
+        x = 0;
+      if (x >= ow)
+        x = ow - 1;
+      replay_frame = x * replay_st.end_frame / ow;
+    };
+
+    auto check_move_replay_slider = [&](auto &e) {
+      if (!is_replay_mode)
+        return;
+      if (e.mouse_x >= replay_slider_area.from.x &&
+          e.mouse_x < replay_slider_area.to.x) {
+        if (e.mouse_y >= replay_slider_area.from.y &&
+            e.mouse_y < replay_slider_area.to.y) {
+          is_moving_replay_slider = true;
+          move_replay_slider(e.mouse_x, e.mouse_y);
+        }
+      }
+    };
+
+    auto issue_order_at_cursor = [&](int mouse_x, int mouse_y) {
+      if (!is_live_game_mode || !has_local_player())
+        return;
+      xy map_pos = screen_to_map_pos(mouse_x, mouse_y);
+      unit_t *target = select_get_unit_at(map_pos);
+      bool queue = wnd.get_key_state(225) || wnd.get_key_state(229);
+      issue_local_targeted_order(map_pos, target, queue);
+    };
+
+    auto end_drag_select = [&](bool double_clicked) {
+      bool shift = wnd.get_key_state(225) || wnd.get_key_state(229);
+      if (drag_select_from_x > drag_select_to_x)
+        std::swap(drag_select_from_x, drag_select_to_x);
+      if (drag_select_from_y > drag_select_to_y)
+        std::swap(drag_select_from_y, drag_select_to_y);
+      if (drag_select_to_x - drag_select_from_x <= 4 ||
+          drag_select_to_y - drag_select_from_y <= 4) {
+        unit_t *u = select_get_unit_at(
+            screen_pos + xy(drag_select_from_x, drag_select_from_y));
+        if (u) {
+          if (!unit_is_local_controllable(u)) {
+            is_drag_selecting = false;
+            return;
+          }
+          bool ctrl = wnd.get_key_state(224) || wnd.get_key_state(228);
+          if (double_clicked || ctrl) {
+            if (!shift)
+              current_selection_clear();
+            auto is_tank = [&](unit_t *a) {
+              return unit_is(a, UnitTypes::Terran_Siege_Tank_Siege_Mode) ||
+                     unit_is(a, UnitTypes::Terran_Siege_Tank_Tank_Mode);
+            };
+            auto is_same_type = [&](unit_t *a, unit_t *b) {
+              if (unit_is_mineral_field(a) && unit_is_mineral_field(b))
+                return true;
+              if (is_tank(a) && is_tank(b))
+                return true;
+              return a->unit_type == b->unit_type;
+            };
+            for (unit_t *u2 : find_units(
+                     {screen_pos, screen_pos + xy(view_width, view_height)})) {
+              if (u2->owner != u->owner)
+                continue;
+              if (!is_same_type(u, u2))
+                continue;
+              current_selection_add(u2);
+            }
+          } else {
+            if (shift) {
+              if (current_selection_is_selected(u))
+                current_selection_remove(u);
+              else
+                current_selection_add(u);
+            } else {
+              current_selection_clear();
+              current_selection_add(u);
+            }
+          }
+        }
+      } else {
+        if (!shift)
+          current_selection_clear();
+        auto r = rect{{drag_select_from_x, drag_select_from_y},
+                      {drag_select_to_x, drag_select_to_y}};
+        if (r.from.x > r.to.x)
+          std::swap(r.from.x, r.to.x);
+        if (r.from.y > r.to.y)
+          std::swap(r.from.y, r.to.y);
+        a_vector<unit_t *> new_units;
+        bool any_non_neutrals = false;
+        for (unit_t *u : find_units(translate_rect(r, screen_pos))) {
+          if (!unit_can_be_selected(u))
+            continue;
+          if (!unit_is_local_controllable(u))
+            continue;
+          new_units.push_back(u);
+          if (u->owner != 11)
+            any_non_neutrals = true;
+        }
+        for (unit_t *u : new_units) {
+          if (u->owner == 11 && any_non_neutrals)
+            continue;
+          current_selection_add(u);
+        }
+      }
+      is_drag_selecting = false;
+    };
+
+    if (wnd) {
+      native_window::event_t e;
+      while (wnd.peek_message(e)) {
+        switch (e.type) {
+        case native_window::event_t::type_quit:
+          if (exit_on_close)
+            std::exit(0);
+          else
+            window_closed = true;
+          break;
+        case native_window::event_t::type_resize:
+          resize(e.width, e.height);
+          break;
+        case native_window::event_t::type_mouse_button_down:
+          if (e.button == 1) {
+            check_move_minimap(e);
+            check_move_replay_slider(e);
+            bool consumed_live_ui = false;
+            if (!is_moving_minimap && !is_moving_replay_slider &&
+                is_live_game_mode) {
+              consumed_live_ui =
+                  live_ui_handles_left_click(e.mouse_x, e.mouse_y);
+            }
+            if (!is_moving_minimap && !is_moving_replay_slider &&
+                !consumed_live_ui) {
+              if (live_build_placement_armed && is_live_game_mode) {
+                try_place_live_build_command(
+                    screen_to_map_pos(e.mouse_x, e.mouse_y));
+              } else {
+                is_drag_selecting = true;
+                drag_select_from_x = e.mouse_x;
+                drag_select_from_y = e.mouse_y;
+                drag_select_to_x = e.mouse_x;
+                drag_select_to_y = e.mouse_y;
+              }
+            }
+          } else if (e.button == 3) {
+            if (is_live_game_mode) {
+              if (live_build_placement_armed) {
+                cancel_live_build_placement();
+                pending_order_mode = pending_order_mode_t::none;
+                break;
+              }
+              issue_order_at_cursor(e.mouse_x, e.mouse_y);
+              break;
+            }
+            is_dragging_screen = true;
+            drag_screen_pos =
+                screen_pos +
+                xy((fp16::integer(e.mouse_x) / view_scale).integer_part(),
+                   (fp16::integer(e.mouse_y) / view_scale).integer_part());
+          } else if (e.button == 2) {
+            is_dragging_screen = true;
+            drag_screen_pos =
+                screen_pos +
+                xy((fp16::integer(e.mouse_x) / view_scale).integer_part(),
+                   (fp16::integer(e.mouse_y) / view_scale).integer_part());
+          }
+          break;
+        case native_window::event_t::type_mouse_motion:
+          if (e.button_state & 1) {
+            if (is_moving_minimap)
+              check_move_minimap(e);
+            if (is_moving_replay_slider)
+              check_move_replay_slider(e);
+            if (is_drag_selecting) {
+              drag_select_to_x = e.mouse_x;
+              drag_select_to_y = e.mouse_y;
+            }
+          } else if (e.button_state & 4 || e.button_state & 2) {
+            if (is_dragging_screen) {
+              screen_pos =
+                  drag_screen_pos -
+                  xy((fp16::integer(e.mouse_x) / view_scale).integer_part(),
+                     (fp16::integer(e.mouse_y) / view_scale).integer_part());
+              // screen_pos -= xy((fp16::integer(e.mouse_x - drag_screen_x) /
+              // view_scale).integer_part(), (fp16::integer(e.mouse_y -
+              // drag_screen_y) / view_scale).integer_part());
+            }
+          }
+
+          if (is_drag_selecting && ~e.button_state & 1)
+            end_drag_select(false);
+          break;
+        case native_window::event_t::type_mouse_button_up:
+          if (e.button == 1) {
+            if (is_moving_minimap)
+              is_moving_minimap = false;
+            if (is_moving_replay_slider)
+              is_moving_replay_slider = false;
+            if (is_drag_selecting) {
+              end_drag_select(e.clicks >= 2 && e.clicks % 2 == 0);
+            }
+          } else if (e.button == 3) {
+            is_dragging_screen = false;
+          } else if (e.button == 2) {
+            is_dragging_screen = false;
+          }
+          break;
+        case native_window::event_t::type_key_down:
+          // if (e.sym == 'q') {
+          //	use_new_images = !use_new_images;
+          // }
 #ifndef EMSCRIPTEN
-				if (e.sym == ' ' || e.sym == 'p') {
-					is_paused = !is_paused;
-				}
-				if (!is_live_game_mode && (e.sym == 'a' || e.sym == 'u')) {
-					if (game_speed < fp8::integer(128)) game_speed *= 2;
-				}
-				if (e.sym == 'z' || e.sym == 'd') {
-					if (game_speed > 2_fp8) game_speed /= 2;
-				}
-				if (is_replay_mode && e.sym == '\b') {
-					int t = 5 * 42 / 1000;
-					if (replay_frame < t) replay_frame = 0;
-					else replay_frame -= t;
-				}
-				// F3 (scancode 60) toggles the debug overlay in all modes.
-				if (e.scancode == 60) {
-					show_debug_overlay = !show_debug_overlay;
-					ui::log("debug overlay %s\n", show_debug_overlay ? "enabled" : "disabled");
-				}
-					if (is_live_game_mode && has_local_player()) {
-						bool ctrl = wnd.get_key_state(224) || wnd.get_key_state(228);
-						bool shift = wnd.get_key_state(225) || wnd.get_key_state(229);
+          if (e.sym == ' ' || e.sym == 'p') {
+            is_paused = !is_paused;
+          }
+          if (!is_live_game_mode && (e.sym == 'a' || e.sym == 'u')) {
+            if (game_speed < fp8::integer(128))
+              game_speed *= 2;
+          }
+          if (e.sym == 'z' || e.sym == 'd') {
+            if (game_speed > 2_fp8)
+              game_speed /= 2;
+          }
+          if (is_replay_mode && e.sym == '\b') {
+            int t = 5 * 42 / 1000;
+            if (replay_frame < t)
+              replay_frame = 0;
+            else
+              replay_frame -= t;
+          }
+          // F3 (scancode 60) toggles the debug overlay in all modes.
+          if (e.scancode == 60) {
+            show_debug_overlay = !show_debug_overlay;
+            ui::log("debug overlay %s\n",
+                    show_debug_overlay ? "enabled" : "disabled");
+          }
+          if (is_live_game_mode && has_local_player()) {
+            bool ctrl = wnd.get_key_state(224) || wnd.get_key_state(228);
+            bool shift = wnd.get_key_state(225) || wnd.get_key_state(229);
 
-						// F5 (scancode 62): quicksave; F8 (scancode 65): quickload.
-						if (e.scancode == 62) {
-							quicksave_pending = true;
-						} else if (e.scancode == 65) {
-							quickload_pending = true;
-						} else if (e.sym == 27) {
-							cancel_live_build_placement();
-							pending_order_mode = pending_order_mode_t::none;
-						} else if (e.sym == 'u') {
-							if (game_speed < fp8::integer(128)) game_speed *= 2;
-						} else if (e.sym == 's') {
-							sync_action_selection_from_current();
-							action_stop(local_player_id, shift);
-						} else if (e.sym == 'h') {
-							sync_action_selection_from_current();
-							action_hold_position(local_player_id, shift);
-						} else if (e.sym == 'a') {
-							cancel_live_build_placement();
-							pending_order_mode = pending_order_mode_t::attack_move;
-						} else if (e.sym == 't') {
-							cancel_live_build_placement();
-							pending_order_mode = pending_order_mode_t::patrol;
-						} else if (e.sym == 'f') {
-							enforce_local_visibility = !enforce_local_visibility;
-							ui::log("single-player: fog of war %s\n", enforce_local_visibility ? "enabled" : "disabled");
-						} else if (e.sym == 'x') {
-							issue_live_ability_hotkey(live_command_kind_t::ability_cancel, shift);
-						} else if (e.sym == 'b') {
-							issue_live_ability_hotkey(live_command_kind_t::ability_burrow_toggle, shift);
-						} else if (e.sym == 'g') {
-							issue_live_ability_hotkey(live_command_kind_t::ability_siege_toggle, shift);
-						} else if (e.sym == 'c') {
-							issue_live_ability_hotkey(live_command_kind_t::ability_cloak_toggle, shift);
-						} else if (e.sym == 'r') {
-							issue_live_ability_hotkey(live_command_kind_t::ability_return_cargo, shift);
-						} else if (e.sym == 'l') {
-							if (!issue_live_ability_hotkey(live_command_kind_t::ability_unload_all, shift)) {
-								issue_live_ability_hotkey(live_command_kind_t::ability_liftoff_land_toggle, shift);
-							}
-						} else if (e.sym == 'i') {
-							issue_live_ability_hotkey(live_command_kind_t::ability_stim, shift);
-						} else if (e.sym == 'm') {
-							if (!issue_live_ability_hotkey(live_command_kind_t::ability_morph_archon, shift)) {
-								issue_live_ability_hotkey(live_command_kind_t::ability_morph_dark_archon, shift);
-							}
-						} else if (e.sym == '\t') {
-							// Center camera on selected units.
-							if (!current_selection.empty()) {
-								xy sum_pos = {};
-								int count = 0;
-								for (auto uid : current_selection) {
-									unit_t* u = get_unit(uid);
-									if (!u || unit_dead(u)) continue;
-									sum_pos += u->sprite->position;
-									++count;
-								}
-								if (count > 0) {
-									xy center = sum_pos / count;
-									screen_pos = center - xy(view_width / 2, view_height / 2);
-								}
-							}
-						} else if (e.sym >= '0' && e.sym <= '9') {
-							size_t group_n = e.sym == '0' ? 9 : (size_t)(e.sym - '1');
-							int subaction = ctrl ? 0 : (shift ? 2 : 1);
-							sync_action_selection_from_current();
-							bool changed = action_control_group(local_player_id, group_n, subaction);
-							if (subaction == 1 && changed) sync_current_selection_from_action();
-						}
-					}
+            // F5 (scancode 62): quicksave; F8 (scancode 65): quickload.
+            if (e.scancode == 62) {
+              quicksave_pending = true;
+            } else if (e.scancode == 65) {
+              quickload_pending = true;
+            } else if (e.sym == 27) {
+              cancel_live_build_placement();
+              pending_order_mode = pending_order_mode_t::none;
+            } else if (e.sym == 'u') {
+              if (game_speed < fp8::integer(128))
+                game_speed *= 2;
+            } else if (e.sym == 's') {
+              sync_action_selection_from_current();
+              action_stop(local_player_id, shift);
+            } else if (e.sym == 'h') {
+              sync_action_selection_from_current();
+              action_hold_position(local_player_id, shift);
+            } else if (e.sym == 'a') {
+              cancel_live_build_placement();
+              pending_order_mode = pending_order_mode_t::attack_move;
+            } else if (e.sym == 't') {
+              cancel_live_build_placement();
+              pending_order_mode = pending_order_mode_t::patrol;
+            } else if (e.sym == 'f') {
+              enforce_local_visibility = !enforce_local_visibility;
+              ui::log("single-player: fog of war %s\n",
+                      enforce_local_visibility ? "enabled" : "disabled");
+            } else if (e.sym == 'x') {
+              issue_live_ability_hotkey(live_command_kind_t::ability_cancel,
+                                        shift);
+            } else if (e.sym == 'b') {
+              issue_live_ability_hotkey(
+                  live_command_kind_t::ability_burrow_toggle, shift);
+            } else if (e.sym == 'g') {
+              issue_live_ability_hotkey(
+                  live_command_kind_t::ability_siege_toggle, shift);
+            } else if (e.sym == 'c') {
+              issue_live_ability_hotkey(
+                  live_command_kind_t::ability_cloak_toggle, shift);
+            } else if (e.sym == 'r') {
+              issue_live_ability_hotkey(
+                  live_command_kind_t::ability_return_cargo, shift);
+            } else if (e.sym == 'l') {
+              if (!issue_live_ability_hotkey(
+                      live_command_kind_t::ability_unload_all, shift)) {
+                issue_live_ability_hotkey(
+                    live_command_kind_t::ability_liftoff_land_toggle, shift);
+              }
+            } else if (e.sym == 'i') {
+              issue_live_ability_hotkey(live_command_kind_t::ability_stim,
+                                        shift);
+            } else if (e.sym == 'm') {
+              if (!issue_live_ability_hotkey(
+                      live_command_kind_t::ability_morph_archon, shift)) {
+                issue_live_ability_hotkey(
+                    live_command_kind_t::ability_morph_dark_archon, shift);
+              }
+            } else if (e.sym == '\t') {
+              // Center camera on selected units.
+              if (!current_selection.empty()) {
+                xy sum_pos = {};
+                int count = 0;
+                for (auto uid : current_selection) {
+                  unit_t *u = get_unit(uid);
+                  if (!u || unit_dead(u))
+                    continue;
+                  sum_pos += u->sprite->position;
+                  ++count;
+                }
+                if (count > 0) {
+                  xy center = sum_pos / count;
+                  screen_pos = center - xy(view_width / 2, view_height / 2);
+                }
+              }
+            } else if (e.sym >= '0' && e.sym <= '9') {
+              size_t group_n = e.sym == '0' ? 9 : (size_t)(e.sym - '1');
+              int subaction = ctrl ? 0 : (shift ? 2 : 1);
+              sync_action_selection_from_current();
+              bool changed =
+                  action_control_group(local_player_id, group_n, subaction);
+              if (subaction == 1 && changed)
+                sync_current_selection_from_action();
+            }
+          }
 #endif
-					break;
-				}
-			}
-		}
-		refresh_live_commands_if_needed();
+          break;
+        }
+      }
+    }
+    refresh_live_commands_if_needed();
 
-		if (!indexed_surface) {
-			if (wnd) {
-				window_surface = native_window_drawing::get_window_surface(&wnd);
-				rgba_surface = native_window_drawing::create_rgba_surface(window_surface->w, window_surface->h);
-			} else {
-				rgba_surface = native_window_drawing::create_rgba_surface(screen_width, screen_height);
-			}
-			indexed_surface = native_window_drawing::convert_to_8_bit_indexed(&*rgba_surface);
-			if (!palette) set_image_data();
-			indexed_surface->set_palette(palette);
+    if (!indexed_surface) {
+      if (wnd) {
+        window_surface = native_window_drawing::get_window_surface(&wnd);
+        rgba_surface = native_window_drawing::create_rgba_surface(
+            window_surface->w, window_surface->h);
+      } else {
+        rgba_surface = native_window_drawing::create_rgba_surface(
+            screen_width, screen_height);
+      }
+      indexed_surface =
+          native_window_drawing::convert_to_8_bit_indexed(&*rgba_surface);
+      if (!palette)
+        set_image_data();
+      indexed_surface->set_palette(palette);
 
-			indexed_surface->set_blend_mode(native_window_drawing::blend_mode::none);
-			rgba_surface->set_blend_mode(native_window_drawing::blend_mode::none);
-			rgba_surface->set_alpha(0);
+      indexed_surface->set_blend_mode(native_window_drawing::blend_mode::none);
+      rgba_surface->set_blend_mode(native_window_drawing::blend_mode::none);
+      rgba_surface->set_alpha(0);
 
-			if (window_surface) {
-				window_surface->set_blend_mode(native_window_drawing::blend_mode::none);
-				window_surface->set_alpha(0);
-			}
-		}
+      if (window_surface) {
+        window_surface->set_blend_mode(native_window_drawing::blend_mode::none);
+        window_surface->set_alpha(0);
+      }
+    }
 
-		if (wnd) {
-			auto input_poll_speed = std::chrono::milliseconds(12);
+    if (wnd) {
+      auto input_poll_speed = std::chrono::milliseconds(12);
 
-			auto input_poll_t = now - last_input_poll;
-			while (input_poll_t >= input_poll_speed) {
-				if (input_poll_t >= input_poll_speed * 20) last_input_poll = now - input_poll_speed;
-				else last_input_poll += input_poll_speed;
-				std::array<int, 6> scroll_speeds = {2, 2, 4, 6, 6, 8};
+      auto input_poll_t = now - last_input_poll;
+      while (input_poll_t >= input_poll_speed) {
+        if (input_poll_t >= input_poll_speed * 20)
+          last_input_poll = now - input_poll_speed;
+        else
+          last_input_poll += input_poll_speed;
+        std::array<int, 6> scroll_speeds = {2, 2, 4, 6, 6, 8};
 
-				if (!is_drag_selecting) {
-					int scroll_speed = scroll_speeds[scroll_speed_n];
-					auto prev_screen_pos = screen_pos;
-					if (wnd.get_key_state(81)) screen_pos.y += scroll_speed;
-					else if (wnd.get_key_state(82)) screen_pos.y -= scroll_speed;
-					if (wnd.get_key_state(79)) screen_pos.x += scroll_speed;
-					else if (wnd.get_key_state(80)) screen_pos.x -= scroll_speed;
-					if (screen_pos != prev_screen_pos) {
-						if (scroll_speed_n != scroll_speeds.size() - 1) ++scroll_speed_n;
-					} else scroll_speed_n = 0;
-				}
+        if (!is_drag_selecting) {
+          int scroll_speed = scroll_speeds[scroll_speed_n];
+          auto prev_screen_pos = screen_pos;
+          if (wnd.get_key_state(81))
+            screen_pos.y += scroll_speed;
+          else if (wnd.get_key_state(82))
+            screen_pos.y -= scroll_speed;
+          if (wnd.get_key_state(79))
+            screen_pos.x += scroll_speed;
+          else if (wnd.get_key_state(80))
+            screen_pos.x -= scroll_speed;
+          if (screen_pos != prev_screen_pos) {
+            if (scroll_speed_n != scroll_speeds.size() - 1)
+              ++scroll_speed_n;
+          } else
+            scroll_speed_n = 0;
+        }
 
-				input_poll_t = now - last_input_poll;
-			}
+        input_poll_t = now - last_input_poll;
+      }
 
-			if (is_moving_minimap) {
-				int x = -1;
-				int y = -1;
-				wnd.get_cursor_pos(&x, &y);
-				if (x != -1) move_minimap(x, y);
-			}
-			if (is_moving_replay_slider) {
-				int x = -1;
-				int y = -1;
-				wnd.get_cursor_pos(&x, &y);
-				if (x != -1) move_replay_slider(x, y);
-			}
-		}
+      if (is_moving_minimap) {
+        int x = -1;
+        int y = -1;
+        wnd.get_cursor_pos(&x, &y);
+        if (x != -1)
+          move_minimap(x, y);
+      }
+      if (is_moving_replay_slider) {
+        int x = -1;
+        int y = -1;
+        wnd.get_cursor_pos(&x, &y);
+        if (x != -1)
+          move_replay_slider(x, y);
+      }
+    }
 
-		if (screen_pos.y + view_height > game_st.map_height) screen_pos.y = game_st.map_height - view_height;
-		if (screen_pos.y < 0) screen_pos.y = 0;
-		if (screen_pos.x + view_width > game_st.map_width) screen_pos.x = game_st.map_width - view_width;
-		if (screen_pos.x < 0) screen_pos.x = 0;
+    if (screen_pos.y + view_height > game_st.map_height)
+      screen_pos.y = game_st.map_height - view_height;
+    if (screen_pos.y < 0)
+      screen_pos.y = 0;
+    if (screen_pos.x + view_width > game_st.map_width)
+      screen_pos.x = game_st.map_width - view_width;
+    if (screen_pos.x < 0)
+      screen_pos.x = 0;
 
-		uint8_t* data = (uint8_t*)indexed_surface->lock();
-		draw_tiles(data, indexed_surface->pitch);
-		draw_sprites(data, indexed_surface->pitch);
+    uint8_t *data = (uint8_t *)indexed_surface->lock();
+    draw_tiles(data, indexed_surface->pitch);
+    draw_sprites(data, indexed_surface->pitch);
 
-		draw_callback(data, indexed_surface->pitch);
+    draw_callback(data, indexed_surface->pitch);
 
-		if (draw_ui_elements) {
-			draw_minimap(data, indexed_surface->pitch);
-			draw_ui(data, indexed_surface->pitch);
-			if (show_debug_overlay) draw_debug_overlay(data, indexed_surface->pitch);
-			draw_hud_messages(data, indexed_surface->pitch);
-		}
-		indexed_surface->unlock();
+    if (draw_ui_elements) {
+      draw_minimap(data, indexed_surface->pitch);
+      draw_ui(data, indexed_surface->pitch);
+      if (show_debug_overlay)
+        draw_debug_overlay(data, indexed_surface->pitch);
+      draw_hud_messages(data, indexed_surface->pitch);
+    }
+    indexed_surface->unlock();
 
-		rgba_surface->fill(0, 0, 0, 255);
-		indexed_surface->blit(&*rgba_surface, 0, 0);
+    rgba_surface->fill(0, 0, 0, 255);
+    indexed_surface->blit(&*rgba_surface, 0, 0);
 
-		draw_image_queue();
+    draw_image_queue();
 
-		if (is_drag_selecting) {
-			uint32_t* data = (uint32_t*)rgba_surface->lock();
-			if (is_drag_selecting) {
-				auto r = rect{{drag_select_from_x, drag_select_from_y}, {drag_select_to_x, drag_select_to_y}};
-				if (r.from.x > r.to.x) std::swap(r.from.x, r.to.x);
-				if (r.from.y > r.to.y) std::swap(r.from.y, r.to.y);
+    if (is_drag_selecting) {
+      uint32_t *data = (uint32_t *)rgba_surface->lock();
+      if (is_drag_selecting) {
+        auto r = rect{{drag_select_from_x, drag_select_from_y},
+                      {drag_select_to_x, drag_select_to_y}};
+        if (r.from.x > r.to.x)
+          std::swap(r.from.x, r.to.x);
+        if (r.from.y > r.to.y)
+          std::swap(r.from.y, r.to.y);
 
-				line_rectangle_rgba(data, rgba_surface->pitch / 4, r, 0xff18fc10);
-			}
-			rgba_surface->unlock();
-		} else if (live_build_placement_armed && wnd) {
-			uint32_t* data = (uint32_t*)rgba_surface->lock();
-			int mouse_x = -1;
-			int mouse_y = -1;
-			wnd.get_cursor_pos(&mouse_x, &mouse_y);
-			if (mouse_x != -1 && mouse_y != -1) {
-				xy map_pos = screen_to_map_pos(mouse_x, mouse_y);
-				int tile_x = map_pos.x / 32;
-				int tile_y = map_pos.y / 32;
-				if (tile_x >= 0 && tile_y >= 0 && (size_t)tile_x < game_st.map_tile_width && (size_t)tile_y < game_st.map_tile_height) {
-					auto* source = get_single_local_selected_unit();
-					bool can_place = source && live_build_placement_is_valid(source, live_build_placement_command, {(size_t)tile_x, (size_t)tile_y});
-					xy top_left = xy(tile_x * 32, tile_y * 32) - screen_pos;
-					xy size = live_build_placement_command.unit_type ? live_build_placement_command.unit_type->placement_size : xy(32, 32);
-					rect build_rect{top_left, top_left + size};
-					line_rectangle_rgba(data, rgba_surface->pitch / 4, build_rect, can_place ? 0xff20ff20 : 0xffd03030);
-				}
-			}
-			rgba_surface->unlock();
-		}
+        line_rectangle_rgba(data, rgba_surface->pitch / 4, r, 0xff18fc10);
+      }
+      rgba_surface->unlock();
+    } else if (live_build_placement_armed && wnd) {
+      uint32_t *data = (uint32_t *)rgba_surface->lock();
+      int mouse_x = -1;
+      int mouse_y = -1;
+      wnd.get_cursor_pos(&mouse_x, &mouse_y);
+      if (mouse_x != -1 && mouse_y != -1) {
+        xy map_pos = screen_to_map_pos(mouse_x, mouse_y);
+        int tile_x = map_pos.x / 32;
+        int tile_y = map_pos.y / 32;
+        if (tile_x >= 0 && tile_y >= 0 &&
+            (size_t)tile_x < game_st.map_tile_width &&
+            (size_t)tile_y < game_st.map_tile_height) {
+          auto *source = get_single_local_selected_unit();
+          bool can_place = source && live_build_placement_is_valid(
+                                         source, live_build_placement_command,
+                                         {(size_t)tile_x, (size_t)tile_y});
+          xy top_left = xy(tile_x * 32, tile_y * 32) - screen_pos;
+          xy size = live_build_placement_command.unit_type
+                        ? live_build_placement_command.unit_type->placement_size
+                        : xy(32, 32);
+          rect build_rect{top_left, top_left + size};
+          line_rectangle_rgba(data, rgba_surface->pitch / 4, build_rect,
+                              can_place ? 0xff20ff20 : 0xffd03030);
+        }
+      }
+      rgba_surface->unlock();
+    }
 
-		if (wnd) {
-			rgba_surface->blit(&*window_surface, 0, 0);
-			wnd.update_surface();
-		}
-	}
+    if (wnd) {
+      rgba_surface->blit(&*window_surface, 0, 0);
+      wnd.update_surface();
+    }
+  }
 
-	std::tuple<int, int, uint32_t*> get_rgba_buffer() {
-		void* r = rgba_surface->lock();
-		rgba_surface->unlock();
-		return std::make_tuple(rgba_surface->pitch / 4, rgba_surface->h, (uint32_t*)r);
-	}
+  std::tuple<int, int, uint32_t *> get_rgba_buffer() {
+    void *r = rgba_surface->lock();
+    rgba_surface->unlock();
+    return std::make_tuple(rgba_surface->pitch / 4, rgba_surface->h,
+                           (uint32_t *)r);
+  }
 
-	template<typename cb_F>
-	void async_read_file(a_string filename, cb_F cb) {
+  template <typename cb_F> void async_read_file(a_string filename, cb_F cb) {
 #ifdef EMSCRIPTEN
-		auto uptr = std::make_unique<cb_F>(std::move(cb));
-		auto f = [](void* ptr, uint8_t* data, size_t size) {
-			cb_F* cb_p = (cb_F*)ptr;
-			std::unique_ptr<cb_F> uptr(cb_p);
-			(*cb_p)(data, size);
-		};
-		auto* a = filename.c_str();
-		auto* b = (void(*)(void*, uint8_t*, size_t))f;
-		auto* c = uptr.release();
-		EM_ASM_({js_download_file($0, $1, $2);}, a, b, c);
+    auto uptr = std::make_unique<cb_F>(std::move(cb));
+    auto f = [](void *ptr, uint8_t *data, size_t size) {
+      cb_F *cb_p = (cb_F *)ptr;
+      std::unique_ptr<cb_F> uptr(cb_p);
+      (*cb_p)(data, size);
+    };
+    auto *a = filename.c_str();
+    auto *b = (void (*)(void *, uint8_t *, size_t))f;
+    auto *c = uptr.release();
+    EM_ASM_({ js_download_file($0, $1, $2); }, a, b, c);
 #else
-		filename = "data/" + filename;
-		FILE* f = fopen(filename.c_str(), "rb");
-		if (!f) {
-			cb(nullptr, 0);
-		} else {
-			a_vector<uint8_t> data;
-			fseek(f, 0, SEEK_END);
-			data.resize(ftell(f));
-			fseek(f, 0, SEEK_SET);
-			data.resize(fread(data.data(), 1, data.size(), f));
-			fclose(f);
-			cb(data.data(), data.size());
-		}
+    filename = "data/" + filename;
+    FILE *f = fopen(filename.c_str(), "rb");
+    if (!f) {
+      cb(nullptr, 0);
+    } else {
+      a_vector<uint8_t> data;
+      fseek(f, 0, SEEK_END);
+      data.resize(ftell(f));
+      fseek(f, 0, SEEK_SET);
+      data.resize(fread(data.data(), 1, data.size(), f));
+      fclose(f);
+      cb(data.data(), data.size());
+    }
 #endif
-	}
+  }
 
-	std::array<tileset_image_data, 8> all_tileset_img;
+  std::array<tileset_image_data, 8> all_tileset_img;
 
-	template<typename load_data_file_F>
-	void load_all_image_data(load_data_file_F&& load_data_file) {
-		load_image_data(img, load_data_file);
-		for (size_t i = 0; i != 8; ++i) {
-			load_tileset_image_data(all_tileset_img[i], i, load_data_file);
-		}
-	}
+  template <typename load_data_file_F>
+  void load_all_image_data(load_data_file_F &&load_data_file) {
+    load_image_data(img, load_data_file);
+    for (size_t i = 0; i != 8; ++i) {
+      load_tileset_image_data(all_tileset_img[i], i, load_data_file);
+    }
+  }
 
-	void set_image_data() {
-		tileset_img = all_tileset_img.at(game_st.tileset_index);
+  void set_image_data() {
+    tileset_img = all_tileset_img.at(game_st.tileset_index);
 
-		if (!palette) palette = native_window_drawing::new_palette();
+    if (!palette)
+      palette = native_window_drawing::new_palette();
 
-		native_window_drawing::color palette_colors[256];
-		if (tileset_img.wpe.size() != 256 * 4) error("wpe size invalid (%d)", tileset_img.wpe.size());
-		for (size_t i = 0; i != 256; ++i) {
-			palette_colors[i].r = tileset_img.wpe[4 * i + 0];
-			palette_colors[i].g = tileset_img.wpe[4 * i + 1];
-			palette_colors[i].b = tileset_img.wpe[4 * i + 2];
-			palette_colors[i].a = tileset_img.wpe[4 * i + 3];
-		}
-		palette->set_colors(palette_colors);
-	}
+    native_window_drawing::color palette_colors[256];
+    if (tileset_img.wpe.size() != 256 * 4)
+      error("wpe size invalid (%d)", tileset_img.wpe.size());
+    for (size_t i = 0; i != 256; ++i) {
+      palette_colors[i].r = tileset_img.wpe[4 * i + 0];
+      palette_colors[i].g = tileset_img.wpe[4 * i + 1];
+      palette_colors[i].b = tileset_img.wpe[4 * i + 2];
+      palette_colors[i].a = tileset_img.wpe[4 * i + 3];
+    }
+    palette->set_colors(palette_colors);
+  }
 
-	void reset() {
-		apm = {};
-		replay_frame = 0;
-		is_paused = false;
-		is_replay_mode = false;
-		is_live_game_mode = false;
-		local_player_id = -1;
-		enemy_player_id = -1;
-		quicksave_pending = false;
-		quickload_pending = false;
-		pending_next_scenario.clear();
-		hud_next_slot = 0;
-		for (auto& v : hud_messages) v = {};
-		auto& game = *st.game;
-		st = state();
-		game = game_state();
-		replay_st = replay_state();
-		action_st = action_state();
+  void reset() {
+    apm = {};
+    replay_frame = 0;
+    is_paused = false;
+    is_replay_mode = false;
+    is_live_game_mode = false;
+    local_player_id = -1;
+    enemy_player_id = -1;
+    quicksave_pending = false;
+    quickload_pending = false;
+    pending_next_scenario.clear();
+    hud_next_slot = 0;
+    for (auto &v : hud_messages)
+      v = {};
+    auto &game = *st.game;
+    st = state();
+    game = game_state();
+    replay_st = replay_state();
+    action_st = action_state();
 
-		st.global = &global_st;
-		st.game = &game;
-		enforce_local_visibility = default_enforce_local_visibility;
-	}
+    st.global = &global_st;
+    st.game = &game;
+    enforce_local_visibility = default_enforce_local_visibility;
+  }
 };
 
-}
+} // namespace bwgame

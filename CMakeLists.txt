@@ -1,10 +1,16 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 project(OpenSnowstorm CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+function(opensnowstorm_apply_common_compile_options target_name)
+    if(MSVC)
+        target_compile_options(${target_name} PRIVATE /bigobj)
+    endif()
+endfunction()
 
 # ---------------------------------------------------------------------------
 # Build options
@@ -33,6 +39,7 @@ if(OPENSNOWSTORM_BUILD_UI)
         ${SDL2_INCLUDE_DIRS}
     )
     target_link_libraries(openbw_ui ${SDL2_LIBRARIES})
+    opensnowstorm_apply_common_compile_options(openbw_ui)
     set_property(TARGET openbw_ui PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     # Main replay-viewer / benchmark / validate-replay executable
@@ -43,6 +50,7 @@ if(OPENSNOWSTORM_BUILD_UI)
         ${SDL2_INCLUDE_DIRS}
     )
     target_link_libraries(gfxtest openbw_ui ${SDL2_LIBRARIES})
+    opensnowstorm_apply_common_compile_options(gfxtest)
 endif()
 
 # ---------------------------------------------------------------------------
