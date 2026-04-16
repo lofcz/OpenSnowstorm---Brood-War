@@ -50,7 +50,7 @@ OpenSnowstorm has the same ambition for **StarCraft: Brood War**:
 
 ### Campaign playability snapshot ("somewhat playable")
 
-Current rough estimate: **~45% of the way** to a "somewhat playable" campaign loop.
+Current rough estimate: **~55% of the way** to a "somewhat playable" campaign loop.
 
 What is already in place:
 - Deterministic simulation, replay, sync, and map boot/run paths are working.
@@ -68,13 +68,23 @@ What is already in place:
 - In-memory quicksave (F5) and quickload (F8) allow mid-mission checkpoints.
 - Native builds now auto-resolve and load the next mission map at victory when a
   `Set Next Scenario` trigger points to a map beside the current mission.
+- Filesystem-chain fallback: when no `Set Next Scenario` trigger fires, the native client
+  walks the current map's folder and loads the next alphabetically-sorted `.scx`/`.scm`,
+  so curated campaign packs chain without per-map triggers.
+- Persistent campaign resume: every time a single-player map is launched, the client writes
+  `campaign_progress.txt` beside the executable.  Relaunching without `--map` surfaces a
+  pinned "Continue" entry at the top of the startup shell that resumes the last-played map.
+- Pre-mission briefing gate: each single-player map auto-pauses on load and shows a
+  "Mission: <name>" / "Press Space to begin." HUD pair until the player presses Space/P.
 - Browser build exposes `replay_get_value(7)` (pending next-scenario name) and
   `replay_get_value(9)` (transition-ready flag) for JS-side campaign orchestration.
 
 What still blocks a fully reliable campaign experience:
-- **No persistent save/load** — quicksave is in-memory only; closing the window loses all progress.
-  File-backed save requires serializing the full simulation state (intrusive lists, pools, counters),
-  which needs a dedicated serialization layer not yet built.
+- **No persistent mid-mission save/load** — quicksave is in-memory only; closing the window
+  loses in-mission progress.  Mission-level resume is persisted (`campaign_progress.txt`
+  points the next launch at the last-played map), but mid-mission state is not.
+  File-backed mid-mission save requires serializing the full simulation state (intrusive
+  lists, pools, counters), which needs a dedicated serialization layer not yet built.
 - **No browser-side mission chaining yet** — native builds now transition automatically when the
   next map can be resolved on disk, but the browser build still only exposes JS hooks and needs an
   external campaign orchestration layer (map list, file loader, UI shell) to chain missions.
