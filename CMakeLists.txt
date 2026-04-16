@@ -1,16 +1,20 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(OpenSnowstorm CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+# list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 function(opensnowstorm_apply_common_compile_options target_name)
     if(MSVC)
         target_compile_options(${target_name} PRIVATE /bigobj)
     endif()
 endfunction()
+
+if(MSVC)
+    add_compile_options(/bigobj)
+endif()
 
 # ---------------------------------------------------------------------------
 # Build options
@@ -26,9 +30,9 @@ option(OPENSNOWSTORM_BUILD_BWAPI
 # ---------------------------------------------------------------------------
 if(OPENSNOWSTORM_BUILD_UI)
     find_package(SDL2 REQUIRED)
+    find_package(SDL2_mixer REQUIRED)
 
     add_definitions(-DOPENBW_NO_SDL_IMAGE)
-    add_definitions(-DOPENBW_NO_SDL_MIXER)
     add_definitions(-DOPENBW_ENABLE_UI)
 
     # SDL2 backend library (shared between gfxtest and any embedder)
@@ -38,7 +42,7 @@ if(OPENSNOWSTORM_BUILD_UI)
         ${CMAKE_SOURCE_DIR}/ui
         ${SDL2_INCLUDE_DIRS}
     )
-    target_link_libraries(openbw_ui ${SDL2_LIBRARIES})
+    target_link_libraries(openbw_ui ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
     opensnowstorm_apply_common_compile_options(openbw_ui)
     set_property(TARGET openbw_ui PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -48,8 +52,9 @@ if(OPENSNOWSTORM_BUILD_UI)
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/ui
         ${SDL2_INCLUDE_DIRS}
+        ${SDL2_MIXER_INCLUDE_DIRS}
     )
-    target_link_libraries(gfxtest openbw_ui ${SDL2_LIBRARIES})
+    target_link_libraries(gfxtest openbw_ui ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
     opensnowstorm_apply_common_compile_options(gfxtest)
 endif()
 

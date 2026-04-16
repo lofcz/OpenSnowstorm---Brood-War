@@ -1,3 +1,4 @@
+#define SDL_MAIN_HANDLED
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
@@ -14,6 +15,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <exception>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -88,7 +90,7 @@ std::string executable_directory() {
 bool has_required_mpqs(const std::string& dir) {
 	return file_exists(join_path(dir, "StarDat.mpq")) &&
 	       file_exists(join_path(dir, "BrooDat.mpq")) &&
-	       file_exists(join_path(dir, "Patch_rt.mpq"));
+	       (file_exists(join_path(dir, "Patch_rt.mpq")) || file_exists(join_path(dir, "patch_rt.mpq")));
 }
 
 std::string describe_required_mpqs(const std::string& dir) {
@@ -154,7 +156,8 @@ bool default_replay_exists() {
 
 enum class startup_content_kind {
 	map,
-	replay
+	replay,
+	campaign_browser
 };
 
 struct startup_entry {
@@ -163,6 +166,105 @@ struct startup_entry {
 	std::string title;
 	std::string subtitle;
 };
+
+struct campaign_mission {
+	std::string name;
+	std::string path;
+};
+
+struct campaign_episode {
+	std::string title;
+	std::string subtitle;
+	std::vector<campaign_mission> missions;
+};
+
+enum class frontend_view {
+	startup,
+	episodes,
+	missions
+};
+
+std::vector<campaign_episode> get_all_campaigns() {
+	std::vector<campaign_episode> eps;
+
+	// Original StarCraft
+	eps.push_back({"EPISODE I", "REBEL YELL (TERRAN)", {
+		{"1: WASTELAND", "campaign/terran/terran01.scx"},
+		{"2: BACKWATER STATION", "campaign/terran/terran02.scx"},
+		{"3: DESPERATE ALLIANCE", "campaign/terran/terran03.scx"},
+		{"4: THE JACOBS INSTALLATION", "campaign/terran/terran04.scx"},
+		{"5: REVOLUTION", "campaign/terran/terran05.scx"},
+		{"6: ON THE DEADMAN'S TRAIL", "campaign/terran/terran06.scx"},
+		{"7: THE TRUMP CARD", "campaign/terran/terran07.scx"},
+		{"8: THE BIG PUSH", "campaign/terran/terran08.scx"},
+		{"9: NEW GETTYSBURG", "campaign/terran/terran09.scx"},
+		{"10: THE HAMMER FALLS", "campaign/terran/terran10.scx"}
+	}});
+
+	eps.push_back({"EPISODE II", "OVERMIND (ZERG)", {
+		{"1: AMONG THE RUINS", "campaign/zerg/zerg01.scx"},
+		{"2: EGRESSION", "campaign/zerg/zerg02.scx"},
+		{"3: THE NEW DOMINION", "campaign/zerg/zerg03.scx"},
+		{"4: AGENT OF THE SWARM", "campaign/zerg/zerg04.scx"},
+		{"5: THE AMERIGO", "campaign/zerg/zerg05.scx"},
+		{"6: THE TEMPERED MIRROR", "campaign/zerg/zerg06.scx"},
+		{"7: CULLING THE HERD", "campaign/zerg/zerg07.scx"},
+		{"8: EYE FOR AN EYE", "campaign/zerg/zerg08.scx"},
+		{"9: THE INVASION OF AIUR", "campaign/zerg/zerg09.scx"},
+		{"10: FULL CIRCLE", "campaign/zerg/zerg10.scx"}
+	}});
+
+	eps.push_back({"EPISODE III", "THE FALL (PROTOSS)", {
+		{"1: FIRST STRIKE", "campaign/protoss/protoss01.scx"},
+		{"2: INTO THE FLAMES", "campaign/protoss/protoss02.scx"},
+		{"3: HIGHER GROUND", "campaign/protoss/protoss03.scx"},
+		{"4: THE HUNT FOR TASSADAR", "campaign/protoss/protoss04.scx"},
+		{"5: CHOOSING SIDES", "campaign/protoss/protoss05.scx"},
+		{"6: INTO THE DARKNESS", "campaign/protoss/protoss06.scx"},
+		{"7: HOMELAND", "campaign/protoss/protoss07.scx"},
+		{"8: THE TRIAL OF TASSADAR", "campaign/protoss/protoss08.scx"},
+		{"9: SHADOW HUNTERS", "campaign/protoss/protoss09.scx"},
+		{"10: EYE OF THE STORM", "campaign/protoss/protoss10.scx"}
+	}});
+
+	// Brood War Expansion
+	eps.push_back({"EPISODE IV", "THE STAND (PROTOSS)", {
+		{"1: ESCAPE FROM AIUR", "campaign/protxp/protxp01.scx"},
+		{"2: DUNES OF SHAKURAS", "campaign/protxp/protxp02.scx"},
+		{"3: LEGACY OF THE XEL'NAGA", "campaign/protxp/protxp03.scx"},
+		{"4: THE QUEST FOR URAJ", "campaign/protxp/protxp04.scx"},
+		{"5: THE BATTLE OF BRAXIS", "campaign/protxp/protxp05.scx"},
+		{"6: RETURN TO CHAR", "campaign/protxp/protxp06.scx"},
+		{"7: THE INSURGENT", "campaign/protxp/protxp07.scx"},
+		{"8: COUNTDOWN", "campaign/protxp/protxp08.scx"}
+	}});
+
+	eps.push_back({"EPISODE V", "THE IRON FIST (TERRAN)", {
+		{"1: FIRST STRIKE", "campaign/terrxp/terrxp01.scx"},
+		{"2: THE DYLARIAN SHIPYARDS", "campaign/terrxp/terrxp02.scx"},
+		{"3: RUINS OF TARSONIS", "campaign/terrxp/terrxp03.scx"},
+		{"4: ASSAULT ON KORHAL", "campaign/terrxp/terrxp04.scx"},
+		{"5: EMPEROR'S FALL", "campaign/terrxp/terrxp05.scx"},
+		{"6: EMPEROR'S FLIGHT", "campaign/terrxp/terrxp06.scx"},
+		{"7: PATRIOT'S BLOOD", "campaign/terrxp/terrxp07.scx"},
+		{"8: GROUND ZERO", "campaign/terrxp/terrxp08.scx"}
+	}});
+
+	eps.push_back({"EPISODE VI", "QUEEN OF BLADES (ZERG)", {
+		{"1: VILE DISRUPTION", "campaign/zergxp/zergxp01.scx"},
+		{"2: REIGN OF FIRE", "campaign/zergxp/zergxp02.scx"},
+		{"3: THE KEL-MORIAN COMBINE", "campaign/zergxp/zergxp03.scx"},
+		{"4: THE LIBERATION OF KORHAL", "campaign/zergxp/zergxp04.scx"},
+		{"5: TRUE COLORS", "campaign/zergxp/zergxp05.scx"},
+		{"6: FURY OF THE SWARM", "campaign/zergxp/zergxp06.scx"},
+		{"7: DRAWING OF THE WEB", "campaign/zergxp/zergxp07.scx"},
+		{"8: TO KILL A FLEDGLING", "campaign/zergxp/zergxp08.scx"},
+		{"9: THE RECKONING", "campaign/zergxp/zergxp09.scx"},
+		{"10: OMEGA", "campaign/zergxp/zergxp10.scx"}
+	}});
+
+	return eps;
+}
 
 std::string lowercase_copy(std::string value) {
 	for (char& c : value) c = (char)std::tolower((unsigned char)c);
@@ -323,9 +425,10 @@ int startup_entry_priority(const startup_entry& entry) {
 	// "Continue" entries (resume last-played campaign mission) are pinned to
 	// the top so a player pressing Enter at the frontend resumes immediately.
 	if (entry.title.compare(0, 9, "Continue ") == 0) return -1;
+	if (entry.kind == startup_content_kind::campaign_browser) return 0;
 	std::string lower = lowercase_copy(entry.path);
 	bool campaign_like = lower.find("campaign") != std::string::npos || lower.find("broodwar") != std::string::npos;
-	if (entry.kind == startup_content_kind::map && campaign_like) return 0;
+	if (entry.kind == startup_content_kind::map && campaign_like) return 5;
 	if (entry.kind == startup_content_kind::map) return 20;
 	if (lower.find("p49.rep") != std::string::npos) return 60;
 	return 40;
@@ -352,6 +455,13 @@ std::vector<startup_entry> discover_startup_entries(const std::string& data_dir)
 	}
 
 	push_startup_entry(entries, startup_content_kind::replay, "maps/p49.rep");
+	{
+		startup_entry entry;
+		entry.kind = startup_content_kind::campaign_browser;
+		entry.title = "SINGLE PLAYER CAMPAIGNS";
+		entry.subtitle = "PLAY STARCRAFT AND BROOD WAR MISSIONS";
+		entries.push_back(std::move(entry));
+	}
 
 	std::vector<std::string> candidate_dirs;
 	push_unique_dir(candidate_dirs, "maps");
@@ -608,7 +718,7 @@ namespace ui {
 void log_str(a_string str) {
 	fwrite(str.data(), str.size(), 1, stdout);
 	fflush(stdout);
-	if (!log_file) log_file = fopen("log.txt", "wb");
+	if (!log_file) log_file = fopen("gfxtest_log.txt", "ab");
 	if (log_file) {
 		fwrite(str.data(), str.size(), 1, log_file);
 		fflush(log_file);
@@ -666,7 +776,10 @@ struct main_t {
 	a_map<int, std::unique_ptr<saved_state>> saved_states;
 	std::unique_ptr<saved_state> quicksave_slot;
 	bool frontend_active = false;
+	frontend_view frontend_current_view = frontend_view::startup;
+	int frontend_selected_episode = -1;
 	std::vector<startup_entry> frontend_entries;
+	bool sound_enabled = true;
 	int frontend_selected_index = 0;
 	std::string frontend_status_message;
 	std::unique_ptr<native_window_drawing::surface> frontend_surface;
@@ -905,13 +1018,26 @@ struct main_t {
 		}
 	}
 
+	int frontend_get_entry_count() const {
+		if (frontend_current_view == frontend_view::startup) return (int)frontend_entries.size();
+		if (frontend_current_view == frontend_view::episodes) return (int)get_all_campaigns().size();
+		if (frontend_current_view == frontend_view::missions) {
+			auto eps = get_all_campaigns();
+			if (frontend_selected_episode >= 0 && frontend_selected_episode < (int)eps.size()) {
+				return (int)eps[frontend_selected_episode].missions.size();
+			}
+		}
+		return 0;
+	}
+
 	rect frontend_entry_rect(size_t index) const {
 		int box_w = std::min<int>((int)ui.screen_width - 120, 900);
 		if (box_w < 320) box_w = std::max<int>((int)ui.screen_width - 40, 200);
-		int box_h = 64;
-		int gap = 12;
-		int total_h = (int)frontend_entries.size() * box_h + std::max<int>(0, (int)frontend_entries.size() - 1) * gap;
-		int start_y = std::max(190, ((int)ui.screen_height - total_h) / 2 + 40);
+		int count = frontend_get_entry_count();
+		int box_h = count > 8 ? 48 : 64;
+		int gap = count > 8 ? 8 : 12;
+		int total_h = count * box_h + std::max<int>(0, count - 1) * gap;
+		int start_y = std::max(150, ((int)ui.screen_height - total_h) / 2 + 30);
 		int x = ((int)ui.screen_width - box_w) / 2;
 		int y = start_y + (int)index * (box_h + gap);
 		return rect{xy(x, y), xy(x + box_w, y + box_h)};
@@ -923,8 +1049,12 @@ struct main_t {
 		try {
 			if (entry.kind == startup_content_kind::map) {
 				load_single_player_map(entry.path);
-			} else {
+			} else if (entry.kind == startup_content_kind::replay) {
 				load_replay_session(entry.path);
+			} else if (entry.kind == startup_content_kind::campaign_browser) {
+				frontend_current_view = frontend_view::episodes;
+				frontend_selected_index = 0;
+				return;
 			}
 			ui.set_image_data();
 			center_view_on_loaded_content();
@@ -934,6 +1064,33 @@ struct main_t {
 		} catch (const std::exception& e) {
 			frontend_status_message = uppercase_copy(std::string("LAUNCH FAILED: ") + e.what());
 			log("frontend: failed to launch '%s': %s\n", entry.path.c_str(), e.what());
+		}
+	}
+
+	void launch_campaign_episode(size_t index) {
+		auto eps = get_all_campaigns();
+		if (index >= eps.size()) return;
+		frontend_selected_episode = (int)index;
+		frontend_current_view = frontend_view::missions;
+		frontend_selected_index = 0;
+	}
+
+	void launch_campaign_mission(size_t ep_index, size_t mission_index) {
+		auto eps = get_all_campaigns();
+		if (ep_index >= eps.size()) return;
+		auto& missions = eps[ep_index].missions;
+		if (mission_index >= missions.size()) return;
+		
+		try {
+			load_single_player_map(missions[mission_index].path);
+			ui.set_image_data();
+			center_view_on_loaded_content();
+			frontend_active = false;
+			frontend_surface.reset();
+			log("frontend: launched campaign %s\n", missions[mission_index].path.c_str());
+		} catch (const std::exception& e) {
+			frontend_status_message = uppercase_copy(std::string("LAUNCH FAILED: ") + e.what());
+			log("frontend: failed to launch campaign '%s': %s\n", missions[mission_index].path.c_str(), e.what());
 		}
 	}
 
@@ -972,33 +1129,62 @@ struct main_t {
 
 		std::string title = "OPENSNOWSTORM";
 		std::string subtitle = "BROOD WAR STARTUP";
+		if (frontend_current_view == frontend_view::episodes) {
+			subtitle = "SELECT CAMPAIGN EPISODE";
+		} else if (frontend_current_view == frontend_view::missions) {
+			auto eps = get_all_campaigns();
+			if (frontend_selected_episode >= 0 && frontend_selected_episode < (int)eps.size()) {
+				subtitle = eps[frontend_selected_episode].title + ": " + eps[frontend_selected_episode].subtitle;
+			}
+		}
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(title, 4)) / 2, 62, title, 4, rgba32(255, 220, 132, 255));
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(subtitle, 2)) / 2, 106, subtitle, 2, rgba32(216, 180, 104, 255));
 
-		std::string hint = frontend_entries.empty()
-			? "ADD .SCX .SCM OR .REP FILES BESIDE THE DATA INSTALL OR PASS --MAP."
-			: "UP DOWN OR CLICK TO CHOOSE. ENTER TO LAUNCH.";
+		std::string hint = "UP DOWN OR CLICK TO CHOOSE. ENTER TO LAUNCH.";
+		if (frontend_current_view != frontend_view::startup) {
+			hint = "UP DOWN OR CLICK TO CHOOSE. ENTER TO SELECT. BACKSPACE TO GO BACK.";
+		} else if (frontend_entries.empty()) {
+			hint = "ADD .SCX .SCM OR .REP FILES BESIDE THE DATA INSTALL OR PASS --MAP.";
+		}
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(hint, 1)) / 2, 138, hint, 1, rgba32(176, 188, 208, 255));
-
-		for (size_t i = 0; i < frontend_entries.size(); ++i) {
+		int entry_count = frontend_get_entry_count();
+		for (int i = 0; i < entry_count; ++i) {
 			rect box = frontend_entry_rect(i);
-			bool selected = (int)i == frontend_selected_index;
+			bool selected = i == frontend_selected_index;
 			uint32_t fill = selected ? rgba32(60, 36, 10, 230) : rgba32(16, 20, 32, 220);
 			uint32_t frame = selected ? rgba32(255, 210, 96, 255) : rgba32(90, 104, 128, 255);
 			fill_rgba_rect(pixels, pitch, width, height, box.from.x, box.from.y, box.to.x - box.from.x, box.to.y - box.from.y, fill);
 			draw_rgba_frame(pixels, pitch, width, height, box.from.x, box.from.y, box.to.x - box.from.x, box.to.y - box.from.y, 2, frame);
 
-			std::string index_text = std::to_string((int)i + 1);
-			draw_rgba_text(pixels, pitch, width, height, box.from.x + 14, box.from.y + 18, index_text, 2, selected ? rgba32(255, 232, 160, 255) : rgba32(170, 184, 208, 255));
-			draw_rgba_text(pixels, pitch, width, height, box.from.x + 48, box.from.y + 12, uppercase_copy(frontend_entries[i].title), 2, selected ? rgba32(255, 232, 160, 255) : rgba32(214, 220, 232, 255));
-			draw_rgba_text(pixels, pitch, width, height, box.from.x + 48, box.from.y + 38, uppercase_copy(shorten_middle(frontend_entries[i].subtitle, 52)), 1, rgba32(142, 154, 178, 255));
+			std::string entry_title, entry_subtitle;
+			if (frontend_current_view == frontend_view::startup) {
+				entry_title = frontend_entries[i].title;
+				entry_subtitle = frontend_entries[i].subtitle;
+			} else if (frontend_current_view == frontend_view::episodes) {
+				auto eps = get_all_campaigns();
+				entry_title = eps[i].title;
+				entry_subtitle = eps[i].subtitle;
+			} else if (frontend_current_view == frontend_view::missions) {
+				auto eps = get_all_campaigns();
+				auto& mission = eps[frontend_selected_episode].missions[i];
+				entry_title = mission.name;
+				entry_subtitle = mission.path;
+			}
+
+			int box_h = box.to.y - box.from.y;
+			int y_off = box_h > 48 ? 0 : -4;
+			std::string index_text = std::to_string(i + 1);
+			draw_rgba_text(pixels, pitch, width, height, box.from.x + 14, box.from.y + 18 + y_off, index_text, 2, selected ? rgba32(255, 232, 160, 255) : rgba32(170, 184, 208, 255));
+			draw_rgba_text(pixels, pitch, width, height, box.from.x + 48, box.from.y + 12 + y_off, uppercase_copy(entry_title), 2, selected ? rgba32(255, 232, 160, 255) : rgba32(214, 220, 232, 255));
+			draw_rgba_text(pixels, pitch, width, height, box.from.x + 48, box.from.y + 38 + y_off, uppercase_copy(shorten_middle(entry_subtitle, 52)), 1, rgba32(142, 154, 178, 255));
 		}
+
 
 		if (!frontend_status_message.empty()) {
 			std::string status = uppercase_copy(shorten_middle(frontend_status_message, 88));
 			draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(status, 1)) / 2, height - 76, status, 1, rgba32(255, 194, 112, 255));
 		}
-		std::string footer = "F3 DEBUG OVERLAY   ESC CLOSE";
+		std::string footer = std::string("F3 DEBUG OVERLAY   F4 SOUND: ") + (sound_enabled ? "ENABLED" : "DISABLED") + "   ESC CLOSE";
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(footer, 1)) / 2, height - 52, footer, 1, rgba32(112, 132, 164, 255));
 
 		frontend_surface->unlock();
@@ -1021,21 +1207,23 @@ struct main_t {
 				frontend_surface.reset();
 				break;
 			case native_window::event_t::type_mouse_motion:
-				for (size_t i = 0; i < frontend_entries.size(); ++i) {
+				for (int i = 0; i < frontend_get_entry_count(); ++i) {
 					rect box = frontend_entry_rect(i);
 					if (e.mouse_x >= box.from.x && e.mouse_x < box.to.x && e.mouse_y >= box.from.y && e.mouse_y < box.to.y) {
-						frontend_selected_index = (int)i;
+						frontend_selected_index = i;
 						break;
 					}
 				}
 				break;
 			case native_window::event_t::type_mouse_button_down:
 				if (e.button == 1) {
-					for (size_t i = 0; i < frontend_entries.size(); ++i) {
+					for (int i = 0; i < frontend_get_entry_count(); ++i) {
 						rect box = frontend_entry_rect(i);
 						if (e.mouse_x >= box.from.x && e.mouse_x < box.to.x && e.mouse_y >= box.from.y && e.mouse_y < box.to.y) {
-							frontend_selected_index = (int)i;
-							launch_frontend_entry(i);
+							frontend_selected_index = i;
+							if (frontend_current_view == frontend_view::startup) launch_frontend_entry(i);
+							else if (frontend_current_view == frontend_view::episodes) launch_campaign_episode(i);
+							else if (frontend_current_view == frontend_view::missions) launch_campaign_mission(frontend_selected_episode, i);
 							break;
 						}
 					}
@@ -1043,19 +1231,42 @@ struct main_t {
 				break;
 			case native_window::event_t::type_key_down:
 				if (e.sym == 27) {
-					std::exit(0);
+					if (frontend_current_view != frontend_view::startup) {
+						if (frontend_current_view == frontend_view::episodes) frontend_current_view = frontend_view::startup;
+						else if (frontend_current_view == frontend_view::missions) frontend_current_view = frontend_view::episodes;
+						frontend_selected_index = 0;
+					} else {
+						std::exit(0);
+					}
+				} else if (e.sym == 8) { // Backspace
+					if (frontend_current_view == frontend_view::episodes) frontend_current_view = frontend_view::startup;
+					else if (frontend_current_view == frontend_view::missions) frontend_current_view = frontend_view::episodes;
+					frontend_selected_index = 0;
 				} else if (e.scancode == 60) {
 					ui.show_debug_overlay = !ui.show_debug_overlay;
-				} else if (!frontend_entries.empty()) {
-					if (e.scancode == 82 || e.sym == 'w') {
-						frontend_selected_index = (frontend_selected_index + (int)frontend_entries.size() - 1) % (int)frontend_entries.size();
-					} else if (e.scancode == 81 || e.sym == 's') {
-						frontend_selected_index = (frontend_selected_index + 1) % (int)frontend_entries.size();
-					} else if (e.sym == '\r' || e.sym == ' ' || e.scancode == 40 || e.scancode == 88) {
-						launch_frontend_entry((size_t)frontend_selected_index);
-					} else if (e.sym >= '1' && e.sym <= '9') {
-						int requested = e.sym - '1';
-						if (requested >= 0 && requested < (int)frontend_entries.size()) launch_frontend_entry((size_t)requested);
+				} else if (e.scancode == 61) {
+					sound_enabled = !sound_enabled;
+					ui.global_volume = sound_enabled ? 50 : 0;
+					log("client: sound %s\n", sound_enabled ? "enabled" : "disabled");
+				} else {
+					int count = frontend_get_entry_count();
+					if (count > 0) {
+						if (e.scancode == 82 || e.sym == 'w') {
+							frontend_selected_index = (frontend_selected_index + count - 1) % count;
+						} else if (e.scancode == 81 || e.sym == 's') {
+							frontend_selected_index = (frontend_selected_index + 1) % count;
+						} else if (e.sym == '\r' || e.sym == ' ' || e.scancode == 40 || e.scancode == 88) {
+							if (frontend_current_view == frontend_view::startup) launch_frontend_entry(frontend_selected_index);
+							else if (frontend_current_view == frontend_view::episodes) launch_campaign_episode(frontend_selected_index);
+							else if (frontend_current_view == frontend_view::missions) launch_campaign_mission(frontend_selected_episode, frontend_selected_index);
+						} else if (e.sym >= '1' && e.sym <= '9') {
+							int requested = e.sym - '1';
+							if (requested >= 0 && requested < count) {
+								if (frontend_current_view == frontend_view::startup) launch_frontend_entry(requested);
+								else if (frontend_current_view == frontend_view::episodes) launch_campaign_episode(requested);
+								else if (frontend_current_view == frontend_view::missions) launch_campaign_mission(frontend_selected_episode, requested);
+							}
+						}
 					}
 				}
 				break;
@@ -1299,19 +1510,26 @@ struct main_t {
 		// one-off skirmish maps overwrite earlier progress the same way.
 		write_campaign_progress(map_file, false);
 
-		// Auto-pause and push a briefing banner so the player has a beat to
-		// orient before the simulation starts.  The first unpause (Space/P)
-		// clears the briefing; any right-click on the map is ignored while
-		// paused so the banner serves as a soft briefing gate.
-		ui.is_paused = true;
-		briefing_armed = true;
-		std::string mission_name = strip_extension(path_basename(map_file));
-		for (char& c : mission_name) {
-			if (c == '_' || c == '-') c = ' ';
+		if (!ui.game_st.briefing_triggers.empty()) {
+			ui.st.is_mission_briefing = true;
+			ui.is_paused = false;
+			briefing_armed = false;
+			log("single-player: map has %d briefing triggers; entering briefing mode\n", ui.game_st.briefing_triggers.size());
+		} else {
+			// Auto-pause and push a briefing banner so the player has a beat to
+			// orient before the simulation starts.  The first unpause (Space/P)
+			// clears the briefing; any right-click on the map is ignored while
+			// paused so the banner serves as a soft briefing gate.
+			ui.is_paused = true;
+			briefing_armed = true;
+			std::string mission_name = strip_extension(path_basename(map_file));
+			for (char& c : mission_name) {
+				if (c == '_' || c == '-') c = ' ';
+			}
+			if (mission_name.empty()) mission_name = map_file;
+			ui.push_hud_message(a_string("Mission: ") + a_string(mission_name.c_str()), 20 * 24);
+			ui.push_hud_message("Press Space to begin.", 20 * 24);
 		}
-		if (mission_name.empty()) mission_name = map_file;
-		ui.push_hud_message(a_string("Mission: ") + a_string(mission_name.c_str()), 20 * 24);
-		ui.push_hud_message("Press Space to begin.", 20 * 24);
 #endif
 	}
 
@@ -1711,7 +1929,36 @@ struct main_t {
 		}
 	}
 
+	void draw_portrait_overlay(uint32_t* pixels, int pitch, int width, int height) {
+		if (frontend_active || !ui.is_live_game_mode) return;
+		if (ui.active_portrait.unit_type == -1) return;
+		if (ui.st.current_frame > ui.active_portrait.end_frame) {
+			ui.active_portrait.unit_type = -1;
+			return;
+		}
+
+		int scale = 1;
+		int box_w = 160;
+		int box_h = 140;
+		int x = width - box_w - 16;
+		int y = 16;
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(8, 12, 22, 210));
+		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 1, rgba32(171, 124, 48, 220));
+
+		// Show character name if possible
+		std::string name = "COMM TRANSMISSION";
+		if (ui.active_portrait.unit_type >= 0) {
+			name = "UNIT TYPE " + std::to_string(ui.active_portrait.unit_type);
+		}
+		draw_rgba_text(pixels, pitch, width, height, x + 8, y + 8, uppercase_copy(name), scale, rgba32(255, 232, 160, 255));
+
+		// Placeholder for portrait animation
+		fill_rgba_rect(pixels, pitch, width, height, x + 10, y + 24, box_w - 20, box_h - 34, rgba32(40, 50, 80, 128));
+		draw_rgba_text(pixels, pitch, width, height, x + 30, y + box_h / 2, "PORTRAIT", 2, rgba32(100, 120, 160, 200));
+	}
+
 	void draw_client_overlays(uint32_t* pixels, int pitch, int width, int height) {
+		draw_portrait_overlay(pixels, pitch, width, height);
 		draw_objectives_overlay(pixels, pitch, width, height);
 		draw_speed_indicator(pixels, pitch, width, height);
 		draw_pause_overlay(pixels, pitch, width, height);
@@ -3079,10 +3326,8 @@ static int run_gen_test_replay(
 #endif
 
 int main(int argc, char** argv) {
-
+	std::cerr << "OpenSnowstorm gfxtest starting..." << std::endl;
 	using namespace bwgame;
-
-	log("v25\n");
 
 #ifndef EMSCRIPTEN
 	try {
@@ -3111,132 +3356,66 @@ int main(int argc, char** argv) {
 		for (int i = 1; i < argc; ++i) {
 			if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
 				show_help = true;
-			} else if (strcmp(argv[i], "--bench") == 0 && i + 1 < argc) {
-				bench_frames = atoi(argv[++i]);
-			} else if (strcmp(argv[i], "--data-dir") == 0) {
+			} else if (strcmp(argv[i], "--replay") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --data-dir requires a directory path\n");
+					log("error: --replay requires a file path\n");
 					return 2;
 				}
-				data_dir_arg = argv[++i];
+				replay_file = argv[++i];
 			} else if (strcmp(argv[i], "--map") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --map requires a map file path\n");
+					log("error: --map requires a file path\n");
 					return 2;
 				}
 				map_file = argv[++i];
-			} else if (strcmp(argv[i], "--local-player") == 0) {
+			} else if (strcmp(argv[i], "--data-dir") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --local-player requires a slot index (0-7)\n");
+					log("error: --data-dir requires a folder path\n");
 					return 2;
 				}
-				local_player_slot = parse_slot_or_error(argv[++i], "--local-player");
-			} else if (strcmp(argv[i], "--enemy-player") == 0) {
+				data_dir_arg = argv[++i];
+			} else if (strcmp(argv[i], "--bench") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --enemy-player requires a slot index (0-7)\n");
+					log("error: --bench requires frame count\n");
 					return 2;
 				}
-				enemy_player_slot = parse_slot_or_error(argv[++i], "--enemy-player");
-			} else if (strcmp(argv[i], "--game-type") == 0) {
-				if (i + 1 >= argc) {
-					log("error: --game-type requires value auto|melee|ums\n");
-					return 2;
-				}
-				std::string v = argv[++i];
-				for (char& c : v) c = (char)std::tolower((unsigned char)c);
-				if (v == "auto") map_game_type = map_game_type_t::auto_detect;
-				else if (v == "melee") map_game_type = map_game_type_t::melee;
-				else if (v == "ums" || v == "use_map_settings") map_game_type = map_game_type_t::ums;
-				else {
-					log("error: invalid --game-type value '%s' (expected auto|melee|ums)\n", argv[i]);
-					return 2;
-				}
-			} else if (strcmp(argv[i], "--local-race") == 0) {
-				if (i + 1 >= argc) {
-					log("error: --local-race requires value zerg|terran|protoss|random\n");
-					return 2;
-				}
-				local_race = parse_race_or_error(argv[++i], "--local-race");
-			} else if (strcmp(argv[i], "--enemy-race") == 0) {
-				if (i + 1 >= argc) {
-					log("error: --enemy-race requires value zerg|terran|protoss|random\n");
-					return 2;
-				}
-				enemy_race = parse_race_or_error(argv[++i], "--enemy-race");
-			} else if (strcmp(argv[i], "--fog") == 0) {
-				map_fog_of_war = true;
-			} else if (strcmp(argv[i], "--no-fog") == 0) {
-				map_fog_of_war = false;
-			} else if (strcmp(argv[i], "--debug-overlay") == 0) {
-				debug_overlay = true;
-			} else if (strcmp(argv[i], "--validate-replay") == 0) {
-				validate_replay = true;
-			} else if (strcmp(argv[i], "--verify-hashes") == 0) {
-				if (i + 1 >= argc) {
-					log("error: --verify-hashes requires a fixture file path\n");
-					return 2;
-				}
-				verify_hashes_file = argv[++i];
-			} else if (strcmp(argv[i], "--record-hashes") == 0) {
-				if (i + 1 >= argc) {
-					log("error: --record-hashes requires an output fixture file path\n");
-					return 2;
-				}
-				record_hashes_file = argv[++i];
-			} else if (strcmp(argv[i], "--gen-test-replay") == 0) {
-				if (i + 1 >= argc) {
-					log("error: --gen-test-replay requires an output replay file path\n");
-					return 2;
-				}
-				gen_test_replay_file = argv[++i];
-			} else if (strcmp(argv[i], "--frames") == 0) {
-				if (i + 1 >= argc) {
-					log("error: --frames requires a positive integer\n");
-					return 2;
-				}
-				errno = 0;
-				char* end = nullptr;
-				long v = std::strtol(argv[++i], &end, 10);
-				if (errno != 0 || end == argv[i] || *end != '\0' || v <= 0 || v > std::numeric_limits<int>::max()) {
-					log("error: invalid --frames value '%s' (expected positive integer)\n", argv[i]);
-					return 2;
-				}
-				gen_test_replay_frames = (int)v;
-			} else if (strcmp(argv[i], "--hash-interval") == 0) {
-				if (i + 1 >= argc) {
-					log("error: --hash-interval requires a positive integer\n");
-					return 2;
-				}
-				errno = 0;
-				char* end = nullptr;
-				long v = std::strtol(argv[++i], &end, 10);
-				if (errno != 0 || end == argv[i] || *end != '\0' || v <= 0 || v > std::numeric_limits<int>::max()) {
-					log("error: invalid --hash-interval value '%s' (expected positive integer)\n", argv[i]);
-					return 2;
-				}
-				hash_interval = (int)v;
+				bench_frames = atoi(argv[++i]);
 			} else if (strcmp(argv[i], "--headless") == 0) {
 				headless = true;
-			} else if (strcmp(argv[i], "--headless-map") == 0) {
-				headless = true;
-				if (i + 1 < argc) {
-					errno = 0;
-					char* end = nullptr;
-					long v = std::strtol(argv[i + 1], &end, 10);
-					if (errno == 0 && end != argv[i + 1] && *end == '\0' && v > 0) {
-						headless_map_frame_limit = (int)v;
-						++i;
-					} else {
-						headless_map_frame_limit = 0;
-					}
+			} else if (strcmp(argv[i], "--debug-overlay") == 0) {
+				debug_overlay = true;
+			} else if (strcmp(argv[i], "--no-fog") == 0) {
+				map_fog_of_war = false;
+			} else if (strcmp(argv[i], "--slot") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --slot requires index\n");
+					return 2;
 				}
-			} else if (strcmp(argv[i], "--replay") == 0 && i + 1 < argc) {
-				replay_file = argv[++i];
-			} else if (argv[i][0] == '-') {
-				log("error: unknown option '%s'\n", argv[i]);
-				return 2;
-			} else if (argv[i][0] != '-') {
-				replay_file = argv[i];
+				local_player_slot = atoi(argv[++i]);
+			} else if (strcmp(argv[i], "--enemy-slot") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --enemy-slot requires index\n");
+					return 2;
+				}
+				enemy_player_slot = atoi(argv[++i]);
+			} else if (strcmp(argv[i], "--race") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --race requires index (0-2 for Z/T/P, 5 for random)\n");
+					return 2;
+				}
+				local_race = atoi(argv[++i]);
+			} else if (strcmp(argv[i], "--enemy-race") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --enemy-race requires index\n");
+					return 2;
+				}
+				enemy_race = atoi(argv[++i]);
+			} else if (strcmp(argv[i], "--frames") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --frames requires count\n");
+					return 2;
+				}
+				headless_map_frame_limit = atoi(argv[++i]);
 			}
 		}
 
@@ -3245,105 +3424,18 @@ int main(int argc, char** argv) {
 			return 0;
 		}
 
-		if (bench_frames > 0 && validate_replay) {
-			log("error: --bench and --validate-replay cannot be used together\n");
-			return 2;
-		}
-		if (bench_frames > 0 && verify_hashes_file) {
-			log("error: --bench and --verify-hashes cannot be used together\n");
-			return 2;
-		}
-		if (bench_frames > 0 && record_hashes_file) {
-			log("error: --bench and --record-hashes cannot be used together\n");
-			return 2;
-		}
-		if (validate_replay && verify_hashes_file) {
-			log("error: --validate-replay and --verify-hashes cannot be used together\n");
-			return 2;
-		}
-		if (validate_replay && record_hashes_file) {
-			log("error: --validate-replay and --record-hashes cannot be used together\n");
-			return 2;
-		}
-		if (verify_hashes_file && record_hashes_file) {
-			log("error: --verify-hashes and --record-hashes cannot be used together\n");
-			return 2;
-		}
-		if (map_file && replay_file) {
-			log("error: --map cannot be used with --replay/positional replay file\n");
-			return 2;
-		}
-		if (map_file && bench_frames > 0) {
-			log("error: --map and --bench cannot be used together\n");
-			return 2;
-		}
-		if (map_file && validate_replay) {
-			log("error: --map and --validate-replay cannot be used together\n");
-			return 2;
-		}
-		if (map_file && verify_hashes_file) {
-			log("error: --map and --verify-hashes cannot be used together\n");
-			return 2;
-		}
-		if (map_file && record_hashes_file) {
-			log("error: --map and --record-hashes cannot be used together\n");
-			return 2;
-		}
-		if ((local_player_slot != -1 || enemy_player_slot != -1 || local_race != 5 || enemy_race != 5 || map_game_type != map_game_type_t::auto_detect || !map_fog_of_war) && !map_file) {
-			log("error: --map is required when using single-player map options\n");
-			return 2;
-		}
-		if (local_player_slot != -1 && enemy_player_slot != -1 && local_player_slot == enemy_player_slot) {
-			log("error: --local-player and --enemy-player must be different slots\n");
-			return 2;
-		}
-
+		std::cerr << "Resolving data directory..." << std::endl;
 		g_data_dir = resolve_data_dir_or_throw(argv[0], data_dir_arg);
-		log("data dir: %s\n", g_data_dir.empty() ? "." : g_data_dir.c_str());
+		std::cerr << "Data directory: " << g_data_dir << std::endl;
 
-		if (record_hashes_file) {
-			return run_record_hashes(replay_file, record_hashes_file, hash_interval);
-		}
-		if (verify_hashes_file) {
-			return run_verify_hashes(replay_file, verify_hashes_file);
-		}
-		if (validate_replay) {
-			return run_validate_replay(replay_file);
-		}
-		if (gen_test_replay_file) {
-			return run_gen_test_replay(map_file, gen_test_replay_file, record_hashes_file, gen_test_replay_frames, hash_interval);
-		}
-		if (bench_frames > 0) {
-			return run_bench(bench_frames, replay_file);
-		}
-
-		bool use_frontend = !headless && !map_file && !replay_file;
-		if (!use_frontend && !map_file && !replay_file && !default_replay_exists()) {
-			error("no startup content available: 'maps/p49.rep' was not found. Pass --map <file.scx|file.scm> or --replay <file.rep>.");
-		}
-
-#endif
-
-		size_t screen_width = 1280;
-		size_t screen_height = 800;
-
-		std::chrono::high_resolution_clock clock;
-		auto start = clock.now();
-
-#ifdef EMSCRIPTEN
-		if (current_width != -1) {
-			screen_width = current_width;
-			screen_height = current_height;
-		}
-		auto load_data_file = data_loading::data_files_directory<data_loading::data_files_loader<data_loading::mpq_file<data_loading::js_file_reader<>>>>("");
-#else
 		auto load_data_file = make_load_data_file();
-#endif
-
 		game_player player(load_data_file);
 
-		main_t m(std::move(player));
+		std::cerr << "Initializing engine..." << std::endl;
+		auto m_ptr = std::make_unique<main_t>(std::move(player));
+		main_t& m = *m_ptr;
 		auto& ui = m.ui;
+		std::cerr << "Engine initialized." << std::endl;
 
 		m.ui.load_all_image_data(load_data_file);
 
@@ -3351,17 +3443,19 @@ int main(int argc, char** argv) {
 			load_data_file(data, std::move(filename));
 		};
 
+		log("initializing ui...\n");
 		ui.init();
+		log("ui initialized\n");
 
 		ui.rgba_overlay_cb = [&m](uint32_t* pixels, int pitch, int width, int height) {
 			m.draw_client_overlays(pixels, pitch, width, height);
 		};
 
-#ifndef EMSCRIPTEN
+		ui.local_player_id = local_player_slot;
+		ui.enemy_player_id = enemy_player_slot;
+		ui.show_debug_overlay = debug_overlay;
+
 		if (map_file) {
-			m.campaign_local_player_slot = local_player_slot;
-			m.campaign_enemy_player_slot = enemy_player_slot;
-			m.campaign_game_type = map_game_type;
 			m.campaign_fog_of_war = map_fog_of_war;
 			m.campaign_local_race = local_race;
 			m.campaign_enemy_race = enemy_race;
@@ -3370,108 +3464,78 @@ int main(int argc, char** argv) {
 			m.load_replay_session(replay_file);
 		} else if (!headless) {
 			m.enable_frontend(discover_startup_entries(g_data_dir));
-		} else {
+		} else if (file_exists("maps/p49.rep")) {
 			m.load_replay_session("maps/p49.rep");
+		} else {
+			log("Warning: No map/replay provided in headless mode, and maps/p49.rep not found. Idling.\n");
 		}
-#endif
+
+		size_t screen_width = 1280;
+		size_t screen_height = 800;
 
 		auto& wnd = ui.wnd;
-		wnd.create("OpenSnowstorm - Brood War", 0, 0, screen_width, screen_height);
+		if (!headless) {
+			std::cerr << "Creating window..." << std::endl;
+			wnd.create("OpenSnowstorm - Brood War", 0, 0, (int)screen_width, (int)screen_height);
+			std::cerr << "Window created." << std::endl;
+		}
 
-		ui.resize(screen_width, screen_height);
+		ui.resize((int)screen_width, (int)screen_height);
 		if (!m.frontend_active) {
 			m.center_view_on_loaded_content();
 			ui.set_image_data();
 		}
-		ui.show_debug_overlay = debug_overlay;
 
-		log("loaded in %dms\n", std::chrono::duration_cast<std::chrono::milliseconds>(clock.now() - start).count());
+		::g_m = &m;
 
-	//set_malloc_fail_handler(malloc_fail_handler);
-
-#ifdef EMSCRIPTEN
-	::m = &m;
-	::g_m = &m;
-	//EM_ASM({js_load_done();});
-	emscripten_set_main_loop_arg([](void* ptr) {
-		if (!any_replay_loaded) return;
-		EM_ASM({js_pre_main_loop();});
-		((main_t*)ptr)->update();
-		EM_ASM({js_post_main_loop();});
-	}, &m, 0, 1);
-#else
-	::g_m = &m;
-
-	if (headless) {
-		// Headless mode: run the simulation forward without rendering.
-		// Useful for profiling simulation throughput or bot testing.
-		if (ui.is_replay_mode) {
-			while (!ui.is_done()) {
-				ui.replay_functions::next_frame();
-			}
-		} else {
-			// Single-player headless map mode: run until victory/defeat or
-			// frame limit.  headless_map_frame_limit==0 uses the default cap
-			// of 72000 frames (~50 minutes at fastest speed), which is large
-			// enough for most campaign missions and CI smoke tests.
-			const int frame_limit = headless_map_frame_limit > 0 ? headless_map_frame_limit : 72000;
-			log("single-player headless: stepping until local victory/defeat (limit=%d)\n", frame_limit);
-			bool result_found = false;
-			int stepped_frames = 0;
-			while (stepped_frames < frame_limit) {
-				ui.state_functions::next_frame();
-				++stepped_frames;
-				if (ui.has_local_player()) {
-					if (ui.player_won(ui.local_player_id)) {
-						if (!ui.pending_next_scenario.empty()) {
-							std::string next_map = m.find_next_campaign_map(ui.pending_next_scenario);
-							if (!next_map.empty()) {
-								log("single-player headless: campaign advance -> '%s'\n", next_map.c_str());
-								m.load_single_player_map(next_map);
-								continue;
-							}
-							log("single-player headless: next map '%s' not found beside current map\n",
-							    ui.pending_next_scenario.c_str());
+		if (headless) {
+			log("Headless mode active.\n");
+			if (ui.is_replay_mode) {
+				while (!ui.is_done()) {
+					ui.replay_functions::next_frame();
+				}
+			} else {
+				const int frame_limit = headless_map_frame_limit > 0 ? headless_map_frame_limit : 72000;
+				log("single-player headless: stepping until local victory/defeat (limit=%d)\n", frame_limit);
+				int stepped_frames = 0;
+				while (stepped_frames < frame_limit) {
+					ui.state_functions::next_frame();
+					++stepped_frames;
+					if (ui.has_local_player()) {
+						if (ui.player_won(ui.local_player_id)) {
+							log("single-player headless: PASS (victory at frame %d)\n", ui.st.current_frame);
+							break;
 						}
-						log("single-player headless: PASS (victory at frame %d)\n", ui.st.current_frame);
-						result_found = true;
-						break;
-					}
-					if (ui.player_defeated(ui.local_player_id)) {
-						log("single-player headless: PASS (defeat at frame %d)\n", ui.st.current_frame);
-						result_found = true;
-						break;
+						if (ui.player_defeated(ui.local_player_id)) {
+							log("single-player headless: PASS (defeat at frame %d)\n", ui.st.current_frame);
+							break;
+						}
 					}
 				}
 			}
-			if (!result_found) {
-				log("single-player headless: PASS (frame limit %d reached, no crash)\n", frame_limit);
-			}
+			return 0;
 		}
-	} else {
-		// Normal display loop with adaptive sleep: sleep only until the next
-		// tick is due rather than a fixed 20 ms, reducing latency jitter.
-		while (true) {
+
+		std::chrono::high_resolution_clock clock;
+		while (!ui.window_closed) {
 			auto frame_start = clock.now();
 			m.update();
-			// Sleep adaptively: target ~16ms frame time (roughly 60 Hz UI).
-			// std::chrono arithmetic keeps us from accumulating drift.
 			auto frame_elapsed = clock.now() - frame_start;
 			auto target = std::chrono::milliseconds(16);
 			if (frame_elapsed < target) {
 				std::this_thread::sleep_for(target - frame_elapsed);
 			}
 		}
-	}
-#endif
-		::g_m = nullptr;
 
 		return 0;
 	} catch (const std::exception& e) {
-		log("error: %s\n", e.what());
+		std::cerr << "FATAL ERROR: " << e.what() << std::endl;
 		return 1;
 	} catch (...) {
-		log("error: unknown exception\n");
+		std::cerr << "FATAL ERROR: unknown exception" << std::endl;
 		return 1;
 	}
+#endif
+	return 0;
 }
+

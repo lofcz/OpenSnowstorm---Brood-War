@@ -3,6 +3,7 @@
 #include "native_sound.h"
 
 #include "common.h"
+#define SDL_MAIN_HANDLED
 #include "SDL.h"
 #ifndef OPENBW_NO_SDL_IMAGE
 #include "SDL_image.h"

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 option(OPENBW_ENABLE_UI "Enables support for the graphical user interface, requires SDL2")
 

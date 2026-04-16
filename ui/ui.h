@@ -744,13 +744,28 @@ struct ui_functions : ui_util_functions {
     ui::log("trigger: display text: %s\n", text.c_str());
   }
 
-  virtual void on_trigger_transmission(int owner, int string_index) override {
-    // Transmission includes implicit center-view (handled below via location
-    // stored in the action) and text display.  We show the text string here.
+  virtual void on_trigger_transmission(int owner, int string_index,
+                                       int sound_index, int unit_type,
+                                       int duration_ms,
+                                       int location_id) override {
+    // Center view
+    on_trigger_center_view(owner, location_id);
+
+    // Show portrait
+    on_trigger_talking_portrait(owner, unit_type, duration_ms);
+
+    // Show text
     a_string msg = get_map_string((size_t)string_index);
     if (!msg.empty()) {
       push_hud_message(msg);
       ui::log("trigger: transmission: %s\n", msg.c_str());
+    }
+
+    // Play sound
+    a_string sound_name = get_map_string((size_t)sound_index);
+    if (!sound_name.empty()) {
+      ui::log("trigger: transmission sound: %s\n", sound_name.c_str());
+      play_wav(sound_name);
     }
   }
 
@@ -788,6 +803,31 @@ struct ui_functions : ui_util_functions {
     if (is_live_game_mode) {
       is_paused = false;
       ui::log("trigger: game unpaused\n");
+    }
+  }
+  virtual void on_trigger_minimap_ping(int owner, xy position) override {
+    ui::log("trigger: minimap ping for player %d at (%d, %d)\n", owner,
+            position.x, position.y);
+    active_minimap_pings.push_back({position, st.current_frame + 24 * 5});
+  }
+  virtual void on_trigger_talking_portrait(int owner, int unit_type,
+                                           int duration_ms,
+                                           int slot = 0) override {
+    ui::log("trigger: talking portrait for player %d, unit type %d, duration "
+            "%dms, slot %d\n",
+            owner, unit_type, duration_ms, slot);
+
+    if (st.is_mission_briefing && slot >= 0 && slot < 4) {
+      if (unit_type == -1) {
+        briefing_slots[slot].unit_type = -1;
+      } else {
+        briefing_slots[slot].unit_type = unit_type;
+        briefing_slots[slot].end_frame =
+            st.current_frame + (duration_ms * 24 / 1000);
+      }
+    } else {
+      active_portrait.unit_type = unit_type;
+      active_portrait.end_frame = st.current_frame + (duration_ms * 24 / 1000);
     }
   }
 
@@ -840,6 +880,7 @@ struct ui_functions : ui_util_functions {
   a_vector<std::chrono::high_resolution_clock::time_point> last_played_sound;
 
   int global_volume = 50;
+  a_unordered_map<a_string, std::unique_ptr<native_sound::sound>> custom_sounds;
 
   struct sound_channel {
     bool playing = false;
@@ -849,6 +890,22 @@ struct ui_functions : ui_util_functions {
     const unit_type_t *unit_type = nullptr;
     int volume = 0;
   };
+  struct portrait_info {
+    int unit_type = -1;
+    int end_frame = 0;
+  } active_portrait;
+
+  struct briefing_slot_info {
+    int unit_type = -1;
+    int end_frame = 0;
+  };
+  std::array<briefing_slot_info, 4> briefing_slots;
+
+  struct minimap_ping_info {
+    xy position;
+    int end_frame = 0;
+  };
+  a_list<minimap_ping_info> active_minimap_pings;
   a_vector<sound_channel> sound_channels;
 
   void set_volume(int volume) {
@@ -978,6 +1035,27 @@ struct ui_functions : ui_util_functions {
         c->unit_type = unit_type;
         c->volume = volume;
       }
+    }
+  }
+
+  void play_wav(a_string filename) {
+    if (filename.empty())
+      return;
+    a_vector<uint8_t> data;
+    load_data_file(data, "glue\\wav\\" + filename);
+    if (data.empty())
+      load_data_file(data, "sound\\" + filename);
+    if (data.empty())
+      load_data_file(data, filename);
+
+    if (data.empty()) {
+      ui::log("failed to load wav: %s\n", filename.c_str());
+      return;
+    }
+    auto s = native_sound::load_wav(data.data(), data.size());
+    if (s) {
+      native_sound::play(1, s.get(), 128 * global_volume / 100, 0);
+      custom_sounds[filename] = std::move(s);
     }
   }
 
@@ -1857,6 +1935,30 @@ struct ui_functions : ui_util_functions {
     view_rect.to =
         view_rect.from + xy((view_width + 31) / 32u, (view_height + 31) / 32u);
     line_rectangle(data, data_pitch, view_rect, 255);
+
+    auto it = active_minimap_pings.begin();
+    while (it != active_minimap_pings.end()) {
+      if (st.current_frame > it->end_frame) {
+        it = active_minimap_pings.erase(it);
+        continue;
+      }
+
+      int x = it->position.x / 32;
+      int y = it->position.y / 32;
+
+      // Draw a pulsating box
+      int pulse = (st.current_frame / 4) % 2;
+      int size = pulse ? 2 : 3;
+
+      rect ping_rect;
+      ping_rect.from = area.from + xy(x - size, y - size);
+      ping_rect.to = area.from + xy(x + size, y + size);
+
+      // Flash white/black
+      int color = (st.current_frame % 8 < 4) ? 255 : 0;
+      line_rectangle(data, data_pitch, ping_rect, color);
+      ++it;
+    }
   }
 
   int replay_frame = 0;
@@ -2016,6 +2118,8 @@ struct ui_functions : ui_util_functions {
                         area.from + xy(ox, 0) + xy(button_w, button_h)},
                    51);
   }
+
+  virtual void draw_briefing_screen(uint8_t *data, size_t data_pitch) {}
 
   void draw_live_ui(uint8_t *data, size_t data_pitch) {
     refresh_live_commands_if_needed();
@@ -4615,10 +4719,14 @@ struct ui_functions : ui_util_functions {
       screen_pos.x = 0;
 
     uint8_t *data = (uint8_t *)indexed_surface->lock();
-    draw_tiles(data, indexed_surface->pitch);
-    draw_sprites(data, indexed_surface->pitch);
+    if (st.is_mission_briefing) {
+      draw_briefing_screen(data, indexed_surface->pitch);
+    } else {
+      draw_tiles(data, indexed_surface->pitch);
+      draw_sprites(data, indexed_surface->pitch);
 
-    draw_callback(data, indexed_surface->pitch);
+      draw_callback(data, indexed_surface->pitch);
+    }
 
     if (draw_ui_elements) {
       draw_minimap(data, indexed_surface->pitch);

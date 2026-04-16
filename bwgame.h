@@ -43,7 +43,7 @@ struct state_functions {
 	// Trigger event callbacks for UI-visible notifications.
 	// The default implementations are no-ops; override in the UI layer.
 	virtual void on_trigger_display_text(int owner, const a_string& text) {}
-	virtual void on_trigger_transmission(int owner, int string_index) {}
+	virtual void on_trigger_transmission(int owner, int string_index, int sound_index, int unit_type, int duration_ms, int location_id) {}
 	virtual void on_trigger_center_view(int owner, int location_id) {}
 	virtual void on_trigger_set_objectives(int owner, const a_string& text) {}
 	virtual void on_trigger_set_next_scenario(int owner, const a_string& scenario) {}
@@ -51,6 +51,8 @@ struct state_functions {
 	// these to actually pause/resume simulation playback.
 	virtual void on_trigger_pause_game() {}
 	virtual void on_trigger_unpause_game() {}
+	virtual void on_trigger_minimap_ping(int owner, xy position) {}
+	virtual void on_trigger_talking_portrait(int owner, int unit_type, int duration_ms, int slot = 0) {}
 
 	virtual ~state_functions() {}
 
@@ -13363,14 +13365,22 @@ struct state_functions {
 			if (unit_provides_space(u) && !ut_building(u)) {
 				for (unit_t* n : loaded_units(u)) {
 					kill_unit(n);
-					// todo: units lost scores
+					if (n->owner < 12) {
+						if (ut_building(n)) st.building_score[n->owner] -= n->unit_type->build_score;
+						else st.unit_score[n->owner] -= n->unit_type->build_score;
+					}
 				}
 			}
 			u->hp = 0_fp8;
 			kill_unit(u);
-			// todo: units lost scores
+			if (u->owner < 12) {
+				if (ut_building(u)) st.building_score[u->owner] -= u->unit_type->build_score;
+				else st.unit_score[u->owner] -= u->unit_type->build_score;
+			}
 			if (source_unit && unit_target_is_enemy(source_unit, u)) {
-				// todo: kill scores
+				if (source_unit->owner < 12) {
+					st.unit_deaths[source_unit->owner][(size_t)u->unit_type->id]++;
+				}
 			}
 		}
 	}
@@ -19036,9 +19046,13 @@ struct state_functions {
 			on_trigger_unpause_game();
 			return true;
 		case 7: // transmission (voice + text + center view)
-			on_trigger_transmission(owner, a.string_index);
+			on_trigger_transmission(owner, a.string_index, a.sound_index, a.extra_n, a.time_n, a.location);
 			return true;
 		case 8: // play WAV
+			if (a.string_index > 0) {
+				// No location or source_unit for global trigger sounds.
+				play_sound(a.string_index);
+			}
 			return true;
 		case 9: // display text message
 			if (a.string_index > 0) {
@@ -19461,9 +19475,15 @@ struct state_functions {
 			return true;
 		case 53: // modify unit hangar count - no-op
 			return true;
-		case 55: // minimap ping - UI layer, no-op
+		case 55: // minimap ping
+			{
+				auto& loc = st.locations.at(a.location - 1);
+				xy pos = (loc.area.from + loc.area.to) / 2;
+				on_trigger_minimap_ping(owner, pos);
+			}
 			return true;
-		case 56: // talking portrait - UI layer, no-op
+		case 56: // talking portrait
+			on_trigger_talking_portrait(owner, a.extra_n, a.time_n, a.group_n);
 			return true;
 		case 57: // mute unit speech - UI layer, no-op
 			return true;
