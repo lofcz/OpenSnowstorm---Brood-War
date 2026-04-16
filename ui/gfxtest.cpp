@@ -193,6 +193,15 @@ std::string strip_extension(const std::string& path) {
 	return path.substr(0, pos);
 }
 
+std::string humanize_map_stem(const std::string& path) {
+	std::string stem = strip_extension(path_basename(path));
+	if (stem.empty()) stem = path;
+	for (char& c : stem) {
+		if (c == '_' || c == '-') c = ' ';
+	}
+	return stem;
+}
+
 std::string shorten_middle(const std::string& text, size_t max_chars) {
 	if (text.size() <= max_chars) return text;
 	if (max_chars <= 3) return text.substr(0, max_chars);
@@ -209,11 +218,7 @@ bool has_extension_ci(const std::string& path, const char* extension) {
 }
 
 std::string make_startup_title(startup_content_kind kind, const std::string& path) {
-	std::string stem = strip_extension(path_basename(path));
-	if (stem.empty()) stem = path;
-	for (char& c : stem) {
-		if (c == '_' || c == '-') c = ' ';
-	}
+	std::string stem = humanize_map_stem(path);
 	std::string lower_path = lowercase_copy(path);
 	if (kind == startup_content_kind::replay) return "Replay  " + stem;
 	if (lower_path.find("campaign") != std::string::npos || lower_path.find("broodwar") != std::string::npos) {
@@ -672,6 +677,30 @@ struct main_t {
 	// toggle (Space/P) while armed clears it so the simulation begins stepping.
 	bool briefing_armed = false;
 
+	// Post-mission result snapshot.  Populated once when victory or defeat
+	// is detected, then rendered by the overlay callback until the player
+	// dismisses it.  Debrief body lines are pre-formatted here so the
+	// overlay does not allocate per frame.
+	struct mission_result_t {
+		bool active = false;
+		bool won = false;
+		bool next_mission_ready = false;
+		std::string header;
+		uint32_t header_color = 0;
+		uint32_t veil_color = 0;
+		std::vector<std::string> lines;
+	};
+	mission_result_t mission_result;
+
+	std::string current_map_display_name;
+	std::string pending_next_map_file;
+
+	// Cached soft-wrapped + uppercased objectives text.  Rebuilt lazily when
+	// ui.current_objectives_text changes so draw_objectives_overlay does not
+	// reallocate every frame.
+	std::string cached_objectives_source;
+	std::vector<std::string> cached_objectives_lines;
+
 	void save_replay_state_if_missing(int frame) {
 		auto i = saved_states.find(frame);
 		if (i != saved_states.end()) return;
@@ -698,6 +727,141 @@ struct main_t {
 		ui.reset();
 		live_result_reported = false;
 		current_map_file.clear();
+		current_map_display_name.clear();
+		mission_result = {};
+		pending_next_map_file.clear();
+		briefing_armed = false;
+	}
+
+	void capture_mission_result(bool won, bool next_ready) {
+		// uid 229 is the engine's documented "all unit types" sentinel for
+		// trigger_player_kills — it sums the entire unit_deaths table.
+		constexpr int k_all_units = 229;
+		const int fps = 24;
+
+		int elapsed_seconds = ui.st.current_frame / fps;
+		int local = ui.local_player_id;
+		int enemy = ui.enemy_player_id;
+		int units_built = 0, buildings_built = 0;
+		int minerals = 0, gas = 0;
+		int unit_score = 0, building_score = 0;
+		int losses = 0, kills = 0;
+		if (local >= 0 && local < 12) {
+			units_built = ui.st.total_non_buildings_ever_completed[(size_t)local];
+			buildings_built = ui.st.total_buildings_ever_completed[(size_t)local];
+			minerals = ui.st.total_minerals_gathered[(size_t)local];
+			gas = ui.st.total_gas_gathered[(size_t)local];
+			unit_score = ui.st.unit_score[(size_t)local];
+			building_score = ui.st.building_score[(size_t)local];
+			losses = ui.trigger_player_kills(local, k_all_units);
+		}
+		if (enemy >= 0 && enemy < 12) {
+			kills = ui.trigger_player_kills(enemy, k_all_units);
+		}
+
+		std::string mission_name = current_map_display_name.empty()
+			? std::string("MISSION") : current_map_display_name;
+
+		auto pad_stat = [](const std::string& label, const std::string& value, size_t total_w) {
+			if (label.size() + value.size() + 2 >= total_w) return label + "  " + value;
+			return label + std::string(total_w - label.size() - value.size(), ' ') + value;
+		};
+		const size_t col_w = 28;
+
+		mission_result_t r;
+		r.active = true;
+		r.won = won;
+		r.next_mission_ready = next_ready;
+		r.header = won ? "MISSION ACCOMPLISHED" : "MISSION FAILED";
+		r.header_color = won ? rgba32(170, 255, 170, 255) : rgba32(255, 160, 160, 255);
+		r.veil_color = won ? rgba32(20, 40, 12, 160) : rgba32(40, 12, 12, 160);
+
+		char time_buf[32];
+		std::snprintf(time_buf, sizeof(time_buf), "%d:%02d", elapsed_seconds / 60, elapsed_seconds % 60);
+
+		r.lines.push_back(uppercase_copy(mission_name));
+		r.lines.push_back("");
+		r.lines.push_back(pad_stat("TIME", time_buf, col_w));
+		r.lines.push_back(pad_stat("UNITS BUILT", std::to_string(units_built), col_w));
+		r.lines.push_back(pad_stat("BUILDINGS BUILT", std::to_string(buildings_built), col_w));
+		r.lines.push_back(pad_stat("UNITS LOST", std::to_string(losses), col_w));
+		r.lines.push_back(pad_stat("KILLS", std::to_string(kills), col_w));
+		r.lines.push_back(pad_stat("MINERALS GATHERED", std::to_string(minerals), col_w));
+		r.lines.push_back(pad_stat("GAS GATHERED", std::to_string(gas), col_w));
+		r.lines.push_back(pad_stat("UNIT SCORE", std::to_string(unit_score), col_w));
+		r.lines.push_back(pad_stat("BUILDING SCORE", std::to_string(building_score), col_w));
+		r.lines.push_back("");
+		if (won && next_ready) {
+			r.lines.push_back("ENTER   NEXT MISSION");
+			r.lines.push_back("F7      REPLAY MISSION");
+			r.lines.push_back("F10     STARTUP MENU");
+		} else if (won) {
+			r.lines.push_back("ENTER   STARTUP MENU");
+			r.lines.push_back("F7      REPLAY MISSION");
+		} else {
+			r.lines.push_back("F7      RETRY MISSION");
+			r.lines.push_back("F8      QUICKLOAD");
+			r.lines.push_back("ENTER   STARTUP MENU");
+		}
+
+		mission_result = std::move(r);
+		log("result: %s name='%s' time=%ds units=%d buildings=%d kills=%d losses=%d\n",
+			won ? "victory" : "defeat",
+			mission_name.c_str(),
+			elapsed_seconds,
+			units_built,
+			buildings_built,
+			kills,
+			losses);
+	}
+
+#ifndef EMSCRIPTEN
+	void return_to_startup_shell() {
+		try {
+			enable_frontend(discover_startup_entries(g_data_dir));
+		} catch (const std::exception& e) {
+			log("client: could not open startup shell: %s\n", e.what());
+		}
+	}
+#endif
+
+	void service_client_requests() {
+		auto try_load = [this](const std::string& path, const char* verb, const char* fail_msg) {
+			log("client: %s '%s'\n", verb, path.c_str());
+			try {
+				load_single_player_map(path);
+				ui.set_image_data();
+				center_view_on_loaded_content();
+			} catch (const std::exception& e) {
+				log("client: %s failed: %s\n", verb, e.what());
+				ui.push_hud_message(fail_msg, 6 * 24);
+			}
+		};
+
+		if (ui.request_continue_after_debrief) {
+			ui.request_continue_after_debrief = false;
+			if (mission_result.active) {
+				if (mission_result.won && !pending_next_map_file.empty()) {
+					try_load(pending_next_map_file, "advancing to", "Load failed.");
+				} else {
+#ifndef EMSCRIPTEN
+					return_to_startup_shell();
+#endif
+				}
+			}
+		}
+		if (ui.request_restart_mission) {
+			ui.request_restart_mission = false;
+			if (!current_map_file.empty()) {
+				try_load(current_map_file, "restarting mission", "Restart failed.");
+			}
+		}
+		if (ui.request_quit_to_menu) {
+			ui.request_quit_to_menu = false;
+#ifndef EMSCRIPTEN
+			return_to_startup_shell();
+#endif
+		}
 	}
 
 	void center_view_on_loaded_content() {
@@ -1108,6 +1272,7 @@ struct main_t {
 		ui.replay_frame = ui.st.current_frame;
 		ui.set_image_data();
 		current_map_file = map_file;
+		current_map_display_name = humanize_map_stem(map_file);
 
 		const char* game_mode_name = selected_game_type_melee ? "melee" : "ums";
 		const char* mode_origin = campaign_game_type == map_game_type_t::auto_detect ? " (auto)" : "";
@@ -1312,29 +1477,26 @@ struct main_t {
 							log("campaign: chaining to next folder map '%s'\n", next_map.c_str());
 						}
 					}
+					capture_mission_result(true, !next_map.empty());
 					if (!next_map.empty()) {
-						log("campaign: advancing to '%s'\n", next_map.c_str());
-						load_single_player_map(next_map);
-						log("campaign: mission transition complete\n");
+						log("campaign: next map ready -> '%s' (press Enter to continue)\n", next_map.c_str());
+						pending_next_map_file = next_map;
 					} else if (!ui.pending_next_scenario.empty()) {
 						log("campaign: next map '%s' not found beside current map\n",
 						    ui.pending_next_scenario.c_str());
-						log("campaign: relaunch with --map \"%s\" to continue once the file is available\n",
-						    ui.pending_next_scenario.c_str());
 						ui.push_hud_message(a_string("Next: ") + ui.pending_next_scenario, 12 * 24);
-					} else {
-						ui.push_hud_message("Campaign complete.", 12 * 24);
 					}
 #else
 					if (!ui.pending_next_scenario.empty()) {
 						log("single-player: next scenario -> '%s'\n", ui.pending_next_scenario.c_str());
 					}
+					capture_mission_result(true, false);
 #endif
 				} else if (ui.player_defeated(ui.local_player_id)) {
 					live_result_reported = true;
 					ui.is_paused = true;
 					log("single-player: defeat at frame %d\n", ui.st.current_frame);
-					ui.push_hud_message("Press F8 to retry or Esc to quit.", 10 * 24);
+					capture_mission_result(false, false);
 				}
 			}
 		}
@@ -1372,6 +1534,8 @@ struct main_t {
 				// Reset result latch so victory/defeat is re-detected and the
 				// game auto-pauses again if the player reaches it a second time.
 				live_result_reported = false;
+				mission_result = {};
+				pending_next_map_file.clear();
 				if (resume_after_quickload) ui.is_paused = false;
 				log("quickload: restored to frame %d\n", ui.st.current_frame);
 				ui.push_hud_message("Loaded.", 3 * 24);
@@ -1380,6 +1544,178 @@ struct main_t {
 				ui.push_hud_message("No save.", 3 * 24);
 			}
 		}
+
+		service_client_requests();
+	}
+
+	// Overlays render on top of the engine's RGBA framebuffer via
+	// rgba_overlay_cb: persistent objectives panel, speed indicator, pause
+	// menu, and post-mission debrief.
+
+	void refresh_objectives_cache() {
+		if (cached_objectives_source == ui.current_objectives_text.c_str()) return;
+		cached_objectives_source.assign(ui.current_objectives_text.c_str());
+		cached_objectives_lines.clear();
+		std::string text = uppercase_copy(cached_objectives_source);
+		const size_t max_w = 40;
+		size_t i = 0;
+		while (i < text.size()) {
+			size_t end = std::min(text.size(), i + max_w);
+			if (end < text.size()) {
+				size_t space = text.rfind(' ', end);
+				if (space != std::string::npos && space > i + max_w / 2) end = space;
+			}
+			cached_objectives_lines.push_back(text.substr(i, end - i));
+			i = end;
+			while (i < text.size() && text[i] == ' ') ++i;
+			if (cached_objectives_lines.size() >= 6) break;
+		}
+	}
+
+	void draw_objectives_overlay(uint32_t* pixels, int pitch, int width, int height) {
+		if (mission_result.active || frontend_active || !ui.is_live_game_mode) return;
+		if (ui.current_objectives_text.empty()) return;
+		refresh_objectives_cache();
+		if (cached_objectives_lines.empty()) return;
+
+		int scale = 1;
+		int line_h = 10 * scale;
+		int pad = 8;
+		int longest = 0;
+		for (const std::string& line : cached_objectives_lines) longest = std::max(longest, text_pixel_width(line, scale));
+		int box_w = longest + 2 * pad;
+		int box_h = (int)cached_objectives_lines.size() * line_h + 2 * pad + 12;
+		int x = 16;
+		int y = 16;
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(8, 12, 22, 210));
+		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 1, rgba32(171, 124, 48, 220));
+		draw_rgba_text(pixels, pitch, width, height, x + pad, y + pad, "OBJECTIVES", scale, rgba32(255, 220, 132, 255));
+		int ty = y + pad + 12;
+		for (const std::string& line : cached_objectives_lines) {
+			draw_rgba_text(pixels, pitch, width, height, x + pad, ty, line, scale, rgba32(220, 228, 240, 255));
+			ty += line_h;
+		}
+	}
+
+	void draw_speed_indicator(uint32_t* pixels, int pitch, int width, int height) {
+		if (frontend_active) return;
+		if (!ui.is_live_game_mode) return;
+		int s = ui.game_speed.raw_value;
+		std::string label;
+		if (s <= 128) label = "0.5X";
+		else if (s <= 384) label = "1X";
+		else if (s <= 768) label = "2X";
+		else if (s <= 1536) label = "4X";
+		else label = "8X+";
+		if (ui.is_paused) label = "PAUSED";
+		int scale = 1;
+		int w = text_pixel_width(label, scale) + 12;
+		int h = 16;
+		int x = width - w - 16;
+		int y = 16;
+		fill_rgba_rect(pixels, pitch, width, height, x, y, w, h, rgba32(8, 12, 22, 200));
+		draw_rgba_frame(pixels, pitch, width, height, x, y, w, h, 1, rgba32(171, 124, 48, 200));
+		draw_rgba_text(pixels, pitch, width, height, x + 6, y + 4, label, scale,
+			ui.is_paused ? rgba32(255, 220, 132, 255) : rgba32(200, 220, 240, 255));
+	}
+
+	void draw_centered_panel(uint32_t* pixels, int pitch, int width, int height,
+	                         const std::vector<std::string>& lines,
+	                         int scale, uint32_t border, uint32_t veil) {
+		if (lines.empty()) return;
+		int line_h = 9 * scale + 4;
+		int pad = 20;
+		int longest = 0;
+		for (const std::string& l : lines) longest = std::max(longest, text_pixel_width(l, scale));
+		int box_w = longest + 2 * pad;
+		int box_h = (int)lines.size() * line_h + 2 * pad;
+		int x = (width - box_w) / 2;
+		int y = (height - box_h) / 2;
+		if (veil) fill_rgba_rect(pixels, pitch, width, height, 0, 0, width, height, veil);
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(10, 16, 30, 235));
+		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 2, border);
+		int ty = y + pad;
+		bool first = true;
+		for (const std::string& l : lines) {
+			int lw = text_pixel_width(l, scale);
+			int lx = x + (box_w - lw) / 2;
+			uint32_t color = first ? rgba32(255, 232, 160, 255) : rgba32(214, 220, 232, 255);
+			draw_rgba_text(pixels, pitch, width, height, lx, ty, l, scale, color);
+			ty += line_h;
+			first = false;
+		}
+	}
+
+	void draw_pause_overlay(uint32_t* pixels, int pitch, int width, int height) {
+		if (frontend_active || !ui.is_live_game_mode) return;
+		if (!ui.is_paused || mission_result.active) return;
+
+		static const std::vector<std::string> paused_lines = {
+			"PAUSED",
+			"",
+			"SPACE OR P   RESUME",
+			"F5 SAVE      F8 LOAD",
+			"F7 RESTART   F10 MENU",
+			"ESC          MENU",
+		};
+		std::vector<std::string> briefing_lines;
+		const std::vector<std::string>* lines = &paused_lines;
+		if (briefing_armed) {
+			std::string name = current_map_display_name.empty()
+				? std::string("MISSION")
+				: uppercase_copy(current_map_display_name);
+			briefing_lines = {
+				"MISSION: " + name,
+				"",
+				"PRESS SPACE TO BEGIN",
+				"ESC TO RETURN TO MENU",
+			};
+			lines = &briefing_lines;
+		}
+		draw_centered_panel(pixels, pitch, width, height, *lines, 2,
+			rgba32(255, 210, 96, 240), rgba32(0, 0, 0, 96));
+	}
+
+	void draw_debrief_overlay(uint32_t* pixels, int pitch, int width, int height) {
+		if (frontend_active || !mission_result.active || !ui.is_live_game_mode) return;
+
+		const auto& r = mission_result;
+		int scale = 2;
+		int line_h = 9 * scale + 4;
+		int pad = 24;
+		int header_scale = 3;
+		int header_h = 9 * header_scale + 12;
+		int longest = text_pixel_width(r.header, header_scale);
+		for (const std::string& l : r.lines) longest = std::max(longest, text_pixel_width(l, scale));
+		int box_w = longest + 2 * pad;
+		int box_h = header_h + (int)r.lines.size() * line_h + 2 * pad;
+		int x = (width - box_w) / 2;
+		int y = (height - box_h) / 2;
+
+		fill_rgba_rect(pixels, pitch, width, height, 0, 0, width, height, r.veil_color);
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(10, 16, 30, 240));
+		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 2, rgba32(255, 210, 96, 255));
+
+		int hx = x + (box_w - text_pixel_width(r.header, header_scale)) / 2;
+		draw_rgba_text(pixels, pitch, width, height, hx, y + pad, r.header, header_scale, r.header_color);
+
+		int ty = y + pad + header_h;
+		bool first = true;
+		for (const std::string& l : r.lines) {
+			int lw = text_pixel_width(l, scale);
+			int lx = x + (box_w - lw) / 2;
+			uint32_t color = first ? rgba32(255, 232, 160, 255) : rgba32(214, 220, 232, 255);
+			draw_rgba_text(pixels, pitch, width, height, lx, ty, l, scale, color);
+			ty += line_h;
+			first = false;
+		}
+	}
+
+	void draw_client_overlays(uint32_t* pixels, int pitch, int width, int height) {
+		draw_objectives_overlay(pixels, pitch, width, height);
+		draw_speed_indicator(pixels, pitch, width, height);
+		draw_pause_overlay(pixels, pitch, width, height);
+		draw_debrief_overlay(pixels, pitch, width, height);
 	}
 };
 
@@ -2496,6 +2832,10 @@ static void print_usage(const char* argv0) {
 		"      map in the same folder so curated campaign packs chain without needing per-map triggers.\n"
 		"      Campaign maps auto-pause on load with a 'Press Space to begin' briefing banner; the first unpause\n"
 		"      dismisses the briefing.  Quicksave (F5) / quickload (F8) are still in-memory only.\n"
+		"      Mission objectives set by map triggers render as a persistent top-left panel.\n"
+		"      Victory and defeat show a debrief overlay with time, unit/building stats, kills, and resources.\n"
+		"      Press Enter on the debrief to advance (next mission if available, else startup shell).\n"
+		"      Esc while paused (briefing, pause, or result) returns to the startup shell.\n"
 		"\n"
 		"single-player controls (map mode):\n"
 		"  left drag/select    left click command panel (multi tactical + single-unit production/abilities)   middle drag camera\n"
@@ -2508,10 +2848,12 @@ static void print_usage(const char* argv0) {
 		"  i stim pack (Marine/Firebat)   m merge archon/dark archon (High/Dark Templar)\n"
 		"  tab center camera on selection\n"
 		"  ctrl+<1-0> set group   shift+<1-0> add group   <1-0> recall group\n"
-		"  esc cancel armed building / landing / spell targeting\n"
+		"  esc cancel armed building/landing/spell targeting; when paused returns to startup shell\n"
 		"  f toggle fog of war\n"
 		"  F3 toggle debug overlay (frame counter, draw fps, game speed)\n"
 		"  F5 quicksave (in-memory)   F8 quickload (restores last quicksave)\n"
+		"  F7 restart mission   F10 return to startup shell\n"
+		"  enter dismiss post-mission debrief (continue / retry / return to shell)\n"
 		"  space/p pause       u speed up                 z/d speed down\n"
 		"\n"
 		"spell targeting (command panel or ability hotkey arms a targeting mode):\n"
@@ -3010,6 +3352,10 @@ int main(int argc, char** argv) {
 		};
 
 		ui.init();
+
+		ui.rgba_overlay_cb = [&m](uint32_t* pixels, int pitch, int width, int height) {
+			m.draw_client_overlays(pixels, pitch, width, height);
+		};
 
 #ifndef EMSCRIPTEN
 		if (map_file) {

@@ -50,7 +50,7 @@ OpenSnowstorm has the same ambition for **StarCraft: Brood War**:
 
 ### Campaign playability snapshot ("somewhat playable")
 
-Current rough estimate: **~55% of the way** to a "somewhat playable" campaign loop.
+Current rough estimate: **~65% of the way** to a "somewhat playable" campaign loop.
 
 What is already in place:
 - Deterministic simulation, replay, sync, and map boot/run paths are working.
@@ -65,6 +65,16 @@ What is already in place:
     order units, set next scenario, set deaths (action 45), and more.
 - Virtual trigger callbacks wired to the UI: pause/unpause, text messages, center-view, victory/defeat
   auto-pause with "Mission accomplished." / "Mission failed." HUD banners.
+- **Persistent mission objectives panel**: `set_objectives` trigger text is stored and rendered
+  as a top-left HUD panel for the duration of the mission; no longer hidden in the log only.
+- **Post-mission debrief overlay**: victory and defeat render a centred debrief panel showing
+  mission name, elapsed time, units/buildings built, units lost, kills, minerals/gas gathered,
+  and unit/building scores.  Green-tinted on victory, red-tinted on defeat.
+- **Pause overlay + in-game menu exit**: Esc or F10 while paused (briefing, user pause, or result
+  screen) returns to the startup shell instead of exiting the process.  F7 restarts the current
+  mission; Enter on the debrief advances (next campaign mission if resolved, otherwise shell).
+- **Speed indicator HUD**: a persistent top-right badge shows the current preset
+  (0.5X / 1X / 2X / 4X / 8X+) or "PAUSED".
 - In-memory quicksave (F5) and quickload (F8) allow mid-mission checkpoints.
 - Native builds now auto-resolve and load the next mission map at victory when a
   `Set Next Scenario` trigger points to a map beside the current mission.
@@ -75,7 +85,8 @@ What is already in place:
   `campaign_progress.txt` beside the executable.  Relaunching without `--map` surfaces a
   pinned "Continue" entry at the top of the startup shell that resumes the last-played map.
 - Pre-mission briefing gate: each single-player map auto-pauses on load and shows a
-  "Mission: <name>" / "Press Space to begin." HUD pair until the player presses Space/P.
+  "Mission: <name>" / "Press Space to begin." HUD pair plus a centred pause-menu overlay
+  until the player presses Space/P.
 - Browser build exposes `replay_get_value(7)` (pending next-scenario name) and
   `replay_get_value(9)` (transition-ready flag) for JS-side campaign orchestration.
 
@@ -223,7 +234,11 @@ Controls in map mode:
 - **1–0**: recall control group
 - **Ctrl + 1–0**: set control group
 - **Shift + 1–0**: add to control group
-- **Esc**: cancel armed building / landing placement or spell targeting mode
+- **Esc**: cancel armed building / landing placement or spell targeting mode; when paused returns to the startup shell
+- **F5 / F8**: quicksave / quickload (in-memory only; mission-level progress persists via `campaign_progress.txt`)
+- **F7**: restart the current mission
+- **F10**: return to the startup shell
+- **Enter**: dismiss post-mission debrief (continue to next mission if resolved, otherwise return to shell)
 - **Space / P**: pause
 - **U**: speed up simulation
 - **Z / D**: slow down simulation
