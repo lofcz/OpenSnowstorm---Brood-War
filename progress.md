@@ -13,3 +13,23 @@ Original prompt: continue until the game boots and loads just like the original 
 - Current native startup result on this machine: `gfxtest --headless` prints the searched paths and instructs the user to provide `--data-dir` or set `OPENSNOWSTORM_DATA_DIR`.
 - Verification completed this pass: `cmake --build build --config Release -j 6` succeeds, and `build/Release/gfxtest.exe --help` prints the new interactive frontend usage.
 - Next useful step once assets are available: point `gfxtest` at a valid Brood War install so the frontend shell can be exercised visually, then continue on briefing/debrief, sound/music, and higher-fidelity client polish.
+- 2026-04-16: Campaign-playability slice landed in `ui/gfxtest.cpp`.
+  - **Campaign progress persistence**: the client now writes a `campaign_progress.txt` file
+    beside the executable every time a single-player map is launched.  The startup frontend
+    injects a pinned "Continue" entry at the top of the shell when that file points at a
+    reachable map, so relaunching the client resumes at the last-played mission instead of
+    forcing the player to re-select it from the discovery list.
+  - **Filesystem-chain fallback**: on victory, if no `Set Next Scenario` trigger fires, the
+    client now walks the same folder as the current map and loads the next alphabetically-
+    sorted `.scx`/`.scm` file.  This lets curated campaign map packs chain through the
+    mission list even when individual maps do not embed the trigger-driven transition.
+    Triggered transitions still take precedence when available.
+  - **Pre-mission briefing gate**: each single-player map auto-pauses on load and pushes a
+    "Mission: <name>" / "Press Space to begin." HUD pair.  The first unpause (Space/P)
+    dismisses the briefing; subsequent pauses behave normally.  Because HUD message
+    expiry is keyed to `st.current_frame` and the frame counter is frozen while paused,
+    the briefing stays visible for the entire pre-mission pause.
+  - **Defeat help text**: on local defeat, the client now pushes a "Press F8 to retry or
+    Esc to quit." HUD message so players reach quickload without needing the CLI help.
+  - **Build signal**: native build completes (`cmake --build build -j 4`) with no new
+    warnings; `--help` prints the updated usage.

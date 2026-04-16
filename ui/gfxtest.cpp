@@ -315,6 +315,9 @@ void scan_startup_directory(
 }
 
 int startup_entry_priority(const startup_entry& entry) {
+	// "Continue" entries (resume last-played campaign mission) are pinned to
+	// the top so a player pressing Enter at the frontend resumes immediately.
+	if (entry.title.compare(0, 9, "Continue ") == 0) return -1;
 	std::string lower = lowercase_copy(entry.path);
 	bool campaign_like = lower.find("campaign") != std::string::npos || lower.find("broodwar") != std::string::npos;
 	if (entry.kind == startup_content_kind::map && campaign_like) return 0;
@@ -323,8 +326,26 @@ int startup_entry_priority(const startup_entry& entry) {
 	return 40;
 }
 
+std::string read_last_campaign_map();
+void write_campaign_progress(const std::string& map_path, bool completed);
+std::string find_next_campaign_map_in_folder(const std::string& current_map);
+
 std::vector<startup_entry> discover_startup_entries(const std::string& data_dir) {
 	std::vector<startup_entry> entries;
+
+	// Inject a "Continue" entry at the top if a campaign_progress.txt file
+	// exists and points to a reachable map, so relaunching the client resumes
+	// exactly where the player left off.
+	std::string resume = read_last_campaign_map();
+	if (!resume.empty() && file_exists(resume)) {
+		startup_entry entry;
+		entry.kind = startup_content_kind::map;
+		entry.path = resume;
+		entry.title = std::string("Continue  ") + strip_extension(path_basename(resume));
+		entry.subtitle = shorten_middle(resume, 72);
+		entries.push_back(std::move(entry));
+	}
+
 	push_startup_entry(entries, startup_content_kind::replay, "maps/p49.rep");
 
 	std::vector<std::string> candidate_dirs;
@@ -355,6 +376,78 @@ std::vector<startup_entry> discover_startup_entries(const std::string& data_dir)
 	});
 	if (entries.size() > 6) entries.resize(6);
 	return entries;
+}
+
+// ---------------------------------------------------------------------------
+// Campaign progress persistence.
+//
+// The campaign progress file tracks the last-started mission so a player can
+// close the client and resume the campaign later.  It is intentionally
+// minimal: a single line with the last-launched map path.  This does NOT
+// checkpoint mid-mission state (that requires full state serialisation), but
+// closes the gap where quitting between missions would otherwise lose the
+// player's place in the campaign chain.
+// ---------------------------------------------------------------------------
+const char* k_campaign_progress_file = "campaign_progress.txt";
+
+std::string read_last_campaign_map() {
+	std::ifstream f(k_campaign_progress_file);
+	if (!f) return {};
+	std::string line;
+	std::string result;
+	while (std::getline(f, line)) {
+		while (!line.empty() && (line.back() == '\r' || line.back() == '\n' || line.back() == ' ')) line.pop_back();
+		size_t pos = 0;
+		while (pos < line.size() && (line[pos] == ' ' || line[pos] == '\t')) ++pos;
+		if (pos >= line.size() || line[pos] == '#') continue;
+		const std::string prefix = "map:";
+		if (line.compare(pos, prefix.size(), prefix) == 0) {
+			pos += prefix.size();
+			while (pos < line.size() && (line[pos] == ' ' || line[pos] == '\t')) ++pos;
+			result = line.substr(pos);
+			break;
+		}
+	}
+	return result;
+}
+
+void write_campaign_progress(const std::string& map_path, bool completed) {
+	std::ofstream f(k_campaign_progress_file, std::ios::out | std::ios::trunc);
+	if (!f) return;
+	f << "# OpenSnowstorm campaign progress v1\n";
+	f << "map: " << map_path << "\n";
+	if (completed) f << "completed: 1\n";
+}
+
+// Find the chronologically next campaign-like map in the same folder as the
+// current map, by case-insensitive filename sort.  Used as a fallback when a
+// mission ends without a Set Next Scenario trigger action firing, which is
+// common for custom campaign packs that rely on external orchestration.
+std::string find_next_campaign_map_in_folder(const std::string& current_map) {
+	if (current_map.empty()) return {};
+	std::string dir;
+	size_t sep = current_map.find_last_of("/\\");
+	if (sep != std::string::npos) dir = current_map.substr(0, sep);
+	if (dir.empty()) dir = ".";
+
+	std::string cur_name = canonicalize_path_for_compare(path_basename(current_map));
+	std::vector<std::string> candidates;
+	for (const directory_entry_info& entry : list_directory_entries(dir)) {
+		if (entry.is_directory) continue;
+		if (has_extension_ci(entry.path, ".scx") || has_extension_ci(entry.path, ".scm")) {
+			candidates.push_back(entry.path);
+		}
+	}
+	std::sort(candidates.begin(), candidates.end(), [](const std::string& a, const std::string& b) {
+		return canonicalize_path_for_compare(path_basename(a)) < canonicalize_path_for_compare(path_basename(b));
+	});
+	for (size_t i = 0; i < candidates.size(); ++i) {
+		if (canonicalize_path_for_compare(path_basename(candidates[i])) == cur_name) {
+			if (i + 1 < candidates.size()) return candidates[i + 1];
+			return {};
+		}
+	}
+	return {};
 }
 
 constexpr uint32_t rgba32(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) {
@@ -572,6 +665,12 @@ struct main_t {
 	int frontend_selected_index = 0;
 	std::string frontend_status_message;
 	std::unique_ptr<native_window_drawing::surface> frontend_surface;
+
+	// When a campaign-like map is loaded we auto-pause on the first frame and
+	// push a "press space to begin" briefing banner.  The briefing_armed flag
+	// tracks whether the player still needs to dismiss the briefing; any pause
+	// toggle (Space/P) while armed clears it so the simulation begins stepping.
+	bool briefing_armed = false;
 
 	void save_replay_state_if_missing(int frame) {
 		auto i = saved_states.find(frame);
@@ -1028,6 +1127,27 @@ struct main_t {
 				mode_origin,
 				campaign_fog_of_war ? "on" : "off");
 		}
+
+#ifndef EMSCRIPTEN
+		// Record the mission path so the player can resume the campaign after
+		// closing the client.  Campaign-like is a loose heuristic; non-campaign
+		// one-off skirmish maps overwrite earlier progress the same way.
+		write_campaign_progress(map_file, false);
+
+		// Auto-pause and push a briefing banner so the player has a beat to
+		// orient before the simulation starts.  The first unpause (Space/P)
+		// clears the briefing; any right-click on the map is ignored while
+		// paused so the banner serves as a soft briefing gate.
+		ui.is_paused = true;
+		briefing_armed = true;
+		std::string mission_name = strip_extension(path_basename(map_file));
+		for (char& c : mission_name) {
+			if (c == '_' || c == '-') c = ' ';
+		}
+		if (mission_name.empty()) mission_name = map_file;
+		ui.push_hud_message(a_string("Mission: ") + a_string(mission_name.c_str()), 20 * 24);
+		ui.push_hud_message("Press Space to begin.", 20 * 24);
+#endif
 	}
 
 #ifndef EMSCRIPTEN
@@ -1174,32 +1294,60 @@ struct main_t {
 					live_result_reported = true;
 					ui.is_paused = true;
 					log("single-player: victory at frame %d\n", ui.st.current_frame);
+#ifndef EMSCRIPTEN
+					// Mark this mission completed so the frontend can offer the
+					// next unplayed entry on next launch.
+					write_campaign_progress(current_map_file, true);
+					std::string next_map;
 					if (!ui.pending_next_scenario.empty()) {
 						log("single-player: next scenario -> '%s'\n", ui.pending_next_scenario.c_str());
-#ifndef EMSCRIPTEN
-						std::string next_map = find_next_campaign_map(ui.pending_next_scenario);
-						if (!next_map.empty()) {
-							log("campaign: advancing to '%s'\n", next_map.c_str());
-							load_single_player_map(next_map);
-							log("campaign: mission transition complete\n");
-						} else {
-							log("campaign: next map '%s' not found beside current map\n",
-							    ui.pending_next_scenario.c_str());
-							log("campaign: relaunch with --map \"%s\" to continue once the file is available\n",
-							    ui.pending_next_scenario.c_str());
-							ui.push_hud_message(a_string("Next: ") + ui.pending_next_scenario, 12 * 24);
-						}
-#endif
+						next_map = find_next_campaign_map(ui.pending_next_scenario);
 					}
+					// Fallback: if no trigger-driven next scenario, walk the
+					// same folder to find the chronologically next campaign map.
+					// This lets curated map packs chain without per-map triggers.
+					if (next_map.empty()) {
+						next_map = find_next_campaign_map_in_folder(current_map_file);
+						if (!next_map.empty()) {
+							log("campaign: chaining to next folder map '%s'\n", next_map.c_str());
+						}
+					}
+					if (!next_map.empty()) {
+						log("campaign: advancing to '%s'\n", next_map.c_str());
+						load_single_player_map(next_map);
+						log("campaign: mission transition complete\n");
+					} else if (!ui.pending_next_scenario.empty()) {
+						log("campaign: next map '%s' not found beside current map\n",
+						    ui.pending_next_scenario.c_str());
+						log("campaign: relaunch with --map \"%s\" to continue once the file is available\n",
+						    ui.pending_next_scenario.c_str());
+						ui.push_hud_message(a_string("Next: ") + ui.pending_next_scenario, 12 * 24);
+					} else {
+						ui.push_hud_message("Campaign complete.", 12 * 24);
+					}
+#else
+					if (!ui.pending_next_scenario.empty()) {
+						log("single-player: next scenario -> '%s'\n", ui.pending_next_scenario.c_str());
+					}
+#endif
 				} else if (ui.player_defeated(ui.local_player_id)) {
 					live_result_reported = true;
 					ui.is_paused = true;
 					log("single-player: defeat at frame %d\n", ui.st.current_frame);
+					ui.push_hud_message("Press F8 to retry or Esc to quit.", 10 * 24);
 				}
 			}
 		}
 
 		ui.update();
+
+		// Briefing release: the very first unpause after a campaign map load
+		// clears the briefing-armed flag so the pre-mission pause happens only
+		// once.  Subsequent Space/P toggles behave as normal pause/resume.
+		if (briefing_armed && !ui.is_paused) {
+			briefing_armed = false;
+			log("briefing: dismissed at frame %d\n", ui.st.current_frame);
+		}
 
 		// Quicksave/quickload are armed by F5/F8 inside ui.update() and
 		// fulfilled here where we can safely deep-copy the game state.
@@ -2342,6 +2490,12 @@ static void print_usage(const char* argv0) {
 		"      --game-type ums preserves authored slot topology by default.\n"
 		"      data files are auto-discovered from common locations, or pass --data-dir explicitly.\n"
 		"      interactive launches without --map/--replay now open a startup shell instead of forcing maps/p49.rep.\n"
+		"      campaign progress is persisted to campaign_progress.txt beside the executable; the startup shell\n"
+		"      offers a 'Continue' entry that resumes the last-played mission.  On victory the client tries the\n"
+		"      Set Next Scenario trigger target first, then falls back to the next alphabetically-sorted campaign\n"
+		"      map in the same folder so curated campaign packs chain without needing per-map triggers.\n"
+		"      Campaign maps auto-pause on load with a 'Press Space to begin' briefing banner; the first unpause\n"
+		"      dismisses the briefing.  Quicksave (F5) / quickload (F8) are still in-memory only.\n"
 		"\n"
 		"single-player controls (map mode):\n"
 		"  left drag/select    left click command panel (multi tactical + single-unit production/abilities)   middle drag camera\n"
