@@ -693,6 +693,12 @@ struct ui_functions : ui_util_functions {
   bool quicksave_pending = false;
   bool quickload_pending = false;
 
+  // Single-player client transition requests.  Set by input handling, polled
+  // and cleared by main_t once serviced.
+  bool request_quit_to_menu = false;
+  bool request_restart_mission = false;
+  bool request_continue_after_debrief = false;
+
   // ---------------------------------------------------------------------------
   // Trigger-driven HUD notifications.
   // When a trigger fires a display-text, transmission, or objectives action
@@ -708,9 +714,18 @@ struct ui_functions : ui_util_functions {
   hud_message_t hud_messages[k_hud_max_lines];
   int hud_next_slot = 0;
 
+  // Persistent mission objectives text (latest Set Mission Objectives action).
+  // Does not expire; stays until overwritten or the mission ends.
+  a_string current_objectives_text;
+
   // Next-scenario name set by the Set Next Scenario trigger action.  The
   // main loop in gfxtest.cpp can inspect this field to initiate a transition.
   a_string pending_next_scenario;
+
+  // RGBA post-render overlay hook invoked after the final indexed->RGBA blit.
+  // Receives a locked 32-bit RGBA pixel buffer for the render surface.
+  std::function<void(uint32_t *pixels, int pitch, int width, int height)>
+      rgba_overlay_cb;
 
   void push_hud_message(const a_string &text, int display_frames = 7 * 24) {
     hud_messages[hud_next_slot % k_hud_max_lines] = {text, st.current_frame +
@@ -751,6 +766,7 @@ struct ui_functions : ui_util_functions {
   virtual void on_trigger_set_objectives(int /*owner*/,
                                          const a_string &text) override {
     if (!text.empty()) {
+      current_objectives_text = text;
       ui::log("trigger: mission objectives: %s\n", text.c_str());
     }
   }
@@ -4414,14 +4430,25 @@ struct ui_functions : ui_util_functions {
             bool ctrl = wnd.get_key_state(224) || wnd.get_key_state(228);
             bool shift = wnd.get_key_state(225) || wnd.get_key_state(229);
 
-            // F5 (scancode 62): quicksave; F8 (scancode 65): quickload.
-            if (e.scancode == 62) {
+            constexpr int k_scan_f5 = 62, k_scan_f7 = 64, k_scan_f8 = 65, k_scan_f10 = 67;
+            if (e.scancode == k_scan_f5) {
               quicksave_pending = true;
-            } else if (e.scancode == 65) {
+            } else if (e.scancode == k_scan_f8) {
               quickload_pending = true;
+            } else if (e.scancode == k_scan_f10) {
+              request_quit_to_menu = true;
+            } else if (e.scancode == k_scan_f7) {
+              request_restart_mission = true;
+            } else if (e.sym == '\r' || e.sym == '\n') {
+              request_continue_after_debrief = true;
             } else if (e.sym == 27) {
-              cancel_live_build_placement();
-              pending_order_mode = pending_order_mode_t::none;
+              if (live_build_placement_armed ||
+                  pending_order_mode != pending_order_mode_t::none) {
+                cancel_live_build_placement();
+                pending_order_mode = pending_order_mode_t::none;
+              } else if (is_paused) {
+                request_quit_to_menu = true;
+              }
             } else if (e.sym == 'u') {
               if (game_speed < fp8::integer(128))
                 game_speed *= 2;
@@ -4648,6 +4675,13 @@ struct ui_functions : ui_util_functions {
       rgba_surface->unlock();
     }
 
+    if (rgba_overlay_cb) {
+      uint32_t *overlay = (uint32_t *)rgba_surface->lock();
+      rgba_overlay_cb(overlay, rgba_surface->pitch / 4, rgba_surface->w,
+                      rgba_surface->h);
+      rgba_surface->unlock();
+    }
+
     if (wnd) {
       rgba_surface->blit(&*window_surface, 0, 0);
       wnd.update_surface();
@@ -4728,7 +4762,11 @@ struct ui_functions : ui_util_functions {
     enemy_player_id = -1;
     quicksave_pending = false;
     quickload_pending = false;
+    request_quit_to_menu = false;
+    request_restart_mission = false;
+    request_continue_after_debrief = false;
     pending_next_scenario.clear();
+    current_objectives_text.clear();
     hud_next_slot = 0;
     for (auto &v : hud_messages)
       v = {};
