@@ -106,7 +106,19 @@
 				}
 			}
 			return true;
+		case 14: // run ai script at location
+			{
+				auto& loc = st.locations.at(a.location - 1);
+				xy pos = (loc.area.from + loc.area.to) / 2;
+				for (int p : trigger_players(owner, a.group_n)) {
+					trigger_start_ai_script(p, a.group2_n, pos);
+				}
+			}
+			return true;
 		case 15: // ai script
+			for (int p : trigger_players(owner, a.group_n)) {
+				trigger_start_ai_script(p, a.group2_n);
+			}
 			switch (a.group2_n) {
 			case 0x3069562b:
 				st.shared_vision[0] |= 1 << owner;

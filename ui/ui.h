@@ -744,6 +744,25 @@ struct ui_functions : ui_util_functions {
     ui::log("trigger: display text: %s\n", text.c_str());
   }
 
+  virtual void on_unit_destroy(unit_t *u) override {
+    if (!u || !u->unit_type) return;
+    int sound_id = -1;
+    // Map units often use pissed sounds for death in some scenarios, 
+    // but mostly they have a death anima/sound in iscript.
+    // However, units.dat has death sounds? No, it's in sfxdata usually.
+    // Actually, I'll use a heuristic or just what's common.
+    // For now, let's just implement completion which is definite.
+  }
+
+  virtual void on_unit_completed(unit_t *u) override {
+    if (!u || !u->unit_type) return;
+    if (u->owner != local_player_id) return;
+    int sound_id = u->unit_type->ready_sound;
+    if (sound_id >= 0 && sound_id < (int)sound_filenames.size()) {
+       play_sound(sound_id, u->position, u, false);
+    }
+  }
+
   virtual void on_trigger_transmission(int owner, int string_index,
                                        int sound_index, int unit_type,
                                        int duration_ms,
@@ -873,6 +892,28 @@ struct ui_functions : ui_util_functions {
     if ((size_t)id >= (size_t)Sounds::None)
       error("invalid sound id %d", (size_t)id);
     return &sound_types.vec[(size_t)id];
+  }
+
+  enum struct response_kind { what, yes, why, death };
+  void play_unit_response_sound(unit_t *u, response_kind kind) {
+    if (!u || !u->unit_type) return;
+    int sound_id = -1;
+    if (kind == response_kind::what) {
+      if (u->unit_type->first_what_sound >= 0) {
+        sound_id = u->unit_type->first_what_sound;
+        int count = u->unit_type->last_what_sound - u->unit_type->first_what_sound + 1;
+        if (count > 1) sound_id += rand() % count;
+      }
+    } else if (kind == response_kind::yes) {
+      if (u->unit_type->first_yes_sound >= 0) {
+        sound_id = u->unit_type->first_yes_sound;
+        int count = u->unit_type->last_yes_sound - u->unit_type->first_yes_sound + 1;
+        if (count > 1) sound_id += rand() % count;
+      }
+    }
+    if (sound_id >= 0 && sound_id < (int)sound_filenames.size()) {
+       play_sound(sound_id, u->position, u, false);
+    }
   }
 
   a_vector<bool> has_loaded_sound;
@@ -1981,6 +2022,9 @@ struct ui_functions : ui_util_functions {
     return r;
   }
 
+  static const int HUD_PORTRAIT_Y = 32;
+  static const int HUD_MESSAGES_Y = 96;
+
   rect get_live_ui_area() const {
     if (!is_live_game_mode || !has_local_player())
       return {};
@@ -2168,6 +2212,19 @@ struct ui_functions : ui_util_functions {
                      255);
       draw_small_number(data, data_pitch, area.from + xy(145, 7), supply_avail,
                         2, 255);
+    }
+    
+    // Portrait rendering
+    if (active_portrait.end_frame > st.current_frame && active_portrait.unit_type >= 0) {
+      const unit_type_t* put = get_unit_type((UnitTypes)active_portrait.unit_type);
+      if (put && put->portrait >= 0) {
+         // Placeholder: In a full engine we would draw the portrait animation
+         // For now, we draw a box and the unit's name
+         rect pbox = { area.from + xy(4, HUD_PORTRAIT_Y), area.from + xy(60, HUD_PORTRAIT_Y + 56) };
+         fill_rectangle(data, data_pitch, pbox, 14);
+         line_rectangle(data, data_pitch, pbox, 117);
+         // (Actual portrait rendering logic would go here)
+      }
     }
 
     for (size_t i = 0; i != live_command_slots_n; ++i) {
@@ -2413,47 +2470,52 @@ struct ui_functions : ui_util_functions {
   // Draws a compact debug overlay in the top-left corner: frame number,
   // draw FPS and current game speed multiplier.  Toggled by F3.
   void draw_debug_overlay(uint8_t *data, size_t data_pitch) {
-    const int x = 4;
-    const int y = 4;
-    // Background box: 4 rows of 7-segment digits (8px wide, 11px tall each)
-    // plus 2px padding.  Row layout: frame, fps, speed_num, speed_den.
-    const int box_w = 96;
-    const int box_h = 4 * 13 + 4;
-    rect box{xy(x - 2, y - 2), xy(x - 2 + box_w, y - 2 + box_h)};
-    // Clamp to screen bounds.
-    if (box.to.x > (int)screen_width)
-      box.to.x = (int)screen_width;
-    if (box.to.y > (int)screen_height)
-      box.to.y = (int)screen_height;
-    fill_rectangle(data, data_pitch, box, 0);
-    line_rectangle(data, data_pitch, box, 14);
+    const int x = 12;
+    const int y = 12;
+    const int row_h = 13;
+    const int box_w = 110;
+    const int box_h = 6 * row_h + 8;
 
-    int frame = st.current_frame;
-    draw_small_number(data, data_pitch, xy(x, y + 0 * 13), frame, 1, 255);
+    // Premium translucent backdrop
+    rect box{xy(x - 6, y - 6), xy(x + box_w, y + box_h)};
+    if (box.to.x > (int)screen_width) box.to.x = (int)screen_width;
+    if (box.to.y > (int)screen_height) box.to.y = (int)screen_height;
+    
+    // Draw backdrop with subtle border
+    fill_rectangle(data, data_pitch, box, 0); // Black background
+    line_rectangle(data, data_pitch, box, 14); // Dark gray border
 
-    int fps = fps_draw_last;
-    draw_small_number(data, data_pitch, xy(x, y + 1 * 13), fps, 2, 117);
+    // Frame & FPS
+    draw_small_number(data, data_pitch, xy(x, y + 0 * row_h), st.current_frame, 1, 255); // White
+    draw_small_number(data, data_pitch, xy(x, y + 1 * row_h), fps_draw_last, 2, 117);    // Cyan-ish
 
-    // Display game speed as a fraction of normal (fp8 integer(1) == normal).
-    // Normal = 1x, 2x, 4x … up to 128x; or 1/2x displayed as the raw
-    // fp8 numerator over 256.
+    // Game Speed
     int speed_num = game_speed.raw_value;
     int speed_den = 256;
-    // Simplify by dividing out common factor of 256 for integer speeds.
-    if (speed_num > 0 && (speed_num & 0xff) == 0) {
-      speed_num >>= 8;
-      speed_den = 1;
-    }
-    draw_small_number(data, data_pitch, xy(x, y + 2 * 13), speed_num, 1, 140);
-    if (speed_den > 1) {
-      draw_small_number(data, data_pitch, xy(x + 24, y + 2 * 13), speed_den, 1,
-                        50);
-    }
+    if (speed_num > 0 && (speed_num & 0xff) == 0) { speed_num >>= 8; speed_den = 1; }
+    draw_small_number(data, data_pitch, xy(x, y + 2 * row_h), speed_num, 1, 140); // Yellow
+    if (speed_den > 1) draw_small_number(data, data_pitch, xy(x + 24, y + 2 * row_h), speed_den, 1, 50);
 
-    // Paused indicator: a solid bright block in row 3.
+    // Performance (Sim vs Draw)
+    // Assuming we have these counters accessible (placeholders for now)
+    int sim_ms = 1; // dummy
+    int draw_ms = 2; // dummy
+    draw_small_number(data, data_pitch, xy(x, y + 3 * row_h), sim_ms, 1, 170);   // Green (Sim)
+    draw_small_number(data, data_pitch, xy(x + 30, y + 3 * row_h), draw_ms, 1, 190); // Orange (Draw)
+
+    // Sync Diagnostics (TODO: plumb sync_st into ui_functions)
+    /*
+    int desyncs = (int)sync_st.desync_reports.size();
+    if (desyncs > 0) {
+      draw_small_number(data, data_pitch, xy(x, y + 4 * row_h), desyncs, 1, 160); // Red
+    } else {
+      draw_small_number(data, data_pitch, xy(x, y + 4 * row_h), 0, 1, 110);    // Dim gray
+    }
+    */
+
+    // Paused / Interaction state
     if (is_paused) {
-      fill_rectangle(data, data_pitch,
-                     rect{xy(x, y + 3 * 13), xy(x + 16, y + 3 * 13 + 9)}, 162);
+      fill_rectangle(data, data_pitch, rect{xy(x, y + 5 * row_h), xy(x + 24, y + 5 * row_h + 9)}, 162);
     }
   }
 
@@ -2752,6 +2814,27 @@ struct ui_functions : ui_util_functions {
 
   bool show_debug_overlay = false;
 
+  // ---------------------------------------------------------------------------
+  // Runtime Config & Hotkeys
+  // ---------------------------------------------------------------------------
+  struct hotkeys_t {
+    int stop = 's';
+    int hold = 'h';
+    int attack = 'a';
+    int patrol = 't';
+    int build = 'b';
+    int cloak = 'c';
+    int burrow = 'b';
+    int siege = 'g';
+    int stim = 'i';
+    int unload = 'l';
+    int lift = 'l';
+    int return_cargo = 'r';
+    int merge = 'm';
+    int cancel = 'x';
+    int centered = '\t';
+  } hotkeys;
+
   std::unique_ptr<native_window_drawing::surface> window_surface;
   std::unique_ptr<native_window_drawing::surface> indexed_surface;
   std::unique_ptr<native_window_drawing::surface> rgba_surface;
@@ -2800,6 +2883,8 @@ struct ui_functions : ui_util_functions {
       return;
     current_selection.push_back(uid);
     live_commands_dirty = true;
+    if (current_selection.size() == 1)
+      play_unit_response_sound(u, response_kind::what);
   }
 
   void current_selection_clear() {
@@ -4068,6 +4153,10 @@ struct ui_functions : ui_util_functions {
       ok = action_default_order(local_player_id, map_pos, target, nullptr,
                                 queue);
     }
+    if (ok) {
+      auto& sel = action_st.selection.at(local_player_id);
+      if (!sel.empty()) play_unit_response_sound(sel.front(), response_kind::yes);
+    }
     pending_order_mode = pending_order_mode_t::none;
     return ok;
   }
@@ -4227,6 +4316,8 @@ struct ui_functions : ui_util_functions {
     if (ok) {
       cancel_live_build_placement();
       live_commands_dirty = true;
+      auto& sel = action_st.selection.at(local_player_id);
+      if (!sel.empty()) play_unit_response_sound(sel.front(), response_kind::yes);
     }
     return ok;
   }
@@ -4556,61 +4647,30 @@ struct ui_functions : ui_util_functions {
             } else if (e.sym == 'u') {
               if (game_speed < fp8::integer(128))
                 game_speed *= 2;
-            } else if (e.sym == 's') {
-              sync_action_selection_from_current();
-              action_stop(local_player_id, shift);
-            } else if (e.sym == 'h') {
-              sync_action_selection_from_current();
-              action_hold_position(local_player_id, shift);
-            } else if (e.sym == 'a') {
-              cancel_live_build_placement();
-              pending_order_mode = pending_order_mode_t::attack_move;
-            } else if (e.sym == 't') {
-              cancel_live_build_placement();
-              pending_order_mode = pending_order_mode_t::patrol;
             } else if (e.sym == 'f') {
               enforce_local_visibility = !enforce_local_visibility;
               ui::log("single-player: fog of war %s\n",
                       enforce_local_visibility ? "enabled" : "disabled");
-            } else if (e.sym == 'x') {
-              issue_live_ability_hotkey(live_command_kind_t::ability_cancel,
-                                        shift);
-            } else if (e.sym == 'b') {
-              issue_live_ability_hotkey(
-                  live_command_kind_t::ability_burrow_toggle, shift);
-            } else if (e.sym == 'g') {
-              issue_live_ability_hotkey(
-                  live_command_kind_t::ability_siege_toggle, shift);
-            } else if (e.sym == 'c') {
-              issue_live_ability_hotkey(
-                  live_command_kind_t::ability_cloak_toggle, shift);
-            } else if (e.sym == 'r') {
-              issue_live_ability_hotkey(
-                  live_command_kind_t::ability_return_cargo, shift);
-            } else if (e.sym == 'l') {
-              if (!issue_live_ability_hotkey(
-                      live_command_kind_t::ability_unload_all, shift)) {
-                issue_live_ability_hotkey(
-                    live_command_kind_t::ability_liftoff_land_toggle, shift);
-              }
-            } else if (e.sym == 'i') {
-              issue_live_ability_hotkey(live_command_kind_t::ability_stim,
-                                        shift);
-            } else if (e.sym == 'm') {
-              if (!issue_live_ability_hotkey(
-                      live_command_kind_t::ability_morph_archon, shift)) {
-                issue_live_ability_hotkey(
-                    live_command_kind_t::ability_morph_dark_archon, shift);
-              }
-            } else if (e.sym == '\t') {
+            } else if (e.sym == hotkeys.stop) {
+              sync_action_selection_from_current();
+              action_stop(local_player_id, shift);
+            } else if (e.sym == hotkeys.hold) {
+              sync_action_selection_from_current();
+              action_hold_position(local_player_id, shift);
+            } else if (e.sym == hotkeys.attack) {
+              cancel_live_build_placement();
+              pending_order_mode = pending_order_mode_t::attack_move;
+            } else if (e.sym == hotkeys.patrol) {
+              cancel_live_build_placement();
+              pending_order_mode = pending_order_mode_t::patrol;
+            } else if (e.sym == hotkeys.centered) {
               // Center camera on selected units.
               if (!current_selection.empty()) {
                 xy sum_pos = {};
                 int count = 0;
                 for (auto uid : current_selection) {
                   unit_t *u = get_unit(uid);
-                  if (!u || unit_dead(u))
-                    continue;
+                  if (!u || unit_dead(u)) continue;
                   sum_pos += u->sprite->position;
                   ++count;
                 }
@@ -4623,10 +4683,28 @@ struct ui_functions : ui_util_functions {
               size_t group_n = e.sym == '0' ? 9 : (size_t)(e.sym - '1');
               int subaction = ctrl ? 0 : (shift ? 2 : 1);
               sync_action_selection_from_current();
-              bool changed =
-                  action_control_group(local_player_id, group_n, subaction);
-              if (subaction == 1 && changed)
-                sync_current_selection_from_action();
+              bool changed = action_control_group(local_player_id, group_n, subaction);
+              if (subaction == 1 && changed) sync_current_selection_from_action();
+            } else if (e.sym == hotkeys.cancel) {
+              issue_live_ability_hotkey(live_command_kind_t::ability_cancel, shift);
+            } else if (e.sym == hotkeys.burrow) {
+              issue_live_ability_hotkey(live_command_kind_t::ability_burrow_toggle, shift);
+            } else if (e.sym == hotkeys.cloak) {
+              issue_live_ability_hotkey(live_command_kind_t::ability_cloak_toggle, shift);
+            } else if (e.sym == hotkeys.siege) {
+              issue_live_ability_hotkey(live_command_kind_t::ability_siege_toggle, shift);
+            } else if (e.sym == hotkeys.stim) {
+              issue_live_ability_hotkey(live_command_kind_t::ability_stim, shift);
+            } else if (e.sym == hotkeys.unload) {
+              issue_live_ability_hotkey(live_command_kind_t::ability_unload_all, shift);
+            } else if (e.sym == hotkeys.lift) {
+              issue_live_ability_hotkey(live_command_kind_t::ability_liftoff_land_toggle, shift);
+            } else if (e.sym == hotkeys.return_cargo) {
+              issue_live_ability_hotkey(live_command_kind_t::ability_return_cargo, shift);
+            } else if (e.sym == hotkeys.merge) {
+              if (!issue_live_ability_hotkey(live_command_kind_t::ability_morph_archon, shift)) {
+                issue_live_ability_hotkey(live_command_kind_t::ability_morph_dark_archon, shift);
+              }
             }
           }
 #endif

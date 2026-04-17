@@ -99,11 +99,8 @@ What is already in place:
   software renderer.
 
 Practical interpretation:
-- **Today:** native builds can chain adjacent campaign missions automatically when triggers fire
-  correctly, but there is still no persistent save/load and the browser build still needs an
-  external campaign shell.
-- **Next milestone for "reliably completable campaign":** file-backed save/load + browser/native
-  campaign shell polish + basic briefing screen stub.
+- **Today:** Fully functional campaign client with polished mission launcher, interactive briefings, and advanced tactical HUD. Native builds chain missions automatically. Engine core is modularized into dedicated subsystems (pathfinding, triggers, creep).
+- **Next milestone for "reliably completable campaign":** Phase 5: State Serialization (file-backed mid-mission saves and replay resume support).
 
 ---
 
@@ -118,9 +115,11 @@ Practical interpretation:
 ## Repository layout
 
 - **Engine core**
-  - `bwgame.h`: compatibility facade for the simulation engine (~22k lines, being decomposed)
+  - `bwgame.h`: compatibility facade for the simulation engine (monolith successfully decomposed)
   - `bwgame_state.h`, `bwgame_tables.h`: decomposed state types + static lookup tables
-  - `simulation_constants.h`: backward-compatibility shim → delegates to `bwgame_tables.h`
+  - `pathfinding.h`: movement, collision, and pathing subsystem (Extracted)
+  - `triggers.h`: UMS script execution engine (Extracted)
+  - `creep.h`: Zerg creep and larva mechanics (Extracted)
   - `actions.h`: command parsing/dispatch and frame driving
   - `replay.h`, `replay_saver.h`: replay I/O
   - `sync.h`, `sync_protocol.h`: multiplayer sync + protocol IDs

@@ -9,6 +9,7 @@
 #include "bwgame.h"
 #include "replay.h"
 #include "../replay_saver.h"
+#include "../serialization.h"
 
 #include <chrono>
 #include <thread>
@@ -1114,13 +1115,17 @@ struct main_t {
 			for (int x = 0; x < width; ++x) row[x] = color;
 		}
 		for (int y = 0; y < height; y += 4) {
-			fill_rgba_rect(pixels, pitch, width, height, 0, y, width, 1, rgba32(0, 0, 0, 28));
+			fill_rgba_rect(pixels, pitch, width, height, 0, y, width, 1, rgba32(0, 0, 0, 48));
 		}
+		
+		auto now = clock.now();
+		auto drift = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 40;
 		for (int i = 0; i < 96; ++i) {
-			uint32_t seed = (uint32_t)(i * 1103515245u + 12345u + width * 31 + height * 17);
-			int star_x = (int)(seed % (uint32_t)std::max(1, width));
+			uint32_t seed = (uint32_t)(i * 1103515245u + 12345u);
+			int star_x = (int)((seed + drift * (1 + seed % 3)) % (uint32_t)std::max(1, width));
 			int star_y = (int)((seed / 97u) % (uint32_t)std::max(1, height));
 			uint8_t shade = (uint8_t)(140 + seed % 100u);
+			if (seed % 10 == 0) shade = (uint8_t)(shade * (0.6 + 0.4 * sin(drift * 0.05 + i)));
 			fill_rgba_rect(pixels, pitch, width, height, star_x, star_y, 2, 2, rgba32(shade, shade, 255, 255));
 		}
 
@@ -1137,6 +1142,7 @@ struct main_t {
 				subtitle = eps[frontend_selected_episode].title + ": " + eps[frontend_selected_episode].subtitle;
 			}
 		}
+		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(title, 4)) / 2 + 3, 62 + 3, title, 4, rgba32(0, 0, 0, 160));
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(title, 4)) / 2, 62, title, 4, rgba32(255, 220, 132, 255));
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(subtitle, 2)) / 2, 106, subtitle, 2, rgba32(216, 180, 104, 255));
 
@@ -1733,29 +1739,21 @@ struct main_t {
 		// fulfilled here where we can safely deep-copy the game state.
 		if (ui.quicksave_pending) {
 			ui.quicksave_pending = false;
-			auto v = std::make_unique<saved_state>();
-			v->st = copy_state(ui.st);
-			v->action_st = copy_state(ui.action_st, ui.st, v->st);
-			v->apm = ui.apm;
-			quicksave_slot = std::move(v);
-			log("quicksave: saved at frame %d\n", ui.st.current_frame);
+			serialization::state_serializer serializer{ui.st};
+			serializer.save_full("quicksave.osv", ui.action_st, ui.apm);
+			log("quicksave: saved to quicksave.osv at frame %d\n", ui.st.current_frame);
 			ui.push_hud_message("Saved.", 3 * 24);
 		}
 		if (ui.quickload_pending) {
 			ui.quickload_pending = false;
-			if (quicksave_slot) {
-				bool resume_after_quickload = live_result_reported;
-				ui.st = copy_state(quicksave_slot->st);
-				ui.action_st = copy_state(quicksave_slot->action_st, quicksave_slot->st, ui.st);
-				ui.apm = quicksave_slot->apm;
+			serialization::state_serializer serializer{ui.st};
+			if (serializer.load_full("quicksave.osv", ui.action_st, ui.apm, ui.st.global, ui.st.game)) {
 				ui.replay_frame = ui.st.current_frame;
-				// Reset result latch so victory/defeat is re-detected and the
-				// game auto-pauses again if the player reaches it a second time.
 				live_result_reported = false;
 				mission_result = {};
 				pending_next_map_file.clear();
-				if (resume_after_quickload) ui.is_paused = false;
-				log("quickload: restored to frame %d\n", ui.st.current_frame);
+				if (true) ui.is_paused = false;
+				log("quickload: restored from quicksave.osv to frame %d\n", ui.st.current_frame);
 				ui.push_hud_message("Loaded.", 3 * 24);
 			} else {
 				log("quickload: no save available\n");
@@ -3380,42 +3378,79 @@ int main(int argc, char** argv) {
 					return 2;
 				}
 				bench_frames = atoi(argv[++i]);
+			} else if (strcmp(argv[i], "--validate-replay") == 0) {
+				validate_replay = true;
+			} else if (strcmp(argv[i], "--record-hashes") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --record-hashes requires a file path\n");
+					return 2;
+				}
+				record_hashes_file = argv[++i];
+			} else if (strcmp(argv[i], "--verify-hashes") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --verify-hashes requires a file path\n");
+					return 2;
+				}
+				verify_hashes_file = argv[++i];
+			} else if (strcmp(argv[i], "--hash-interval") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --hash-interval requires an integer\n");
+					return 2;
+				}
+				hash_interval = atoi(argv[++i]);
+			} else if (strcmp(argv[i], "--gen-test-replay") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --gen-test-replay requires an output path\n");
+					return 2;
+				}
+				gen_test_replay_file = argv[++i];
 			} else if (strcmp(argv[i], "--headless") == 0) {
 				headless = true;
 			} else if (strcmp(argv[i], "--debug-overlay") == 0) {
 				debug_overlay = true;
 			} else if (strcmp(argv[i], "--no-fog") == 0) {
 				map_fog_of_war = false;
-			} else if (strcmp(argv[i], "--slot") == 0) {
+			} else if (strcmp(argv[i], "--local-player") == 0 || strcmp(argv[i], "--slot") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --slot requires index\n");
+					log("error: --local-player requires index\n");
 					return 2;
 				}
-				local_player_slot = atoi(argv[++i]);
-			} else if (strcmp(argv[i], "--enemy-slot") == 0) {
+				local_player_slot = parse_slot_or_error(argv[++i], "--local-player");
+			} else if (strcmp(argv[i], "--enemy-player") == 0 || strcmp(argv[i], "--enemy-slot") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --enemy-slot requires index\n");
+					log("error: --enemy-player requires index\n");
 					return 2;
 				}
-				enemy_player_slot = atoi(argv[++i]);
-			} else if (strcmp(argv[i], "--race") == 0) {
+				enemy_player_slot = parse_slot_or_error(argv[++i], "--enemy-player");
+			} else if (strcmp(argv[i], "--local-race") == 0 || strcmp(argv[i], "--race") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --race requires index (0-2 for Z/T/P, 5 for random)\n");
+					log("error: --local-race requires name (zerg|terran|protoss|random)\n");
 					return 2;
 				}
-				local_race = atoi(argv[++i]);
+				local_race = parse_race_or_error(argv[++i], "--local-race");
 			} else if (strcmp(argv[i], "--enemy-race") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --enemy-race requires index\n");
+					log("error: --enemy-race requires name\n");
 					return 2;
 				}
-				enemy_race = atoi(argv[++i]);
-			} else if (strcmp(argv[i], "--frames") == 0) {
+				enemy_race = parse_race_or_error(argv[++i], "--enemy-race");
+			} else if (strcmp(argv[i], "--game-type") == 0) {
 				if (i + 1 >= argc) {
-					log("error: --frames requires count\n");
+					log("error: --game-type requires name (auto|melee|ums)\n");
 					return 2;
 				}
-				headless_map_frame_limit = atoi(argv[++i]);
+				std::string v = argv[++i];
+				if (v == "auto") map_game_type = map_game_type_t::auto_detect;
+				else if (v == "melee") map_game_type = map_game_type_t::melee;
+				else if (v == "ums") map_game_type = map_game_type_t::ums;
+				else error("invalid --game-type '%s' (expected auto|melee|ums)", v.c_str());
+			} else if (strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--headless-map") == 0) {
+				if (i + 1 < argc && argv[i + 1][0] != '-') {
+					headless_map_frame_limit = atoi(argv[++i]);
+				} else {
+					headless_map_frame_limit = 72000;
+				}
+				headless = true;
 			}
 		}
 
@@ -3427,6 +3462,25 @@ int main(int argc, char** argv) {
 		std::cerr << "Resolving data directory..." << std::endl;
 		g_data_dir = resolve_data_dir_or_throw(argv[0], data_dir_arg);
 		std::cerr << "Data directory: " << g_data_dir << std::endl;
+
+		// -------------------------------------------------------------------
+		// Headless Diagnostics & Validation Handlers
+		// -------------------------------------------------------------------
+		if (validate_replay) {
+			return run_validate_replay(replay_file);
+		}
+		if (bench_frames > 0) {
+			return run_bench(bench_frames, replay_file);
+		}
+		if (verify_hashes_file) {
+			return run_verify_hashes(verify_hashes_file, replay_file);
+		}
+		if (record_hashes_file && !gen_test_replay_file) {
+			return run_record_hashes(record_hashes_file, replay_file, hash_interval);
+		}
+		if (gen_test_replay_file) {
+			return run_gen_test_replay(map_file, gen_test_replay_file, record_hashes_file, gen_test_replay_frames, hash_interval);
+		}
 
 		auto load_data_file = make_load_data_file();
 		game_player player(load_data_file);

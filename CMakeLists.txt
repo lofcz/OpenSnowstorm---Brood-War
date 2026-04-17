@@ -35,14 +35,21 @@ if(OPENSNOWSTORM_BUILD_UI)
     add_definitions(-DOPENBW_NO_SDL_IMAGE)
     add_definitions(-DOPENBW_ENABLE_UI)
 
-    # SDL2 backend library (shared between gfxtest and any embedder)
-    add_library(openbw_ui ui/sdl2.cpp)
+    # Rendering backend selection (SDL2 vs Headless)
+    if(SDL2_FOUND AND SDL2_MIXER_FOUND)
+        add_library(openbw_ui ui/sdl2.cpp)
+        target_link_libraries(openbw_ui ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
+        target_include_directories(openbw_ui PUBLIC ${SDL2_INCLUDE_DIRS})
+        add_definitions(-DOPENBW_ENABLE_SDL)
+    else()
+        add_library(openbw_ui ui/headless_backend.cpp)
+        add_definitions(-DOPENBW_ENABLE_HEADLESS)
+    endif()
+
     target_include_directories(openbw_ui PUBLIC
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/ui
-        ${SDL2_INCLUDE_DIRS}
     )
-    target_link_libraries(openbw_ui ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
     opensnowstorm_apply_common_compile_options(openbw_ui)
     set_property(TARGET openbw_ui PROPERTY POSITION_INDEPENDENT_CODE ON)
 

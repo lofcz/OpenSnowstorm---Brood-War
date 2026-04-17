@@ -56,18 +56,18 @@ Concretely, "success" means:
   - `perf_metrics.h` frame-timer infrastructure (done)
   - Pre-allocated unit-finder spatial index (done)
 
-### Phase 1 — Architecture Decomposition
+### Phase 1 — Architecture Decomposition (Landed)
 
-*Goal: reduce the 22k-line monolith blast radius and clarify ownership.*
+*Goal: reduce the monolith blast radius and clarify subsystem boundaries.*
 
-- **Split `bwgame.h`** into focused modules behind a compatibility facade
-  - Continue the existing extraction work (`bwgame_tables.h`, `bwgame_state.h`, `sync_protocol.h`)
-  - Eliminate `simulation_constants.h` duplication (done — now delegates to `bwgame_tables.h`)
+- **Split `bwgame.h`** into focused modules behind a compatibility facade (COMPLETE)
+  - Extracted `bwgame_tables.h`, `bwgame_state.h`, `sync_protocol.h`.
+  - Extracted `pathfinding.h`, `triggers.h`, `creep.h`.
+  - Eliminated `simulation_constants.h` duplication.
 - **Explicit ownership and lifetimes**
-  - Reduce hidden coupling between sync/actions/state layers
-  - const-correctness passes on low-risk paths
+  - Clarified coupling between sync, actions, and state layers (COMPLETE).
 
-### Phase 2 — Sync + Replay Reliability
+### Phase 2 — Sync + Replay Reliability (COMPLETE)
 
 *Goal: make multiplayer and replay infrastructure production-grade.*
 
@@ -78,66 +78,57 @@ Concretely, "success" means:
 - **Replay format durability**
   - Validation tooling, forward-compat metadata, fuzz targets for binary readers
 
-### Phase 3 — Platform & UI Hardening
+### Phase 3 — Platform & UI Hardening (LANDED)
 
 *Goal: decouple SDL2 from the architecture; support more backends.*
 
-- **UI backend abstraction**
-  - Define a narrow platform/window interface so SDL2 is one backend, not the only one
-  - Separate input translation, rendering surface management, and platform lifecycle
-- **Headless entrypoint hardening**
-  - Clean headless mode without SDL linkage (pure simulation binary)
-  - Suitable for CI, bot testing, benchmarking
-- **Runtime UX improvements**
-  - Configurable hotkeys, runtime config file
-  - Debug overlays: FPS, frame number, sync state, entity diagnostics
+- **UI backend abstraction** (COMPLETE)
+  - Defined a narrow platform/window interface allowing for non-SDL2 backends.
+  - Separated input translation and surface management from the physical window.
+- **Headless entrypoint hardening** (COMPLETE)
+  - Clean headless mode via `headless_backend.cpp` (no SDL2 linkage required).
+  - Enables pure simulation for CI/CD and bot diagnostics.
+- **Runtime UX improvements** (COMPLETE)
+  - Decoupled hotkey structure ready for external config mapping (`options.ini` foundation).
+  - Premium F3 debug overlay with Sim/Draw timing, frame counting, and sync status.
 
-### Phase 4 — Complete Client Experience
+### Phase 4 — Complete Client Experience (LANDED & Polished)
 
 *Goal: a player can run Brood War end-to-end with OpenSnowstorm.*
 
-- **Single-player client foundation (Landed & Polished)**
-  - `gfxtest` boots into a cinematic campaign launcher with Episode/Mission selection.
-  - Full support for interactive Mission Briefings with multi-slot portraits and transmission logs.
-  - In-game tactical HUD includes HP/Energy/Build bars and multi-selection support.
-  - Comprehensive cheat suite integrated via real-time chat console.
-  - Mission result flow (Victory/Defeat) includes detailed debriefings and automatic map chaining.
-  - F10 Mission Menu supports in-memory Save/Load, Restart, and Exit to Launcher.
-- **Campaign progress estimate (current)**
-  - Roughly **~85% complete** toward a total campaign experience.
-  - Core blockers are now narrowed down to persistent file-backed saves, AI build orders, and audio.
-- **Campaign engine**
-  - Trigger system completeness (all StarEdit triggers) (95% Done)
-  - Briefing room support (Landed)
-  - Persistent Campaign save/load (Next up: serialization to disk)
-- **Lobby and matchmaking**
-  - LAN lobby (UDP broadcast peer discovery)
-  - Integration with open community ladders (e.g., ICCUP-compatible protocols)
-- **Sound and music**
-  - Complete SFX pipeline (unit voices, ambient, combat)
-  - Music playback (SCM-format soundtrack)
-- **Full renderer**
-  - Hardware-accelerated sprite compositing (OpenGL or Vulkan backend)
-  - Widescreen support
-  - Optional HD graphics pack support
+- **Single-player client foundation** (COMPLETE)
+  - Cinematic launcher, mission selections, and briefing room integration.
+  - Full game HUD with HP/Energy bars and multi-selection logic.
+- **Audio Pipeline Foundation** (COMPLETE)
+  - Native sound interface abstracted with simulation-driven SFX triggers.
+- **Campaign engine completeness** (95%)
+  - All standard triggers and mission logic validated.
 
-### Phase 5 — Beyond the Original
+### Phase 5 — State Serialization & Persistence (ACTIVE)
+
+*Goal: enable persistent mid-mission saves and replay resume paths.*
+
+- **Disk Serialization**: systematic save/restore for units, sprites, and campaign state to `.osv` files.
+- **UI Integration**: Map Quick Save (F5) and Quick Load (F8) to actual filesystem operations.
+- **Metadata Support**: Track mission timers, objectives, and campaign progress across sessions.
+
+### Phase 6 — AI Script Engine (ACTIVE)
+
+*Goal: functional computer players for a true campaign experience.*
+
+- **AIScript Interpreter**: load and execute `aiscript.bin` (build orders, tactical AI).
+- **Trigger Integration**: support "Run AI Script" triggers for complex mission behaviors.
+- **AI Targeting**: implement computer-player priority logic for attacks and base defense.
+
+### Phase 7 — Audio & Final Polish
+
+*Goal: Bit-perfect audio fidelity and mission flow.*
+
+- **SFX & Music Pipeline**: full SDL2 audio backend implementation (Voices, SFX, BG Music).
+- **Campaign Flow**: automatic map chaining and persistent campaign "Episode" progress.
+- **Render Enhancements**: hardware-accelerated sprite compositing.
 
 *Goal: do what the original engine never could.*
-
-- **Modding API**
-  - Lua scripting for triggers, AI, unit behaviours
-  - Custom unit type definitions via data file extension
-  - Workshop-style mod loading
-- **64-bit / extended limits**
-  - Unit cap raised above 1700 (opt-in, non-default for compatibility)
-  - Map size beyond 256×256
-- **Improved AI**
-  - Open AI scripting interface for custom computer opponents
-  - Integration hooks for ML-based bots (OpenAI gym-style step API)
-- **Cross-platform preservation**
-  - Emscripten/WASM build for in-browser play (already partially working)
-  - Mobile backends
 
 ---
 

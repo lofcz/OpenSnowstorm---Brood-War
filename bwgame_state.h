@@ -87,6 +87,7 @@ struct global_state {
   a_vector<uint8_t> techdata_dat;
 
   a_vector<uint8_t> melee_trg;
+  a_vector<uint8_t> aiscript_bin;
 
   std::array<a_vector<uint8_t>, 8> tileset_vf4;
   std::array<a_vector<uint8_t>, 8> tileset_cv5;
@@ -280,7 +281,23 @@ struct psionic_matrix_link_f {
 // Holds live entity pools (units, bullets, sprites, images, orders, paths,
 // thingies) and the unit-finder spatial index.  Cannot be bitwise-copied.
 // ---------------------------------------------------------------------------
+struct ai_script_t {
+  size_t offset = 0;
+  int wait_timer = 0;
+  int player = -1;
+  xy location = {};
+  unit_t *center_unit = nullptr;
+  int party_id = 0;
+  bool active = false;
+  int local_val[4]{};
+};
+
+struct ai_state {
+  std::array<a_list<ai_script_t>, 8> player_scripts;
+};
+
 struct state_base_non_copyable {
+  ai_state ai_st;
 
   state_base_non_copyable() = default;
   state_base_non_copyable(const state_base_non_copyable &) = delete;

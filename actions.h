@@ -2,6 +2,7 @@
 #define BWGAME_ACTIONS_H
 
 #include "bwgame.h"
+#include "ai.h"
 
 #include <cstddef>
 #include <cstdio>
@@ -39,9 +40,9 @@ static inline action_state copy_state(const action_state& action_st, const state
 	return r;
 }
 
-struct action_functions: state_functions {
+struct action_functions: ai_functions {
 	action_state& action_st;
-	explicit action_functions(state& st, action_state& action_st) : state_functions(st), action_st(action_st) {}
+	explicit action_functions(state& st, action_state& action_st) : ai_functions(st), action_st(action_st) {}
 
 	bool unit_can_be_multi_selected(const unit_t* u) const {
 		if (ut_building(u)) return false;
@@ -97,6 +98,10 @@ struct action_functions: state_functions {
 			auto it = std::find(selection.begin(), selection.end(), u);
 			if (it != selection.end()) selection.erase(it);
 		}
+	}
+
+	virtual void ai_train(int player, UnitTypes unit_type) override {
+		action_train(player, get_unit_type(unit_type));
 	}
 
 	struct group_move_t {

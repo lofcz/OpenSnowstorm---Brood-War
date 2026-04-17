@@ -32,6 +32,7 @@ namespace bwgame {
 struct state_functions {
 
 	virtual void play_sound(int id, xy position, const unit_t* source_unit = nullptr, bool add_race_index = false) {}
+	virtual void ai_train(int player, UnitTypes unit_type) {}
 	virtual void on_unit_deselect(unit_t* u) {}
 
 	virtual void on_unit_destroy(unit_t* u) {}
@@ -42,6 +43,7 @@ struct state_functions {
 
 	// Trigger event callbacks for UI-visible notifications.
 	// The default implementations are no-ops; override in the UI layer.
+	virtual void on_unit_completed(unit_t* u) {}
 	virtual void on_trigger_display_text(int owner, const a_string& text) {}
 	virtual void on_trigger_transmission(int owner, int string_index, int sound_index, int unit_type, int duration_ms, int location_id) {}
 	virtual void on_trigger_center_view(int owner, int location_id) {}
@@ -11334,10 +11336,13 @@ struct state_functions {
 		}
 	}
 
+	virtual void trigger_start_ai_script(int player, uint32_t tag, xy pos = {}, unit_t *u = nullptr) {}
+	virtual void update_ai() {}
 	void next_frame() {
 		++st.current_frame;
 		process_frame();
 		process_triggers();
+		update_ai();
 	}
 
 	int lcg_rand(int source) {
@@ -15338,6 +15343,7 @@ struct state_functions {
 		} else {
 			u_set_status_flag(u, unit_t::status_flag_completed);
 		}
+		on_unit_completed(u);
 		add_completed_unit(u, 1, true);
 		if (ut_initially_cloaked(u)) cloak_unit(u);
 		if (unit_is_map_revealer(u)) {
@@ -20185,6 +20191,7 @@ void global_init(global_state& st, load_data_file_F&& load_data_file) {
 	st.sprite_types = data_loading::load_sprites_dat(buf);
 	load_data_file(buf, "arr/images.dat");
 	st.image_types = data_loading::load_images_dat(buf);
+	load_data_file(st.aiscript_bin, "scripts/aiscript.bin");
 	load_data_file(buf, "arr/orders.dat");
 	st.order_types = data_loading::load_orders_dat(buf);
 
