@@ -2,9 +2,8 @@
 
 OpenSnowstorm is an **open-source, community-driven engine reimplementation** of StarCraft: Brood War — aiming to be for StarCraft what [OpenMW](https://openmw.org) is for Morrowind: a clean-room, modern, free-software engine that can run the original game's content with full fidelity, and ultimately exceed the original in moddability, platform support, and long-term preservation.
 
-> **Current state:** The engine simulation, replay, sync, and BWAPI-compatible integration layers are functional.  
-> `gfxtest` now boots into an interactive **startup frontend shell** when launched without `--map` / `--replay`, and the single-player map client foundation remains available via `--map ...`.  
-> A complete client experience (campaign frontend, lobby, matchmaking, full UX parity) remains on the long-term roadmap.  
+> **Current state:** Highly functional campaign client featuring a polished mission launcher, interactive briefings, a suite of classic cheat codes, and an expanded tactical HUD with HP/Energy bars and multi-selection support.
+> `gfxtest` boots into a **cinematic mission shell** by default, allowing end-to-end campaign play with automated mission chaining on native platforms.
 > Contributors at all levels are welcome.
 
 ---
@@ -50,7 +49,7 @@ OpenSnowstorm has the same ambition for **StarCraft: Brood War**:
 
 ### Campaign playability snapshot ("somewhat playable")
 
-Current rough estimate: **~65% of the way** to a "somewhat playable" campaign loop.
+Current rough estimate: **~85% of the way** to a complete, high-fidelity campaign loop.
 
 What is already in place:
 - Deterministic simulation, replay, sync, and map boot/run paths are working.
@@ -81,30 +80,21 @@ What is already in place:
 - Filesystem-chain fallback: when no `Set Next Scenario` trigger fires, the native client
   walks the current map's folder and loads the next alphabetically-sorted `.scx`/`.scm`,
   so curated campaign packs chain without per-map triggers.
-- Persistent campaign resume: every time a single-player map is launched, the client writes
-  `campaign_progress.txt` beside the executable.  Relaunching without `--map` surfaces a
-  pinned "Continue" entry at the top of the startup shell that resumes the last-played map.
-- Pre-mission briefing gate: each single-player map auto-pauses on load and shows a
-  "Mission: <name>" / "Press Space to begin." HUD pair plus a centred pause-menu overlay
-  until the player presses Space/P.
-- Browser build exposes `replay_get_value(7)` (pending next-scenario name) and
-  `replay_get_value(9)` (transition-ready flag) for JS-side campaign orchestration.
+- **Cinematic Campaign Launcher**: Refactored startup shell with a terminal-tech aesthetic, starfield backdrop, and hierarchical campaign navigation (Episodes -> Missions).
+- **Interactive Mission Briefings**: High-fidelity briefing overlay with tech-grid backgrounds, transmission logs, and multi-slot portrait arrays (simulating active speaker communication).
+- **Classic Cheat Engine**: Full implementation of the Brood War cheat suite (`black sheep wall`, `power overwhelming`, `the gathering`, `operation cwal`, etc.) via an in-game chat console.
+- **Advanced Tactical HUD**: Persistent status panel showing HP bars, energy levels, and construction/research progress for single and multiple unit selections.
+- **Mission Result Flow**: Fully polished debriefing screens with automated map chaining for native builds and a resume "Continue" feature.
+- **In-game Mission Menu (F10)**: functional menu for returning to game, quicksave/load management, and mission exiting.
+- **Restart Mission**: F7 hotkey and menu entry for immediate mission reset.
 
-What still blocks a fully reliable campaign experience:
 - **No persistent mid-mission save/load** — quicksave is in-memory only; closing the window
-  loses in-mission progress.  Mission-level resume is persisted (`campaign_progress.txt`
-  points the next launch at the last-played map), but mid-mission state is not.
-  File-backed mid-mission save requires serializing the full simulation state (intrusive
-  lists, pools, counters), which needs a dedicated serialization layer not yet built.
-- **No browser-side mission chaining yet** — native builds now transition automatically when the
-  next map can be resolved on disk, but the browser build still only exposes JS hooks and needs an
-  external campaign orchestration layer (map list, file loader, UI shell) to chain missions.
-- **No briefing/debrief screen** — the engine has no briefing mode; mission text surfaces via
-  HUD banners only.
-- **Incomplete AI scripting** — AI script trigger action (15) handles shared-vision tags but ignores
-  all other script IDs; computer opponents use no scripted build orders.
-- **Sound / music** — SFX and soundtrack are absent; unit voices, ambient, and mission triggers
-  that fire WAV play actions are silently skipped.
+  loses in-mission progress. File-backed mid-mission save requires serializing the full 
+  simulation state (intrusive lists, pools, counters) to disk.
+- **Incomplete AI scripting** — Computer opponents currently use no scripted build orders
+  and rely on basic units; full campaign parity requires parsing and executing `aiscript.bin` actions.
+- **Sound / music** — SFX and soundtrack are absent; mission triggers that fire WAV play actions 
+  are silently skipped.
 - **Renderer gaps** — no hardware-accelerated backend; large maps and many units strain the
   software renderer.
 

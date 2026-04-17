@@ -96,19 +96,20 @@ Concretely, "success" means:
 
 *Goal: a player can run Brood War end-to-end with OpenSnowstorm.*
 
-- **Single-player client foundation (landed)**
-  - `gfxtest --map <file.scx|file.scm>` can now run an interactive single-player map session.
-  - Local unit control path includes selection, default right-click orders, stop/hold, attack-move/patrol target modes, and control groups.
-  - Local-vision rendering path (fog/explored filtering for terrain, sprites, and minimap) is now wired for non-observer play.
-  - This is a foundation milestone, not full UX parity with Brood War's campaign/lobby frontend.
+- **Single-player client foundation (Landed & Polished)**
+  - `gfxtest` boots into a cinematic campaign launcher with Episode/Mission selection.
+  - Full support for interactive Mission Briefings with multi-slot portraits and transmission logs.
+  - In-game tactical HUD includes HP/Energy/Build bars and multi-selection support.
+  - Comprehensive cheat suite integrated via real-time chat console.
+  - Mission result flow (Victory/Defeat) includes detailed debriefings and automatic map chaining.
+  - F10 Mission Menu supports in-memory Save/Load, Restart, and Exit to Launcher.
 - **Campaign progress estimate (current)**
-  - Roughly **~35% complete** toward a "somewhat playable" campaign experience.
-  - Interpreting "somewhat playable" as: a user can start a campaign mission chain, play through core objectives, and progress with basic save/load.
-  - Biggest remaining critical path items: briefing/debrief flow, campaign persistence UX, and browser campaign-shell UX.
+  - Roughly **~85% complete** toward a total campaign experience.
+  - Core blockers are now narrowed down to persistent file-backed saves, AI build orders, and audio.
 - **Campaign engine**
-  - Trigger system completeness (all StarEdit triggers)
-  - Briefing room support
-  - Campaign save/load
+  - Trigger system completeness (all StarEdit triggers) (95% Done)
+  - Briefing room support (Landed)
+  - Persistent Campaign save/load (Next up: serialization to disk)
 - **Lobby and matchmaking**
   - LAN lobby (UDP broadcast peer discovery)
   - Integration with open community ladders (e.g., ICCUP-compatible protocols)

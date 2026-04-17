@@ -244,6 +244,9 @@ struct state_base_copyable {
   int disruption_webbed_units;
   bool cheats_enabled;
   bool cheat_operation_cwal;
+  bool cheat_black_sheep_wall;
+  bool cheat_power_overwhelming;
+  bool cheat_the_gathering;
   bool is_mission_briefing = false;
 
   a_vector<location> locations;
