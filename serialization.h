@@ -15,13 +15,33 @@ namespace bwgame {
 namespace serialization {
 
 static constexpr uint32_t OSV_MAGIC = 0x534e4f57; // 'SNOW'
-static constexpr uint32_t OSV_VERSION = 9;
+static constexpr uint32_t OSV_VERSION = 10;
 
 struct state_serializer {
   state &st;
 
   template <typename T> void write_pod(std::ostream &os, const T &val) { os.write((const char *)&val, sizeof(T)); }
   template <typename T> void read_pod(std::istream &is, T &val) { is.read((char *)&val, sizeof(T)); }
+
+  void write_str(std::ostream &os, const a_string &s) {
+    size_t sz = s.size();
+    write_pod(os, sz);
+    if (sz) os.write(s.data(), (std::streamsize)sz);
+  }
+  void read_str(std::istream &is, a_string &s) {
+    size_t sz;
+    read_pod(is, sz);
+    s.resize(sz);
+    if (sz) is.read(&s[0], (std::streamsize)sz);
+  }
+
+  struct save_metadata_t {
+    a_string current_map_file;
+    a_string objectives_text;
+    a_string pending_next_scenario;
+    int portrait_unit_type = -1;
+    int portrait_end_frame = 0;
+  };
 
   uint32_t to_idx(const void *ptr) {
     if (!ptr) return 0xffffffff;
@@ -363,22 +383,37 @@ struct state_serializer {
     }
   }
 
-  void save_full(const a_string &filename, const action_state &as, const std::array<apm_t, 12> &apm) {
+  void save_full(const a_string &filename, const action_state &as, const std::array<apm_t, 12> &apm, const save_metadata_t &md) {
     std::ofstream os(filename.c_str(), std::ios::binary);
     if (!os) return;
     write_pod(os, OSV_MAGIC);
     write_pod(os, OSV_VERSION);
+    
+    write_str(os, md.current_map_file);
+    write_str(os, md.objectives_text);
+    write_str(os, md.pending_next_scenario);
+    write_pod(os, md.portrait_unit_type);
+    write_pod(os, md.portrait_end_frame);
+
     save_state(os);
     save_action_state(os, as);
     os.write((const char*)apm.data(), sizeof(apm));
   }
 
-  bool load_full(const a_string &filename, action_state &as, std::array<apm_t, 12> &apm, const global_state *g, game_state *gm) {
+  bool load_full(const a_string &filename, action_state &as, std::array<apm_t, 12> &apm, const global_state *g, game_state *gm, save_metadata_t &md) {
     std::ifstream is(filename.c_str(), std::ios::binary);
     if (!is) return false;
     uint32_t magic, version;
     read_pod(is, magic); read_pod(is, version);
     if (magic != OSV_MAGIC) return false;
+    if (version < 10) return false; // Breaking change for metadata
+
+    read_str(is, md.current_map_file);
+    read_str(is, md.objectives_text);
+    read_str(is, md.pending_next_scenario);
+    read_pod(is, md.portrait_unit_type);
+    read_pod(is, md.portrait_end_frame);
+
     load_state(is, g, gm);
     load_action_state(is, as);
     is.read((char*)apm.data(), sizeof(apm));

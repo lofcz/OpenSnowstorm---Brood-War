@@ -59,9 +59,52 @@ struct ai_functions : state_functions {
 					if (s.offset + 2 > bin.size()) { s.active = false; break; }
 					s.offset = *(uint16_t*)(base + s.offset);
 					break;
+				case 0x07: // wait_build
+					if (s.offset + 3 > bin.size()) { s.active = false; break; }
+					{
+						uint16_t unit_id = *(uint16_t*)(base + s.offset);
+						uint8_t count = *(uint8_t*)(base + s.offset + 2);
+						s.offset += 3;
+						if (st.completed_unit_counts[s.player].at((UnitTypes)unit_id) < count) {
+							s.offset -= 4; // Re-execute wait_build
+							s.wait_timer = 30; // Wait 30 frames before checking again
+						}
+					}
+					break;
+				case 0x08: // attack_to
+					if (s.offset + 4 > bin.size()) { s.active = false; break; }
+					{
+						uint16_t x = *(uint16_t*)(base + s.offset);
+						uint16_t y = *(uint16_t*)(base + s.offset + 2);
+						s.offset += 4;
+						xy pos(x, y);
+						for (unit_t& u : st.player_units[s.player]) {
+							if (unit_dead(&u) || ut_building(&u) || ut_worker(&u) || !u_can_move(&u)) continue;
+							if (u.order_type->id == Orders::ComputerAI || u.order_type->id == u.unit_type->human_ai_idle->id) {
+								set_unit_order(&u, get_order_type(Orders::AttackMove), pos);
+							}
+						}
+					}
+					break;
 				case 0x0D: // build
 					if (s.offset + 3 > bin.size()) { s.active = false; break; }
 					s.offset += 3;
+					break;
+				case 0x0E: // help_build
+				case 0x0F: // look_for_towns
+					break;
+				case 0x10: // farms_notiming
+				case 0x11: // farms_timing
+				case 0x12: // build_ready
+					break;
+				case 0x13: // set_ignore
+					if (s.offset + 1 > bin.size()) { s.active = false; break; }
+					s.offset += 1;
+					break;
+				case 0x14: // res_area
+				case 0x15: // guard_resources
+					break;
+				case 0x16: // settler
 					break;
 				case 0x1B: // if_unit
 					if (s.offset + 4 > bin.size()) { s.active = false; break; }
@@ -71,6 +114,28 @@ struct ai_functions : state_functions {
 						s.offset += 4;
 						if (st.unit_counts[s.player].at((UnitTypes)unit_id) > 0)
 							s.offset = label;
+					}
+					break;
+				case 0x1C: // skip_if_unit
+					if (s.offset + 4 > bin.size()) { s.active = false; break; }
+					{
+						uint16_t unit_id = *(uint16_t*)(base + s.offset);
+						uint16_t label = *(uint16_t*)(base + s.offset + 2);
+						s.offset += 4;
+						if (st.unit_counts[s.player].at((UnitTypes)unit_id) == 0)
+							s.offset = label;
+					}
+					break;
+				case 0x1E: // wait_buildstart
+					if (s.offset + 3 > bin.size()) { s.active = false; break; }
+					{
+						uint16_t unit_id = *(uint16_t*)(base + s.offset);
+						uint8_t count = *(uint8_t*)(base + s.offset + 2);
+						s.offset += 3;
+						if (st.unit_counts[s.player].at((UnitTypes)unit_id) < count) {
+							s.offset -= 4;
+							s.wait_timer = 30;
+						}
 					}
 					break;
 				case 0x23: // attack_add
@@ -86,15 +151,17 @@ struct ai_functions : state_functions {
 					{
 						uint16_t unit_id = *(uint16_t*)(base + s.offset);
 						s.offset += 2;
-						if (s.center_unit) {
-							// For simplicity, we use the center unit as the trainer if it's the right type
-							// In full fidelity, the AI player searches for a trainer.
-							ai_train(s.player, (UnitTypes)unit_id);
-						}
+						ai_train(s.player, (UnitTypes)unit_id);
 					}
 					break;
-				case 0x33: // stop
-					s.active = false;
+				case 0x22: // tech
+					if (s.offset + 3 > bin.size()) { s.active = false; break; }
+					s.offset += 3;
+					break;
+				case 0x25: // upgrade
+					if (s.offset + 4 > bin.size()) { s.active = false; break; }
+					s.offset += 4;
+					break;
 					break;
 				default:
 					s.active = false;

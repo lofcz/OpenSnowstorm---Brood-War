@@ -318,10 +318,10 @@ namespace strf {
 				char* str = reserve(len);
 				str += pos;
 				memset(str, 0, len);
-				if (desc.width != (unsigned)-1 && desc.precision != (unsigned)-1) sprintf(str, fstr, (int)desc.width, (int)desc.precision, v);
-				else if (desc.width != (unsigned)-1) sprintf(str, fstr, (int)desc.width, v);
-				else if (desc.precision != (unsigned)-1) sprintf(str, fstr, (int)desc.precision, v);
-				else sprintf(str, fstr, v);
+				if (desc.width != (unsigned)-1 && desc.precision != (unsigned)-1) snprintf(str, len, fstr, (int)desc.width, (int)desc.precision, v);
+				else if (desc.width != (unsigned)-1) snprintf(str, len, fstr, (int)desc.width, v);
+				else if (desc.precision != (unsigned)-1) snprintf(str, len, fstr, (int)desc.precision, v);
+				else snprintf(str, len, fstr, v);
 				pos += strlen(str);
 			}
 			void do_float(float v) {

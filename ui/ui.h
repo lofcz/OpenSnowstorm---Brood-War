@@ -6,6 +6,8 @@
 #include "native_window_drawing.h"
 #include <chrono>
 #include <thread>
+#include <cstdio>
+#include <cstdlib>
 
 
 namespace bwgame {
@@ -884,6 +886,7 @@ struct ui_functions : ui_util_functions {
         player(std::move(player)) {}
 
   std::function<void(a_vector<uint8_t> &, a_string)> load_data_file;
+  std::function<bool(const a_string &)> load_data_file_exists;
 
   sound_types_t sound_types;
   a_vector<a_string> sound_filenames;
@@ -1100,6 +1103,26 @@ struct ui_functions : ui_util_functions {
     }
   }
 
+  void play_music(a_string filename) {
+    if (filename.empty()) {
+      native_sound::stop_music();
+      return;
+    }
+    a_vector<uint8_t> data;
+    a_string music_path = "music\\" + filename;
+    if (load_data_file_exists(music_path))
+      load_data_file(data, std::move(music_path));
+    else if (load_data_file_exists(filename))
+      load_data_file(data, filename);
+
+    if (data.empty()) {
+      ui::log("play_music: %s not found in data archives, skipping\n", filename.c_str());
+      return;
+    }
+    native_sound::play_music(data.data(), data.size());
+    native_sound::set_music_volume(128 * global_volume / 100);
+  }
+
   a_vector<uint8_t> creep_random_tile_indices = a_vector<uint8_t>(256 * 256);
   void init() {
     uint32_t rand_state = (uint32_t)clock.now().time_since_epoch().count();
@@ -1138,6 +1161,63 @@ struct ui_functions : ui_util_functions {
     load_data_file(images_tbl.data, "arr/images.tbl");
 
     load_all_image_data(load_data_file);
+    load_options();
+  }
+
+  void load_options() {
+    FILE *f = fopen("options.ini", "r");
+    if (!f) return;
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+      std::string l = line;
+      size_t eq = l.find('=');
+      if (eq == std::string::npos)
+        continue;
+      std::string key = l.substr(0, eq);
+      std::string val = l.substr(eq + 1);
+      auto trim = [](std::string &s) {
+        size_t first = s.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos) return;
+        size_t last = s.find_last_not_of(" \t\r\n");
+        s = s.substr(first, (last - first + 1));
+      };
+      trim(key);
+      trim(val);
+      if (key == "game_speed") {
+        int v = atoi(val.c_str());
+        if (v > 0) game_speed = fp8::integer(v);
+      } else if (key == "volume") {
+        set_volume(atoi(val.c_str()));
+      } else if (key == "hotkey_stop" && !val.empty())
+        hotkeys.stop = val[0];
+      else if (key == "hotkey_hold" && !val.empty())
+        hotkeys.hold = val[0];
+      else if (key == "hotkey_attack" && !val.empty())
+        hotkeys.attack = val[0];
+      else if (key == "hotkey_patrol" && !val.empty())
+        hotkeys.patrol = val[0];
+      else if (key == "hotkey_build" && !val.empty())
+        hotkeys.build = val[0];
+      else if (key == "hotkey_cloak" && !val.empty())
+        hotkeys.cloak = val[0];
+      else if (key == "hotkey_burrow" && !val.empty())
+        hotkeys.burrow = val[0];
+      else if (key == "hotkey_siege" && !val.empty())
+        hotkeys.siege = val[0];
+      else if (key == "hotkey_stim" && !val.empty())
+        hotkeys.stim = val[0];
+      else if (key == "hotkey_unload" && !val.empty())
+        hotkeys.unload = val[0];
+      else if (key == "hotkey_lift" && !val.empty())
+        hotkeys.lift = val[0];
+      else if (key == "hotkey_return_cargo" && !val.empty())
+        hotkeys.return_cargo = val[0];
+      else if (key == "hotkey_merge" && !val.empty())
+        hotkeys.merge = val[0];
+      else if (key == "hotkey_cancel" && !val.empty())
+        hotkeys.cancel = val[0];
+    }
+    fclose(f);
   }
 
   virtual void on_action(int owner, int action) override {

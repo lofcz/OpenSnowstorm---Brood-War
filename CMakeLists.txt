@@ -6,9 +6,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+# ---------------------------------------------------------------------------
+# Common Compile Options & Strictness
+# ---------------------------------------------------------------------------
 function(opensnowstorm_apply_common_compile_options target_name)
     if(MSVC)
-        target_compile_options(${target_name} PRIVATE /bigobj)
+        target_compile_options(${target_name} PRIVATE 
+            /bigobj 
+            /W4       # Warning level 4
+            /MP       # Multi-processor build
+            /utf-8    # UTF-8 source/execution charset
+        )
+    else()
+        target_compile_options(${target_name} PRIVATE 
+            -Wall 
+            -Wextra 
+            -Wno-unused-parameter
+            -fvisibility=hidden
+        )
     endif()
 endfunction()
 
@@ -25,6 +40,9 @@ option(OPENSNOWSTORM_BUILD_UI
 option(OPENSNOWSTORM_BUILD_BWAPI
     "Build the mini-openbwapi BWAPI compatibility wrapper" ON)
 
+enable_testing()
+add_test(NAME DeterminismCheck COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_SOURCE_DIR} python scripts/regression_check.py)
+
 # ---------------------------------------------------------------------------
 # SDL2 UI + gfxtest executable
 # ---------------------------------------------------------------------------
@@ -36,10 +54,10 @@ if(OPENSNOWSTORM_BUILD_UI)
     add_definitions(-DOPENBW_ENABLE_UI)
 
     # Rendering backend selection (SDL2 vs Headless)
-    if(SDL2_FOUND AND SDL2_MIXER_FOUND)
+    if(1 OR SDL2_FOUND)
         add_library(openbw_ui ui/sdl2.cpp)
-        target_link_libraries(openbw_ui ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
-        target_include_directories(openbw_ui PUBLIC ${SDL2_INCLUDE_DIRS})
+        target_link_libraries(openbw_ui "${SDL2_LIBRARY}" "${SDL2_MIXER_LIBRARY}")
+        target_include_directories(openbw_ui PUBLIC "${SDL2_INCLUDE_DIR}" "${SDL2_MIXER_INCLUDE_DIR}")
         add_definitions(-DOPENBW_ENABLE_SDL)
     else()
         add_library(openbw_ui ui/headless_backend.cpp)
@@ -71,3 +89,6 @@ endif()
 if(OPENSNOWSTORM_BUILD_BWAPI)
     add_subdirectory(mini-openbwapi)
 endif()
+
+add_executable(test_ui test_ui.cpp)
+

@@ -55,6 +55,14 @@ bool file_exists(const std::string& path) {
 	return true;
 }
 
+void create_directory_if_not_exists(const std::string& path) {
+#ifdef _WIN32
+	CreateDirectoryA(path.c_str(), nullptr);
+#else
+	mkdir(path.c_str(), 0755);
+#endif
+}
+
 std::string normalize_dir_path(std::string path) {
 	while (!path.empty() && (path.back() == '/' || path.back() == '\\')) path.pop_back();
 	return path;
@@ -124,6 +132,8 @@ std::string resolve_data_dir_or_throw(const char* argv0, const char* explicit_da
 	push_unique_dir(candidates, "C:/Program Files/StarCraft");
 	push_unique_dir(candidates, "D:/Games/StarCraft");
 	push_unique_dir(candidates, "D:/Games/Starcraft");
+	push_unique_dir(candidates, "E:/Starcraft");
+	push_unique_dir(candidates, "E:/StarCraft");
 #endif
 
 	for (const std::string& dir : candidates) {
@@ -158,7 +168,8 @@ bool default_replay_exists() {
 enum class startup_content_kind {
 	map,
 	replay,
-	campaign_browser
+	campaign_browser,
+	save
 };
 
 struct startup_entry {
@@ -323,6 +334,7 @@ bool has_extension_ci(const std::string& path, const char* extension) {
 std::string make_startup_title(startup_content_kind kind, const std::string& path) {
 	std::string stem = humanize_map_stem(path);
 	std::string lower_path = lowercase_copy(path);
+	if (kind == startup_content_kind::save) return "Saved Game  " + stem;
 	if (kind == startup_content_kind::replay) return "Replay  " + stem;
 	if (lower_path.find("campaign") != std::string::npos || lower_path.find("broodwar") != std::string::npos) {
 		return "Campaign  " + stem;
@@ -418,6 +430,8 @@ void scan_startup_directory(
 			push_startup_entry(out, startup_content_kind::map, entry.path);
 		} else if (has_extension_ci(entry.path, ".rep")) {
 			push_startup_entry(out, startup_content_kind::replay, entry.path);
+		} else if (has_extension_ci(entry.path, ".osv")) {
+			push_startup_entry(out, startup_content_kind::save, entry.path);
 		}
 	}
 }
@@ -426,6 +440,7 @@ int startup_entry_priority(const startup_entry& entry) {
 	// "Continue" entries (resume last-played campaign mission) are pinned to
 	// the top so a player pressing Enter at the frontend resumes immediately.
 	if (entry.title.compare(0, 9, "Continue ") == 0) return -1;
+	if (entry.kind == startup_content_kind::save) return 1;
 	if (entry.kind == startup_content_kind::campaign_browser) return 0;
 	std::string lower = lowercase_copy(entry.path);
 	bool campaign_like = lower.find("campaign") != std::string::npos || lower.find("broodwar") != std::string::npos;
@@ -467,6 +482,7 @@ std::vector<startup_entry> discover_startup_entries(const std::string& data_dir)
 	std::vector<std::string> candidate_dirs;
 	push_unique_dir(candidate_dirs, "maps");
 	push_unique_dir(candidate_dirs, "Maps");
+	push_unique_dir(candidate_dirs, "saves");
 	if (!data_dir.empty()) {
 		push_unique_dir(candidate_dirs, data_dir);
 		push_unique_dir(candidate_dirs, join_path(data_dir, "maps"));
@@ -835,6 +851,16 @@ struct main_t {
 		std::swap(saved_states, new_saved_states);
 	}
 
+	void play_music_for_current_race() {
+		if (ui.local_player_id == -1) return;
+		race_t race = ui.st.players[ui.local_player_id].race;
+		std::string track;
+		if (race == race_t::terran) track = "terran1.wav";
+		else if (race == race_t::zerg) track = "zerg1.wav";
+		else if (race == race_t::protoss) track = "protoss1.wav";
+		if (!track.empty()) ui.play_music(a_string(track.c_str()));
+	}
+
 	void reset() {
 		saved_states.clear();
 		quicksave_slot.reset();
@@ -848,6 +874,13 @@ struct main_t {
 	}
 
 	void capture_mission_result(bool won, bool next_ready) {
+		if (mission_result.active) return;
+		ui.is_paused = true;
+		if (won) {
+			ui.play_music("victory.wav");
+		} else {
+			ui.play_music("defeat.wav");
+		}
 		// uid 229 is the engine's documented "all unit types" sentinel for
 		// trigger_player_kills — it sums the entire unit_deaths table.
 		constexpr int k_all_units = 229;
@@ -1005,6 +1038,32 @@ struct main_t {
 		log("replay: file='%s'\n", replay_file.c_str());
 	}
 
+	void load_save_file(const std::string& path) {
+		reset();
+		ui.is_replay_mode = false;
+		ui.is_live_game_mode = true;
+		ui.default_enforce_local_visibility = true;
+		ui.enforce_local_visibility = true;
+		serialization::state_serializer serializer{ui.st};
+		serialization::state_serializer::save_metadata_t md;
+		if (serializer.load_full(a_string(path.c_str()), ui.action_st, ui.apm, ui.st.global, ui.st.game, md)) {
+			ui.replay_frame = ui.st.current_frame;
+			live_result_reported = false;
+			mission_result = {};
+			current_map_file = md.current_map_file.c_str();
+			ui.current_objectives_text = md.objectives_text;
+			ui.pending_next_scenario = md.pending_next_scenario;
+			ui.active_portrait.unit_type = md.portrait_unit_type;
+			ui.active_portrait.end_frame = md.portrait_end_frame;
+			pending_next_map_file.clear();
+			ui.is_paused = false;
+			ui.set_image_data();
+			log("client: restored from %s to frame %d\n", path.c_str(), ui.st.current_frame);
+		} else {
+			error("failed to load save %s", path.c_str());
+		}
+	}
+
 	void enable_frontend(std::vector<startup_entry> entries) {
 		frontend_entries = std::move(entries);
 		frontend_active = true;
@@ -1052,6 +1111,8 @@ struct main_t {
 				load_single_player_map(entry.path);
 			} else if (entry.kind == startup_content_kind::replay) {
 				load_replay_session(entry.path);
+			} else if (entry.kind == startup_content_kind::save) {
+				load_save_file(entry.path);
 			} else if (entry.kind == startup_content_kind::campaign_browser) {
 				frontend_current_view = frontend_view::episodes;
 				frontend_selected_index = 0;
@@ -1487,6 +1548,8 @@ struct main_t {
 		ui.local_player_id = selected_local;
 		ui.enemy_player_id = selected_enemy;
 		ui.replay_frame = ui.st.current_frame;
+
+		play_music_for_current_race();
 		ui.set_image_data();
 		current_map_file = map_file;
 		current_map_display_name = humanize_map_stem(map_file);
@@ -1740,23 +1803,36 @@ struct main_t {
 		if (ui.quicksave_pending) {
 			ui.quicksave_pending = false;
 			serialization::state_serializer serializer{ui.st};
-			serializer.save_full("quicksave.osv", ui.action_st, ui.apm);
-			log("quicksave: saved to quicksave.osv at frame %d\n", ui.st.current_frame);
+			serialization::state_serializer::save_metadata_t md;
+			md.current_map_file = a_string(current_map_file.c_str());
+			md.objectives_text = ui.current_objectives_text;
+			md.pending_next_scenario = ui.pending_next_scenario;
+			md.portrait_unit_type = ui.active_portrait.unit_type;
+			md.portrait_end_frame = ui.active_portrait.end_frame;
+			create_directory_if_not_exists("saves");
+			serializer.save_full("saves/quicksave.osv", ui.action_st, ui.apm, md);
+			log("quicksave: saved to saves/quicksave.osv at frame %d\n", ui.st.current_frame);
 			ui.push_hud_message("Saved.", 3 * 24);
 		}
 		if (ui.quickload_pending) {
 			ui.quickload_pending = false;
 			serialization::state_serializer serializer{ui.st};
-			if (serializer.load_full("quicksave.osv", ui.action_st, ui.apm, ui.st.global, ui.st.game)) {
+			serialization::state_serializer::save_metadata_t md;
+			if (serializer.load_full("saves/quicksave.osv", ui.action_st, ui.apm, ui.st.global, ui.st.game, md)) {
 				ui.replay_frame = ui.st.current_frame;
 				live_result_reported = false;
 				mission_result = {};
+				current_map_file = md.current_map_file.c_str();
+				ui.current_objectives_text = md.objectives_text;
+				ui.pending_next_scenario = md.pending_next_scenario;
+				ui.active_portrait.unit_type = md.portrait_unit_type;
+				ui.active_portrait.end_frame = md.portrait_end_frame;
 				pending_next_map_file.clear();
 				if (true) ui.is_paused = false;
-				log("quickload: restored from quicksave.osv to frame %d\n", ui.st.current_frame);
+				log("quickload: restored from saves/quicksave.osv to frame %d\n", ui.st.current_frame);
 				ui.push_hud_message("Loaded.", 3 * 24);
 			} else {
-				log("quickload: no save available\n");
+				log("quickload: no save available or incompatible version\n");
 				ui.push_hud_message("No save.", 3 * 24);
 			}
 		}
@@ -1955,10 +2031,33 @@ struct main_t {
 		draw_rgba_text(pixels, pitch, width, height, x + 30, y + box_h / 2, "PORTRAIT", 2, rgba32(100, 120, 160, 200));
 	}
 
+	void draw_mission_timer(uint32_t* pixels, int pitch, int width, int height) {
+		if (frontend_active || !ui.is_live_game_mode) return;
+		int frames = (int)ui.st.current_frame;
+		int seconds = frames / 24;
+		int minutes = seconds / 60;
+		int hours = minutes / 60;
+		seconds %= 60;
+		minutes %= 60;
+		char buf[16];
+		if (hours > 0) sprintf(buf, "%d:%02d:%02d", hours, minutes, seconds);
+		else sprintf(buf, "%02d:%02d", minutes, seconds);
+		
+		int scale = 1;
+		int w = text_pixel_width(buf, scale) + 12;
+		int h = 16;
+		int x = width - w - 16;
+		int y = 16 + 16 + 8; // Below speed indicator
+		fill_rgba_rect(pixels, pitch, width, height, x, y, w, h, rgba32(8, 12, 22, 200));
+		draw_rgba_frame(pixels, pitch, width, height, x, y, w, h, 1, rgba32(171, 124, 48, 200));
+		draw_rgba_text(pixels, pitch, width, height, x + 6, y + 4, buf, scale, rgba32(200, 220, 240, 255));
+	}
+
 	void draw_client_overlays(uint32_t* pixels, int pitch, int width, int height) {
 		draw_portrait_overlay(pixels, pitch, width, height);
 		draw_objectives_overlay(pixels, pitch, width, height);
 		draw_speed_indicator(pixels, pitch, width, height);
+		draw_mission_timer(pixels, pitch, width, height);
 		draw_pause_overlay(pixels, pitch, width, height);
 		draw_debrief_overlay(pixels, pitch, width, height);
 	}
@@ -3076,7 +3175,7 @@ static void print_usage(const char* argv0) {
 		"      Set Next Scenario trigger target first, then falls back to the next alphabetically-sorted campaign\n"
 		"      map in the same folder so curated campaign packs chain without needing per-map triggers.\n"
 		"      Campaign maps auto-pause on load with a 'Press Space to begin' briefing banner; the first unpause\n"
-		"      dismisses the briefing.  Quicksave (F5) / quickload (F8) are still in-memory only.\n"
+		"      dismisses the briefing.  F5 saves to disk; F8 restores the last quicksave.\n"
 		"      Mission objectives set by map triggers render as a persistent top-left panel.\n"
 		"      Victory and defeat show a debrief overlay with time, unit/building stats, kills, and resources.\n"
 		"      Press Enter on the debrief to advance (next mission if available, else startup shell).\n"
@@ -3495,6 +3594,9 @@ int main(int argc, char** argv) {
 
 		ui.load_data_file = [&](a_vector<uint8_t>& data, a_string filename) {
 			load_data_file(data, std::move(filename));
+		};
+		ui.load_data_file_exists = [&](const a_string& filename) {
+			return load_data_file.file_exists(filename);
 		};
 
 		log("initializing ui...\n");

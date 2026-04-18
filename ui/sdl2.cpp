@@ -356,6 +356,8 @@ bool initialized = false;
 int frequency = 0;
 int channels = 64;
 
+Mix_Music* current_music = nullptr;
+
 #ifndef OPENBW_NO_SDL_MIXER
 
 void init() {
@@ -417,6 +419,31 @@ void set_volume(int channel, int volume) {
 	Mix_Volume(channel, volume);
 }
 
+void play_music(const void* data, size_t size) {
+	if (!initialized) init();
+	if (current_music) {
+		Mix_HaltMusic();
+		Mix_FreeMusic(current_music);
+		current_music = nullptr;
+	}
+	current_music = Mix_LoadMUS_RW(SDL_RWFromConstMem(data, (int)size), 1);
+	if (current_music) {
+		Mix_PlayMusic(current_music, -1);
+	}
+}
+
+void stop_music() {
+	if (current_music) {
+		Mix_HaltMusic();
+		Mix_FreeMusic(current_music);
+		current_music = nullptr;
+	}
+}
+
+void set_music_volume(int volume) {
+	Mix_VolumeMusic(volume);
+}
+
 std::unique_ptr<sound> load_wav(const void* data, size_t size) {
 	if (!initialized) init();
 	Mix_Chunk* c = Mix_LoadWAV_RW(SDL_RWFromConstMem(data, (int)size), 1);
@@ -446,6 +473,15 @@ void stop(int channel) {
 }
 
 void set_volume(int channel, int volume) {
+}
+
+void play_music(const void* data, size_t size) {
+}
+
+void stop_music() {
+}
+
+void set_music_volume(int volume) {
 }
 
 std::unique_ptr<sound> load_wav(const void* data, size_t size) {

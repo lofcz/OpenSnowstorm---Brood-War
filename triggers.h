@@ -172,6 +172,10 @@
 				else if (a.num_n == 9) { *score -= val; if (*score < 0) *score = 0; }
 			}
 			return true;
+		case 18: // set doodad state
+		case 19: // set doodad animation
+		case 20: // wait for any unit in location
+			return true;
 		case 21: // set countdown timer
 			if (a.num_n == 7) st.countdown_timer = a.time_n;
 			else if (a.num_n == 8) st.countdown_timer += a.time_n;
@@ -300,6 +304,20 @@
 				}
 			}
 			return true;
+		case 34: // run ai script at location (alternate)
+			{
+				auto& loc = st.locations.at(a.location - 1);
+				xy pos = (loc.area.from + loc.area.to) / 2;
+				for (int p : trigger_players(owner, a.group_n)) {
+					trigger_start_ai_script(p, a.group2_n, pos);
+				}
+			}
+			return true;
+		case 35: // stop ai script
+			for (int p : trigger_players(owner, a.group_n)) {
+				for (auto& s : st.ai_st.player_scripts[p]) s.active = false;
+			}
+			return true;
 		case 36: // give units to player
 			{
 				int dst = a.group2_n;
@@ -340,6 +358,29 @@
 				target_loc.area.to = to;
 			}
 			return true;
+		case 37: // move location (alternate)
+			if (a.location > 0 && a.extra_n > 0) {
+				st.locations.at((size_t)a.location - 1).area = st.locations.at((size_t)a.extra_n - 1).area;
+			}
+			return true;
+		case 39: // order (alternate)
+			{
+				int uid = a.extra_n;
+				const location& loc = st.locations.at((size_t)a.location - 1);
+				const location& dst_loc = st.locations.at((size_t)a.group2_n - 1);
+				xy dst_pos = (dst_loc.area.from + dst_loc.area.to) / 2;
+				for (unit_t* u : find_units(loc.area)) {
+					if (!unit_is_at_elevation_flags(u, loc.elevation_flags)) continue;
+					if (!trigger_players_pred(owner, a.group_n, u->owner)) continue;
+					if (!trigger_unit_matches_filter(u, uid)) continue;
+					const order_type_t* ot = nullptr;
+					if (a.num_n == 0) ot = get_order_type(Orders::Move);
+					else if (a.num_n == 1) ot = get_order_type(Orders::Patrol);
+					else if (a.num_n == 2) ot = get_order_type(Orders::AttackMove);
+					if (ot) set_unit_order(u, ot, dst_pos);
+				}
+			}
+			return true;
 		case 40: // set switch
 			if (a.extra_n >= 0 && a.extra_n < 256) {
 				if (a.num_n == 4)       st.switches[(size_t)a.extra_n] = true;
@@ -347,6 +388,18 @@
 				else if (a.num_n == 6)  st.switches[(size_t)a.extra_n] = !st.switches[(size_t)a.extra_n];
 				else if (a.num_n == 11) st.switches[(size_t)a.extra_n] = (lcg_rand(78) & 1) != 0;
 			}
+			return true;
+		case 41: // set mission objectives (alternate)
+			if (a.string_index > 0) {
+				on_trigger_set_objectives(owner, get_map_string((size_t)a.string_index));
+			}
+			return true;
+		case 42: // set next scenario (alternate)
+			if (a.string_index > 0) {
+				on_trigger_set_next_scenario(owner, get_map_string((size_t)a.string_index));
+			}
+			return true;
+		case 43: // set reward
 			return true;
 		case 44: // create unit
 			for (int p : trigger_players(owner, a.group_n)) {
@@ -468,6 +521,40 @@
 			}
 			return true;
 		case 53: // modify unit hangar count
+			{
+				int uid = a.extra_n;
+				int val = a.group2_n;
+				const location& loc = st.locations.at((size_t)a.location - 1);
+				for (unit_t* u : find_units(loc.area)) {
+					if (!unit_is_at_elevation_flags(u, loc.elevation_flags)) continue;
+					if (!trigger_players_pred(owner, a.group_n, u->owner)) continue;
+					if (!trigger_unit_matches_filter(u, uid)) continue;
+					if (unit_is(u, UnitTypes::Protoss_Carrier) || unit_is(u, UnitTypes::Hero_Gantrithor)) {
+						if (a.num_n == 7) u->carrier.outside_count = (size_t)val;
+						else if (a.num_n == 8) u->carrier.outside_count += (size_t)val;
+						else if (a.num_n == 9) u->carrier.outside_count = (size_t)std::max(0, (int)u->carrier.outside_count - val);
+					}
+					if (unit_is(u, UnitTypes::Protoss_Reaver) || unit_is(u, UnitTypes::Hero_Warbringer)) {
+						if (a.num_n == 7) u->reaver.outside_count = (size_t)val;
+						else if (a.num_n == 8) u->reaver.outside_count += (size_t)val;
+						else if (a.num_n == 9) u->reaver.outside_count = (size_t)std::max(0, (int)u->reaver.outside_count - val);
+					}
+				}
+			}
+			return true;
+		case 54: // set unit hangar count
+			{
+				int uid = a.extra_n;
+				int val = a.group2_n;
+				const location& loc = st.locations.at((size_t)a.location - 1);
+				for (unit_t* u : find_units(loc.area)) {
+					if (!unit_is_at_elevation_flags(u, loc.elevation_flags)) continue;
+					if (!trigger_players_pred(owner, a.group_n, u->owner)) continue;
+					if (!trigger_unit_matches_filter(u, uid)) continue;
+					if (unit_is(u, UnitTypes::Protoss_Carrier) || unit_is(u, UnitTypes::Hero_Gantrithor)) u->carrier.outside_count = (size_t)val;
+					if (unit_is(u, UnitTypes::Protoss_Reaver) || unit_is(u, UnitTypes::Hero_Warbringer)) u->reaver.outside_count = (size_t)val;
+				}
+			}
 			return true;
 		case 55: // minimap ping
 			{

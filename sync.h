@@ -385,6 +385,16 @@ struct sync_functions: action_functions {
 				client->frame = r.template get<uint8_t>();
 				break;
 			case sync_messages::id_client_uid: {
+				uint32_t peer_version = r.template get<uint32_t>();
+				if (peer_version < sync_protocol_min_peer_version) {
+					log("Synced: Rejecting peer with obsolete protocol version %u (min %u required)", peer_version, sync_protocol_min_peer_version);
+					this->kill_client(client);
+					break;
+				}
+				if (peer_version > sync_protocol_version) {
+					log("Synced: Warning: peer using newer protocol version %u (current %u); session may be unstable", peer_version, sync_protocol_version);
+				}
+
 				sync_state::uid_t uid;
 				for (auto& v : uid.vals) v = r.template get<uint32_t>();
 				if (get_client(uid)) {
@@ -495,8 +505,9 @@ struct sync_functions: action_functions {
 			return &sync_st.clients.back();
 		}
 		void send_uid(const void* h) {
-			writer<1 + 32 + 32> w;
+			writer<1 + 4 + 32 + 32> w;
 			w.put<uint8_t>(sync_messages::id_client_uid);
+			w.put<uint32_t>(sync_protocol_version);
 			for (auto& v : sync_st.local_client->uid.vals) w.put<uint32_t>(v);
 			size_t n = 0;
 			for (char c : sync_st.local_client->name) {
