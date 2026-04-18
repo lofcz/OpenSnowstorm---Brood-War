@@ -16,6 +16,7 @@ function(opensnowstorm_apply_common_compile_options target_name)
             /W4       # Warning level 4
             /MP       # Multi-processor build
             /utf-8    # UTF-8 source/execution charset
+            /D_CRT_SECURE_NO_WARNINGS # Silence fopen/scanf warnings
         )
     else()
         target_compile_options(${target_name} PRIVATE 
@@ -91,4 +92,3 @@ if(OPENSNOWSTORM_BUILD_BWAPI)
 endif()
 
 add_executable(test_ui test_ui.cpp)
-

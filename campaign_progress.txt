@@ -1,0 +1,2 @@
+# OpenSnowstorm campaign progress v1
+map: E:\Starcraft\maps\campaign\(1)Enslavers01.scm

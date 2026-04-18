@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+project(TestSDL)
+find_package(SDL2 REQUIRED)
+add_executable(test_sdl scratch/test_sdl.c)
+target_link_libraries(test_sdl SDL2::SDL2)

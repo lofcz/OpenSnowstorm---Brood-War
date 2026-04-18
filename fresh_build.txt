@@ -1,0 +1,6 @@
+MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+
+  mini-openbwapi.vcxproj -> D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\Debug\mini-openbwapi.lib
+  openbw_ui.vcxproj -> D:\Games\OpenSnowstorm---Brood-War\build\Debug\openbw_ui.lib
+  test_ui.vcxproj -> D:\Games\OpenSnowstorm---Brood-War\build\Debug\test_ui.exe
+  gfxtest.vcxproj -> D:\Games\OpenSnowstorm---Brood-War\build\Debug\gfxtest.exe

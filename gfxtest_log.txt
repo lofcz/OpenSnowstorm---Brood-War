@@ -1,0 +1,444 @@
+initializing ui...
+ui initialized
+initializing ui...
+ui initialized
+initializing ui...
+ui initialized
+Warning: No map/replay provided in headless mode, and maps/p49.rep not found. Idling.
+Headless mode active.
+initializing ui...
+ui initialized
+initializing ui...
+ui initialized
+initializing ui...
+ui initialized
+play_music: terran1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=melee (auto) fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=72000)
+usage:
+  D:\Games\OpenSnowstorm---Brood-War\build\Debug\gfxtest.exe [--replay <file.rep>] [--data-dir <path>] [--headless]
+  D:\Games\OpenSnowstorm---Brood-War\build\Debug\gfxtest.exe                              (interactive startup frontend)
+  D:\Games\OpenSnowstorm---Brood-War\build\Debug\gfxtest.exe --map <file.scx|file.scm> [--local-player <0-7>] [--enemy-player <0-7>]
+     [--data-dir <path>]
+     [--game-type <auto|melee|ums>] [--local-race <zerg|terran|protoss|random>]
+     [--enemy-race <zerg|terran|protoss|random>] [--fog|--no-fog] [--headless]
+     [--headless-map [<frame-limit>]]  (headless smoke test; default limit 72000)
+     [--debug-overlay]  (show frame/fps/speed overlay on startup; also toggled by F3)
+  D:\Games\OpenSnowstorm---Brood-War\build\Debug\gfxtest.exe --bench <frames> [--replay <file.rep>] [--data-dir <path>]
+  D:\Games\OpenSnowstorm---Brood-War\build\Debug\gfxtest.exe --validate-replay [--replay <file.rep>] [--data-dir <path>]
+  D:\Games\OpenSnowstorm---Brood-War\build\Debug\gfxtest.exe --record-hashes <fixture.txt> [--hash-interval <n>] [--replay <file.rep>] [--data-dir <path>]
+  D:\Games\OpenSnowstorm---Brood-War\build\Debug\gfxtest.exe --verify-hashes <fixture.txt> [--replay <file.rep>] [--data-dir <path>]
+
+note: --game-type auto (default) selects ums for authored/campaign-like slots, else melee.
+      --game-type ums preserves authored slot topology by default.
+      data files are auto-discovered from common locations, or pass --data-dir explicitly.
+      interactive launches without --map/--replay now open a startup shell instead of forcing maps/p49.rep.
+      campaign progress is persisted to campaign_progress.txt beside the executable; the startup shell
+      offers a 'Continue' entry that resumes the last-played mission.  On victory the client tries the
+      Set Next Scenario trigger target first, then falls back to the next alphabetically-sorted campaign
+      map in the same folder so curated campaign packs chain without needing per-map triggers.
+      Campaign maps auto-pause on load with a 'Press Space to begin' briefing banner; the first unpause
+      dismisses the briefing.  F5 saves to disk; F8 restores the last quicksave.
+      Mission objectives set by map triggers render as a persistent top-left panel.
+      Victory and defeat show a debrief overlay with time, unit/building stats, kills, and resources.
+      Press Enter on the debrief to advance (next mission if available, else startup shell).
+      Esc while paused (briefing, pause, or result) returns to the startup shell.
+
+single-player controls (map mode):
+  left drag/select    left click command panel (multi tactical + single-unit production/abilities)   middle drag camera
+  left click map place armed building / landing
+  right click issue order (or cancel armed building / landing)
+  s stop              h hold position            a attack-move (next right click)
+  t patrol (next right click)   x cancel current production/research/morph/nuke
+  b burrow/unburrow   g siege/unsiege   c cloak/decloak
+  r return cargo      l unload all (transport) / lift off-land (Terran flying buildings)
+  i stim pack (Marine/Firebat)   m merge archon/dark archon (High/Dark Templar)
+  tab center camera on selection
+  ctrl+<1-0> set group   shift+<1-0> add group   <1-0> recall group
+  esc cancel armed building/landing/spell targeting; when paused returns to startup shell
+  f toggle fog of war
+  F3 toggle debug overlay (frame counter, draw fps, game speed)
+  F5 quicksave (in-memory)   F8 quickload (restores last quicksave)
+  F7 restart mission   F10 return to startup shell
+  enter dismiss post-mission debrief (continue / retry / return to shell)
+  space/p pause       u speed up                 z/d speed down
+
+spell targeting (command panel or ability hotkey arms a targeting mode):
+  right click on map/unit fires the spell; esc cancels
+  Science Vessel: defensive matrix, irradiate, emp shockwave, scanner sweep
+  Battlecruiser: yamato gun   Ghost: lockdown   Vulture: spider mines
+  Medic: healing, restoration, optical flare
+  Queen: spawn broodlings, parasite, ensnare, infestation
+  Defiler: dark swarm, plague, consume
+  High Templar: psionic storm, hallucination
+  Arbiter: recall, stasis field
+  Dark Archon: mind control, feedback, maelstrom
+  Corsair: disruption web
+initializing ui...
+ui initialized
+Warning: No map/replay provided in headless mode, and maps/p49.rep not found. Idling.
+Headless mode active.
+initializing ui...
+ui initialized
+play_music: protoss1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\BroodWar\(2)Binary Burghs.scx' local_slot=0 enemy_slot=1 mode=melee (auto) fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=240)
+usage:
+  D:\Games\OpenSnowstorm---Brood-War\build\Release\gfxtest.exe [--replay <file.rep>] [--data-dir <path>] [--headless]
+  D:\Games\OpenSnowstorm---Brood-War\build\Release\gfxtest.exe                              (interactive startup frontend)
+  D:\Games\OpenSnowstorm---Brood-War\build\Release\gfxtest.exe --map <file.scx|file.scm> [--local-player <0-7>] [--enemy-player <0-7>]
+     [--data-dir <path>]
+     [--game-type <auto|melee|ums>] [--local-race <zerg|terran|protoss|random>]
+     [--enemy-race <zerg|terran|protoss|random>] [--fog|--no-fog] [--headless]
+     [--headless-map [<frame-limit>]]  (headless smoke test; default limit 72000)
+     [--debug-overlay]  (show frame/fps/speed overlay on startup; also toggled by F3)
+  D:\Games\OpenSnowstorm---Brood-War\build\Release\gfxtest.exe --bench <frames> [--replay <file.rep>] [--data-dir <path>]
+  D:\Games\OpenSnowstorm---Brood-War\build\Release\gfxtest.exe --validate-replay [--replay <file.rep>] [--data-dir <path>]
+  D:\Games\OpenSnowstorm---Brood-War\build\Release\gfxtest.exe --record-hashes <fixture.txt> [--hash-interval <n>] [--replay <file.rep>] [--data-dir <path>]
+  D:\Games\OpenSnowstorm---Brood-War\build\Release\gfxtest.exe --verify-hashes <fixture.txt> [--replay <file.rep>] [--data-dir <path>]
+
+note: --game-type auto (default) selects ums for authored/campaign-like slots, else melee.
+      --game-type ums preserves authored slot topology by default.
+      data files are auto-discovered from common locations, or pass --data-dir explicitly.
+      interactive launches without --map/--replay now open a startup shell instead of forcing maps/p49.rep.
+      campaign progress is persisted to campaign_progress.txt beside the executable; the startup shell
+      offers a 'Continue' entry that resumes the last-played mission.  On victory the client tries the
+      Set Next Scenario trigger target first, then falls back to the next alphabetically-sorted campaign
+      map in the same folder so curated campaign packs chain without needing per-map triggers.
+      Campaign maps auto-pause on load with a 'Press Space to begin' briefing banner; the first unpause
+      dismisses the briefing.  F5 saves to disk; F8 restores the last quicksave.
+      Mission objectives set by map triggers render as a persistent top-left panel.
+      Victory and defeat show a debrief overlay with time, unit/building stats, kills, and resources.
+      Press Enter on the debrief to advance (next mission if available, else startup shell).
+      Esc while paused (briefing, pause, or result) returns to the startup shell.
+
+single-player controls (map mode):
+  left drag/select    left click command panel (multi tactical + single-unit production/abilities)   middle drag camera
+  left click map place armed building / landing
+  right click issue order (or cancel armed building / landing)
+  s stop              h hold position            a attack-move (next right click)
+  t patrol (next right click)   x cancel current production/research/morph/nuke
+  b burrow/unburrow   g siege/unsiege   c cloak/decloak
+  r return cargo      l unload all (transport) / lift off-land (Terran flying buildings)
+  i stim pack (Marine/Firebat)   m merge archon/dark archon (High/Dark Templar)
+  tab center camera on selection
+  ctrl+<1-0> set group   shift+<1-0> add group   <1-0> recall group
+  esc cancel armed building/landing/spell targeting; when paused returns to startup shell
+  f toggle fog of war
+  F3 toggle debug overlay (frame counter, draw fps, game speed)
+  F5 quicksave (in-memory)   F8 quickload (restores last quicksave)
+  F7 restart mission   F10 return to startup shell
+  enter dismiss post-mission debrief (continue / retry / return to shell)
+  space/p pause       u speed up                 z/d speed down
+
+spell targeting (command panel or ability hotkey arms a targeting mode):
+  right click on map/unit fires the spell; esc cancels
+  Science Vessel: defensive matrix, irradiate, emp shockwave, scanner sweep
+  Battlecruiser: yamato gun   Ghost: lockdown   Vulture: spider mines
+  Medic: healing, restoration, optical flare
+  Queen: spawn broodlings, parasite, ensnare, infestation
+  Defiler: dark swarm, plague, consume
+  High Templar: psionic storm, hallucination
+  Arbiter: recall, stasis field
+  Dark Archon: mind control, feedback, maelstrom
+  Corsair: disruption web
+initializing ui...
+ui initialized
+play_music: terran1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\BroodWar\(2)Binary Burghs.scx' local_slot=0 enemy_slot=1 mode=melee (auto) fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=5000)
+bench: loading replay 'maps/p49.rep', stepping 5000 frames (no UI)
+initializing ui...
+ui initialized
+play_music: protoss1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=melee (auto) fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=2000)
+initializing ui...
+ui initialized
+play_music: terran1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=melee (auto) fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=2000)
+initializing ui...
+ui initialized
+play_music: protoss1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=ums fog=on
+single-player: map has 1 briefing triggers; entering briefing mode
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=2000)
+trigger: game paused
+trigger: talking portrait for player 0, unit type 0, duration 25000ms, slot 0
+trigger: talking portrait for player 0, unit type 0, duration 11500ms, slot 0
+trigger: game unpaused
+trigger: local player victory (state 3)
+single-player headless: PASS (victory at frame 3)
+initializing ui...
+ui initialized
+play_music: terran1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\BroodWar\(2)Binary Burghs.scx' local_slot=0 enemy_slot=1 mode=melee fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=1000)
+initializing ui...
+ui initialized
+play_music: terran1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\BroodWar\(2)Binary Burghs.scx' local_slot=0 enemy_slot=1 mode=melee fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=1000)
+initializing ui...
+ui initialized
+play_music: zerg1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\BroodWar\(2)Ice Floes.scx' local_slot=0 enemy_slot=1 mode=melee fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=1000)
+initializing ui...
+ui initialized
+play_music: protoss1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\BroodWar\(2)Binary Burghs.scx' local_slot=0 enemy_slot=1 mode=melee fog=on
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=100)
+initializing ui...
+ui initialized
+Warning: No map/replay provided in headless mode, and maps/p49.rep not found. Idling.
+launcher: discovering entries for data-dir 'E:\Starcraft'...
+launcher: found 6 entries:
+  [MAP] Continue  (2)Binary Burghs (E:\Starcraft\maps\BroodWar\(2)Binary Burghs.scx)
+  [CMD] SINGLE PLAYER CAMPAIGNS ()
+  [MAP] Map  (2)Challenger (E:\Starcraft/maps/(2)Challenger.scm)
+  [MAP] Map  (2)River Crossing (E:\Starcraft/maps/(2)River Crossing.scm)
+  [MAP] Map  (2)Road War (E:\Starcraft/maps/(2)Road War.scm)
+  [REP] Replay  p49 (maps/p49.rep)
+Headless mode active.
+initializing ui...
+ui initialized
+Warning: No map/replay provided in headless mode, and maps/p49.rep not found. Idling.
+launcher: discovering entries for data-dir 'E:\Starcraft'...
+launcher: found 6 entries:
+  [CMD] SINGLE PLAYER CAMPAIGNS ()
+  [MAP] Map  (2)Challenger (E:\Starcraft/maps/(2)Challenger.scm)
+  [MAP] Map  (2)River Crossing (E:\Starcraft/maps/(2)River Crossing.scm)
+  [MAP] Map  (2)Road War (E:\Starcraft/maps/(2)Road War.scm)
+  [MAP] Map  (2)Space Madness (E:\Starcraft/maps/(2)Space Madness.scm)
+  [REP] Replay  p49 (maps/p49.rep)
+Headless mode active.
+initializing ui...
+ui initialized
+Warning: No map/replay provided in headless mode, and maps/p49.rep not found. Idling.
+launcher: discovering entries for data-dir 'E:\Starcraft'...
+launcher: found 6 entries:
+  [MAP] Continue  (1)Enslavers01 (E:\Starcraft\maps\campaign\(1)Enslavers01.scm)
+  [CMD] SINGLE PLAYER CAMPAIGNS ()
+  [MAP] Map  (2)Challenger (E:\Starcraft/maps/(2)Challenger.scm)
+  [MAP] Map  (2)River Crossing (E:\Starcraft/maps/(2)River Crossing.scm)
+  [MAP] Map  (2)Road War (E:\Starcraft/maps/(2)Road War.scm)
+  [REP] Replay  p49 (maps/p49.rep)
+Headless mode active.
+initializing ui...
+ui initialized
+frontend: startup shell active (6 entries)
+frontend: [1] Continue  (1)Enslavers01 -> E:\Starcraft\maps\campaign\(1)Enslavers01.scm
+frontend: [2] SINGLE PLAYER CAMPAIGNS -> 
+frontend: [3] Map  (2)Challenger -> E:\Starcraft/maps/(2)Challenger.scm
+frontend: [4] Map  (2)River Crossing -> E:\Starcraft/maps/(2)River Crossing.scm
+frontend: [5] Map  (2)Road War -> E:\Starcraft/maps/(2)Road War.scm
+frontend: [6] Replay  p49 -> maps/p49.rep
+play_music: zerg1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=melee (auto) fog=on
+frontend: launched E:\Starcraft\maps\campaign\(1)Enslavers01.scm
+briefing: dismissed at frame 0
+[perf] sim: 1.3 fps  mean=772590 us  p95=17466 us
+[perf] sim: 5.7 fps  mean=175466 us  p95=17946 us
+[perf] sim: 9.7 fps  mean=102808 us  p95=17764 us
+[perf] sim: 99.9 fps  mean=10006 us  p95=17593 us
+[perf] sim: 96.3 fps  mean=10381 us  p95=17596 us
+[perf] sim: 80.7 fps  mean=12388 us  p95=33347 us
+[perf] sim: 64.8 fps  mean=15437 us  p95=35598 us
+[perf] sim: 54.2 fps  mean=18458 us  p95=50723 us
+[perf] sim: 46.6 fps  mean=21440 us  p95=51121 us
+[perf] sim: 41.4 fps  mean=24169 us  p95=51196 us
+[perf] sim: 33.5 fps  mean=29889 us  p95=51548 us
+[perf] sim: 30.4 fps  mean=32872 us  p95=51606 us
+[perf] sim: 27.8 fps  mean=35911 us  p95=51713 us
+[perf] sim: 25.8 fps  mean=38789 us  p95=51947 us
+[perf] sim: 24.6 fps  mean=40725 us  p95=51947 us
+[perf] sim: 23.4 fps  mean=42774 us  p95=52003 us
+[perf] sim: 23.3 fps  mean=42835 us  p95=52003 us
+[perf] sim: 23.4 fps  mean=42812 us  p95=52005 us
+[perf] sim: 23.4 fps  mean=42821 us  p95=52024 us
+[perf] sim: 23.4 fps  mean=42794 us  p95=52003 us
+[perf] sim: 23.8 fps  mean=41947 us  p95=51787 us
+[perf] sim: 23.8 fps  mean=42004 us  p95=51787 us
+[perf] sim: 23.8 fps  mean=41997 us  p95=51757 us
+[perf] sim: 23.8 fps  mean=41988 us  p95=51751 us
+[perf] sim: 23.8 fps  mean=41961 us  p95=51732 us
+[perf] sim: 23.8 fps  mean=42000 us  p95=51729 us
+[perf] sim: 23.8 fps  mean=41940 us  p95=51714 us
+[perf] sim: 23.8 fps  mean=42011 us  p95=51757 us
+[perf] sim: 23.8 fps  mean=41996 us  p95=51757 us
+[perf] sim: 23.8 fps  mean=42002 us  p95=51757 us
+[perf] sim: 23.8 fps  mean=41961 us  p95=51796 us
+[perf] sim: 23.8 fps  mean=41952 us  p95=51796 us
+[perf] sim: 23.8 fps  mean=42026 us  p95=51915 us
+[perf] sim: 23.8 fps  mean=42045 us  p95=51936 us
+[perf] sim: 23.8 fps  mean=41986 us  p95=51925 us
+[perf] sim: 23.8 fps  mean=41994 us  p95=51936 us
+[perf] sim: 23.8 fps  mean=42006 us  p95=52040 us
+[perf] sim: 23.8 fps  mean=41949 us  p95=52044 us
+[perf] sim: 23.8 fps  mean=41998 us  p95=52124 us
+[perf] sim: 23.8 fps  mean=41998 us  p95=52063 us
+[perf] sim: 23.8 fps  mean=42010 us  p95=52124 us
+[perf] sim: 23.8 fps  mean=41977 us  p95=52126 us
+[perf] sim: 23.8 fps  mean=42046 us  p95=52124 us
+[perf] sim: 23.8 fps  mean=42012 us  p95=52124 us
+[perf] sim: 23.8 fps  mean=41992 us  p95=52124 us
+[perf] sim: 23.8 fps  mean=41991 us  p95=52149 us
+[perf] sim: 23.8 fps  mean=42013 us  p95=52051 us
+[perf] sim: 23.8 fps  mean=41993 us  p95=52044 us
+[perf] sim: 23.8 fps  mean=42035 us  p95=51963 us
+[perf] sim: 23.8 fps  mean=41994 us  p95=51944 us
+[perf] sim: 23.8 fps  mean=42004 us  p95=52131 us
+[perf] sim: 23.8 fps  mean=41979 us  p95=51860 us
+[perf] sim: 23.8 fps  mean=41985 us  p95=51860 us
+[perf] sim: 23.8 fps  mean=41987 us  p95=51860 us
+[perf] sim: 23.8 fps  mean=41976 us  p95=51860 us
+[perf] sim: 23.8 fps  mean=41938 us  p95=51844 us
+[perf] sim: 23.8 fps  mean=42008 us  p95=51860 us
+[perf] sim: 23.8 fps  mean=42008 us  p95=51844 us
+[perf] sim: 23.8 fps  mean=42039 us  p95=51844 us
+[perf] sim: 23.8 fps  mean=42009 us  p95=51922 us
+[perf] sim: 23.8 fps  mean=41987 us  p95=51844 us
+[perf] sim: 23.8 fps  mean=42038 us  p95=51844 us
+[perf] sim: 23.8 fps  mean=41980 us  p95=51864 us
+[perf] sim: 23.8 fps  mean=41963 us  p95=51864 us
+[perf] sim: 23.8 fps  mean=42018 us  p95=51864 us
+[perf] sim: 23.8 fps  mean=41980 us  p95=52029 us
+[perf] sim: 23.8 fps  mean=41986 us  p95=52067 us
+[perf] sim: 23.8 fps  mean=41964 us  p95=52064 us
+[perf] sim: 23.8 fps  mean=42013 us  p95=52084 us
+[perf] sim: 23.8 fps  mean=41952 us  p95=52104 us
+[perf] sim: 23.8 fps  mean=41961 us  p95=52206 us
+[perf] sim: 23.8 fps  mean=42031 us  p95=52206 us
+[perf] sim: 23.8 fps  mean=42013 us  p95=52104 us
+[perf] sim: 23.8 fps  mean=41979 us  p95=52104 us
+[perf] sim: 23.8 fps  mean=41971 us  p95=52282 us
+[perf] sim: 23.0 fps  mean=43517 us  p95=52282 us
+[perf] sim: 23.0 fps  mean=43458 us  p95=52020 us
+[perf] sim: 23.0 fps  mean=43525 us  p95=52104 us
+[perf] sim: 23.0 fps  mean=43504 us  p95=52104 us
+initializing ui...
+ui initialized
+play_music: zerg1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=ums fog=on
+single-player: map has 1 briefing triggers; entering briefing mode
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=100)
+trigger: game paused
+trigger: talking portrait for player 0, unit type 0, duration 25000ms, slot 0
+trigger: talking portrait for player 0, unit type 0, duration 11500ms, slot 0
+trigger: game unpaused
+trigger: local player victory (state 3)
+single-player headless: PASS (victory at frame 3)
+initializing ui...
+ui initialized
+client: load_single_player_map(fog=on, local_slot=-1, local_race=5, enemy_race=5)
+play_music: protoss1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=ums fog=on
+single-player: map has 1 briefing triggers; entering briefing mode
+Headless mode active.
+single-player headless: stepping until local victory/defeat (limit=100)
+trigger: game paused
+trigger: talking portrait for player 0, unit type 0, duration 25000ms, slot 0
+trigger: talking portrait for player 0, unit type 0, duration 11500ms, slot 0
+trigger: game unpaused
+trigger: local player victory (state 3)
+single-player headless: PASS (victory at frame 3)
+initializing ui...
+ui initialized
+frontend: startup shell active (6 entries)
+frontend: [1] Continue  (1)Enslavers01 -> E:\Starcraft\maps\campaign\(1)Enslavers01.scm
+frontend: [2] SINGLE PLAYER CAMPAIGNS -> 
+frontend: [3] Map  (2)Challenger -> E:\Starcraft/maps/(2)Challenger.scm
+frontend: [4] Map  (2)River Crossing -> E:\Starcraft/maps/(2)River Crossing.scm
+frontend: [5] Map  (2)Road War -> E:\Starcraft/maps/(2)Road War.scm
+frontend: [6] Replay  p49 -> maps/p49.rep
+client: load_single_player_map(fog=on, local_slot=-1, local_race=5, enemy_race=5)
+play_music: terran1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=melee (auto) fog=on
+frontend: launched E:\Starcraft\maps\campaign\(1)Enslavers01.scm
+briefing: dismissed at frame 0
+[perf] sim: 2.1 fps  mean=469555 us  p95=18277 us
+[perf] sim: 8.3 fps  mean=120528 us  p95=17779 us
+[perf] sim: 13.7 fps  mean=73109 us  p95=17664 us
+[perf] sim: 93.3 fps  mean=10717 us  p95=17653 us
+[perf] sim: 78.3 fps  mean=12778 us  p95=32669 us
+[perf] sim: 67.5 fps  mean=14817 us  p95=33725 us
+[perf] sim: 59.5 fps  mean=16816 us  p95=34088 us
+[perf] sim: 52.8 fps  mean=18943 us  p95=34346 us
+[perf] sim: 47.6 fps  mean=21016 us  p95=34589 us
+[perf] sim: 47.6 fps  mean=20990 us  p95=34465 us
+[perf] sim: 47.7 fps  mean=20946 us  p95=34467 us
+[perf] sim: 47.5 fps  mean=21052 us  p95=34464 us
+[perf] sim: 47.7 fps  mean=20954 us  p95=34456 us
+[perf] sim: 47.7 fps  mean=20977 us  p95=34456 us
+[perf] sim: 47.7 fps  mean=20974 us  p95=34456 us
+[perf] sim: 47.8 fps  mean=20932 us  p95=34418 us
+[perf] sim: 47.6 fps  mean=21024 us  p95=34509 us
+[perf] sim: 47.7 fps  mean=20979 us  p95=34519 us
+[perf] sim: 47.6 fps  mean=21004 us  p95=34754 us
+[perf] sim: 47.6 fps  mean=20990 us  p95=34813 us
+[perf] sim: 47.7 fps  mean=20965 us  p95=34789 us
+[perf] sim: 47.6 fps  mean=21003 us  p95=34652 us
+[perf] sim: 47.6 fps  mean=20989 us  p95=34602 us
+[perf] sim: 47.6 fps  mean=21027 us  p95=34360 us
+[perf] sim: 47.6 fps  mean=21001 us  p95=34360 us
+[perf] sim: 47.7 fps  mean=20960 us  p95=34360 us
+[perf] sim: 47.6 fps  mean=20989 us  p95=34381 us
+[perf] sim: 47.5 fps  mean=21054 us  p95=34293 us
+[perf] sim: 47.7 fps  mean=20981 us  p95=34410 us
+[perf] sim: 47.7 fps  mean=20971 us  p95=34478 us
+[perf] sim: 47.5 fps  mean=21049 us  p95=34478 us
+[perf] sim: 47.5 fps  mean=21031 us  p95=34441 us
+[perf] sim: 47.7 fps  mean=20968 us  p95=34441 us
+[perf] sim: 47.6 fps  mean=21000 us  p95=34442 us
+[perf] sim: 47.7 fps  mean=20947 us  p95=34459 us
+[perf] sim: 47.6 fps  mean=20998 us  p95=34379 us
+[perf] sim: 47.6 fps  mean=20990 us  p95=34348 us
+[perf] sim: 47.5 fps  mean=21034 us  p95=34370 us
+[perf] sim: 47.5 fps  mean=21049 us  p95=34327 us
+[perf] sim: 47.6 fps  mean=20993 us  p95=34327 us
+[perf] sim: 47.6 fps  mean=20988 us  p95=34374 us
+[perf] sim: 47.6 fps  mean=20990 us  p95=34390 us
+[perf] sim: 45.1 fps  mean=22186 us  p95=34696 us
+[perf] sim: 41.6 fps  mean=24063 us  p95=50083 us
+[perf] sim: 38.3 fps  mean=26119 us  p95=51153 us
+[perf] sim: 35.6 fps  mean=28055 us  p95=51433 us
+[perf] sim: 33.3 fps  mean=30050 us  p95=51733 us
+[perf] sim: 31.3 fps  mean=31983 us  p95=51789 us
+[perf] sim: 29.5 fps  mean=33941 us  p95=51979 us
+[perf] sim: 27.8 fps  mean=35962 us  p95=51979 us
+[perf] sim: 26.4 fps  mean=37904 us  p95=51979 us
+[perf] sim: 25.1 fps  mean=39859 us  p95=52031 us
+[perf] sim: 23.9 fps  mean=41861 us  p95=52059 us
+[perf] sim: 23.8 fps  mean=41990 us  p95=52059 us
+[perf] sim: 23.8 fps  mean=41992 us  p95=52001 us
+[perf] sim: 22.8 fps  mean=43950 us  p95=52861 us
+[perf] sim: 21.8 fps  mean=45950 us  p95=84949 us
+[perf] sim: 20.9 fps  mean=47929 us  p95=85541 us
+[perf] sim: 20.1 fps  mean=49850 us  p95=85703 us
+[perf] sim: 19.3 fps  mean=51842 us  p95=85894 us
+[perf] sim: 18.6 fps  mean=53776 us  p95=85963 us
+[perf] sim: 17.9 fps  mean=55831 us  p95=86054 us
+[perf] sim: 17.3 fps  mean=57733 us  p95=86201 us
+[perf] sim: 16.8 fps  mean=59683 us  p95=86226 us
+[perf] sim: 16.2 fps  mean=61669 us  p95=86226 us
+[perf] sim: 15.7 fps  mean=63666 us  p95=86226 us
+[perf] sim: 15.2 fps  mean=65642 us  p95=86226 us
+[perf] sim: 14.8 fps  mean=67566 us  p95=86288 us
+initializing ui...
+ui initialized
+client: load_single_player_map(fog=on, local_slot=-1, local_race=5, enemy_race=5)
+play_music: protoss1.wav not found in data archives, skipping
+single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=melee (auto) fog=on

@@ -104,6 +104,9 @@ Original prompt: continue until the game boots and loads just like the original 
 - **Fail-Safe Audio**: Updated the music and SFX loader to skip missing assets gracefully rather than exiting, ensuring campaign playback isn't interrupted by missing optional WAVs.
 - **Validation**: Verified successful headless simulation of `Enslavers01.scm`.
 
-### Next Task: Terran Campaign Playthrough
-- [ ] Complete Terran Mission 1 (Wasteland) with full audio/scripting fidelity.
-- [ ] Verify victory/defeat triggers and post-mission debriefing.
+### Milestone: Campaign UI Polish (2026-04-18)
+- **Main Menu Upgrade**: Implemented a rich space-themed frontend with multi-layered nebulae, starfields, scanlines, and race-specific episode styling.
+- **Comm Terminal UI**: Replaced placeholder portraits with an animated "Terminal HUD" featuring signal waves and race signaling labels.
+- **HUD Polish**: Upgraded Mission Objectives and Pause/Briefing panels with retro terminal fonts, scanlines, and corner accents.
+- **Stability Fixes**: Resolved type errors in UI race comparisons and unit-type data access.
+- **Build Status**: 100% stable build on MSVC. Ready for full-fidelity campaign playthrough.

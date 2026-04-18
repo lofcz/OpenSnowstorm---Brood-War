@@ -1,0 +1,521 @@
+MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+
+  openbw_ui.vcxproj -> D:\Games\OpenSnowstorm---Brood-War\build\Debug\openbw_ui.lib
+  gfxtest.cpp
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18589,84): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18591,79): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18623,19): warning C4244: '+=': conversion from 'unsigned __int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19054,5): error C2666: 'bwgame::state_functions::play_sound': overloaded functions have similar conversions [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(343,7):
+      could be 'void bwgame::state_functions::play_sound(int,const bwgame::unit_t *,bool)'
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(34,15):
+      or       'void bwgame::state_functions::play_sound(int,bwgame::xy,const bwgame::unit_t *,bool)'
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19054,5):
+      while trying to match the argument list '(const int, initializer list, nullptr)'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19692,12): warning C4834: discarding return value of function with [[nodiscard]] attribute [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19693,48): warning C4834: discarding return value of function with [[nodiscard]] attribute [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(581,50): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(646,45): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(918,37): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(929,42): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1010,45): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1018,45): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1027,30): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1124,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1125,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1167,32): warning C4334: '<<': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?) [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1175,37): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1176,37): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1431,17): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1827,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2654,19): warning C4267: '-=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2655,19): warning C4267: '-=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2682,64): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2682,56): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2685,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2685,49): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2719,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2719,49): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2719,37): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2718,53): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4253,38): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4255,39): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4624,27): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4624,13): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(49,12): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(105,33): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(611,28): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(1745,67): error C2039: 'name': is not a member of 'bwgame::unit_type_t' [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+      D:\Games\OpenSnowstorm---Brood-War\data_types.h(79,8):
+      see declaration of 'bwgame::unit_type_t'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(2412,23): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(2674,24): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3090,26): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3420,63): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3420,49): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3422,27): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3422,13): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  openbwapi.cpp
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18589,84): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18591,79): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18623,19): warning C4244: '+=': conversion from 'unsigned __int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19054,5): error C2666: 'bwgame::state_functions::play_sound': overloaded functions have similar conversions [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(343,7):
+      could be 'void bwgame::state_functions::play_sound(int,const bwgame::unit_t *,bool)'
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(34,15):
+      or       'void bwgame::state_functions::play_sound(int,bwgame::xy,const bwgame::unit_t *,bool)'
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19054,5):
+      while trying to match the argument list '(const int, initializer list, nullptr)'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19692,12): warning C4834: discarding return value of function with [[nodiscard]] attribute [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19693,48): warning C4834: discarding return value of function with [[nodiscard]] attribute [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(581,50): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(646,45): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(918,37): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(929,42): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1010,45): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1018,45): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1027,30): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1124,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1125,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1167,32): warning C4334: '<<': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?) [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1175,37): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1176,37): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1431,17): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1706,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1708,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1728,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1730,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1753,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1755,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1776,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1778,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1827,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,47): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1906,44): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,73): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1914,47): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2654,19): warning C4267: '-=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2655,19): warning C4267: '-=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2682,64): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2682,56): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2685,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2685,49): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2719,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2719,49): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2719,37): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2718,53): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4253,38): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4255,39): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,55): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4257,30): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,63): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4335,51): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,72): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4597,55): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4624,27): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4624,13): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4691,41): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4695,40): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+  (compiling source file '../../mini-openbwapi/openbwapi.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\mini-openbwapi\openbwapi.cpp(54,27): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\mini-openbwapi\openbwapi.cpp(54,13): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\mini-openbwapi\openbwapi.cpp(183,47): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\mini-openbwapi\openbwapi.cpp(242,12): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\mini-openbwapi\openbwapi.cpp(1109,47): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\mini-openbwapi\openbwapi.cpp(1111,47): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\mini-openbwapi\mini-openbwapi.vcxproj]

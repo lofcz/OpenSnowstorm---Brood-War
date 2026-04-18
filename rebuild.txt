@@ -1,0 +1,1655 @@
+MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+
+  openbw_ui.vcxproj -> D:\Games\OpenSnowstorm---Brood-War\build\Release\openbw_ui.lib
+  gfxtest.cpp
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(34,89): warning C4100: 'add_race_index': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(34,61): warning C4100: 'source_unit': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(34,37): warning C4100: 'position': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(34,30): warning C4100: 'id': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(35,46): warning C4100: 'unit_type': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(35,28): warning C4100: 'player': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(36,40): warning C4100: 'u': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(38,39): warning C4100: 'u': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(39,36): warning C4100: 'u': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(41,40): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(42,47): warning C4100: 'state': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(42,36): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(46,41): warning C4100: 'u': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(47,66): warning C4100: 'text': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(47,43): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(48,121): warning C4100: 'location_id': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(48,104): warning C4100: 'duration_ms': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(48,89): warning C4100: 'unit_type': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(48,72): warning C4100: 'sound_index': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(48,54): warning C4100: 'string_index': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(48,43): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(49,53): warning C4100: 'location_id': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(49,42): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(50,68): warning C4100: 'text': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(50,45): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(51,71): warning C4100: 'scenario': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(51,48): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(56,53): warning C4100: 'position': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(56,43): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(57,90): warning C4100: 'slot': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(57,73): warning C4100: 'duration_ms': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(57,58): warning C4100: 'unit_type': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(57,47): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(1411,32): warning C4244: 'argument': conversion from 'int' to 'signed char', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(2745,8): warning C4456: declaration of 'data1' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(2711,7):
+      see declaration of 'data1'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(2746,8): warning C4456: declaration of 'data2' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(2712,7):
+      see declaration of 'data2'
+  
+D:\Games\OpenSnowstorm---Brood-War\util.h(653,29): warning C4244: 'argument': conversion from 'T' to 'signed char', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\util.h(653,29): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\util.h(653,29): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\util.h(653,29): warning C4244:             T=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\util.h(653,29): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\util.h(653,29):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\bwgame.h(5139,78):
+          see reference to function template instantiation 'auto bwgame::fixed_point<0,8,true,true>::operator *<int,0x0>(T) const' being compiled
+          with
+          [
+              T=int
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\pathfinding.h(637,11): warning C4189: 'v': local variable is initialized but not referenced [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\pathfinding.h(669,8): warning C4189: 'v0': local variable is initialized but not referenced [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\pathfinding.h(666,8): warning C4189: 'vx': local variable is initialized but not referenced [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\pathfinding.h(671,8): warning C4189: 'dir_outer': local variable is initialized but not referenced [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\pathfinding.h(667,8): warning C4189: 'vy': local variable is initialized but not referenced [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9314,68): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9521,63): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9580,67): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9586,65): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9669,65): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9676,68): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9690,69): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9702,62): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9715,68): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9767,66): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9808,68): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9847,65): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9862,63): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9868,69): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(9880,68): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(10020,65): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(10089,68): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(10124,60): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(10124,32): warning C4100: 'u': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(10177,34): warning C4100: 'u': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(11339,86): warning C4100: 'u': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(11339,68): warning C4100: 'pos': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(11339,60): warning C4100: 'tag': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(11339,43): warning C4100: 'player': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(11358,46): warning C4100: 'err': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(11358,39): warning C4100: 'u': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(11780,13): warning C4458: declaration of 'image' hides class member [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(11800,1):
+      see declaration of 'bwgame::state_functions::iscript_execute::<lambda_db482ff56d366b63138df401a92203bb>::image'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(12208,44): warning C4244: 'argument': conversion from 'int' to 'signed char', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(12218,83): warning C4244: 'argument': conversion from 'int' to 'signed char', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(12571,21): warning C4458: declaration of 'st' hides class member [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(61,9):
+      see declaration of 'bwgame::state_functions::st'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(13720,10): warning C4457: declaration of 'pos' hides function parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(13820,1):
+      see declaration of 'pos'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(13747,10): warning C4457: declaration of 'pos' hides function parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(13820,1):
+      see declaration of 'pos'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(13778,10): warning C4457: declaration of 'pos' hides function parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(13820,1):
+      see declaration of 'pos'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(13805,10): warning C4457: declaration of 'pos' hides function parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(13820,1):
+      see declaration of 'pos'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(14393,41): warning C4100: 'player': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(15999,84): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(16001,79): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(16033,19): warning C4244: '+=': conversion from 'unsigned __int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame_combat.h(631,63): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame_combat.h(667,64): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame_combat.h(740,75): warning C4100: 'ems': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame_combat.h(867,8): warning C4457: declaration of 'pos' hides function parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame_combat.h(806,96):
+      see declaration of 'pos'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame_combat.h(917,68): warning C4100: 'target': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17120,15): warning C4456: declaration of 'size' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17112,13):
+      see declaration of 'size'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17632,21): warning C4244: 'initializing': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17635,21): warning C4244: 'initializing': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17638,21): warning C4244: 'initializing': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17641,21): warning C4244: 'initializing': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17826,16): warning C4456: declaration of 'i' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17818,9):
+      see declaration of 'i'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17832,16): warning C4456: declaration of 'i' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17818,9):
+      see declaration of 'i'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17855,15): warning C4456: declaration of 'v' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17796,14):
+      see declaration of 'v'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17973,34): warning C4244: '=': conversion from 'int' to '_Ty', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17973,34): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17973,34): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17973,34): warning C4244:             _Ty=uint16_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17973,34): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18127,17): warning C4456: declaration of 'v' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18120,15):
+      see declaration of 'v'
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18223,68): warning C4244: '=': conversion from 'int' to 'uint16_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(28,83): warning C4100: 'source_st': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(155,20): warning C4456: declaration of 'u' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(153,13):
+      see declaration of 'u'
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1031,24): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1416,40): warning C4100: 'action': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1416,29): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(438,49): warning C4100: 'old_value': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(583,50): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(648,45): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(751,9): warning C4189: 'sound_id': local variable is initialized but not referenced [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(793,43): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(962,37): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(973,42): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1054,45): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1062,45): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1071,30): warning C4244: 'argument': conversion from '__int64' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1165,15): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1220,41): warning C4100: 'action': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1264,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1265,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1278,16): warning C4456: declaration of 'width' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1254,12):
+      see declaration of 'width'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1307,32): warning C4334: '<<': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?) [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1315,37): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1316,37): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1318,20): warning C4456: declaration of 'width' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1278,16):
+      see declaration of 'width'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1319,20): warning C4456: declaration of 'height' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1279,16):
+      see declaration of 'height'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1324,24): warning C4456: declaration of 'offset_x' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1267,16):
+      see declaration of 'offset_x'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1325,24): warning C4456: declaration of 'offset_y' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1268,16):
+      see declaration of 'offset_y'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1333,26): warning C4456: declaration of 'dst' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1276,18):
+      see declaration of 'dst'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1486,13): warning C4457: declaration of 'data' hides function parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1366,50):
+      see declaration of 'data'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1549,26): warning C4244: '=': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1571,17): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1750,16): warning C4244: '=': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1757,18): warning C4244: '=': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1846,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1846,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1846,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1846,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1846,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1848,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1848,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1848,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1848,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1848,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1868,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1868,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1868,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1868,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1868,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1870,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1870,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1870,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1870,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1870,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1893,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1893,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1893,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1893,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1893,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1895,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1895,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1895,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1895,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1895,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1916,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1916,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1916,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1916,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1916,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1918,19): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1918,19): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1918,19): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1918,19): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1918,19): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1967,22): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,47): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,47): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,47): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,47): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,47): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,44): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,44): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,44): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,44): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2046,44): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2047,53): warning C4244: 'argument': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,73): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,73): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,73): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,73): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,73): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,47): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,47): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,47): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,47): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2054,47): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2077,51): warning C4244: 'argument': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2243,59): warning C4100: 'data_pitch': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2243,46): warning C4100: 'data': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2663,52): warning C4100: 'data_pitch': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2663,39): warning C4100: 'data': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2701,22): warning C4456: declaration of 'c' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2690,15):
+      see declaration of 'c'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2815,19): warning C4267: '-=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2816,19): warning C4267: '-=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2843,64): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2843,56): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2846,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2846,49): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2880,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2880,49): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2880,37): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2879,53): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4443,38): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4445,39): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,55): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,55): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,55): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,55): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,55): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,30): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,30): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,30): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,30): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4447,30): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,63): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,63): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,63): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,63): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,63): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,51): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,51): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,51): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,51): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4525,51): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,72): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,72): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,72): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,72): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,72): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,55): warning C4267: 'argument': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,55): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,55): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,55): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4756,55): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4801,27): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4801,13): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4868,41): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4868,41): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4868,41): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4868,41): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4868,41): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4872,40): warning C4267: '=': conversion from 'size_t' to 'utype', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4872,40): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4872,40): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4872,40): warning C4267:             utype=int [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4872,40): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4901,17): warning C4456: declaration of 'data' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4876,14):
+      see declaration of 'data'
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4914,17): warning C4456: declaration of 'data' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4876,14):
+      see declaration of 'data'
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(558,27): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(558,27): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(558,27): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(558,27): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(558,27): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\serialization.h(166,32): warning C4189: 'v': local variable is initialized but not referenced [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\serialization.h(166,32):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\serialization.h(170,5):
+          see reference to function template instantiation 'void bwgame::serialization::state_serializer::save_state::<lambda_3ab05611a11adf3eeb9f3039b75277d9>::operator ()<bwgame::intrusive_list<bwgame::unit_t,bwgame::default_link_f,pointer-to-member(0xffffffffffffffff)>>(bwgame::intrusive_list<bwgame::unit_t,bwgame::default_link_f,pointer-to-member(0xffffffffffffffff)> &) const' being compiled
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(52,12): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(116,33): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(112,51): warning C4100: 'argv0': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(738,28): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(2043,18): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(2044,8): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(2715,23): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(2977,24): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3393,26): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\pathfinding.h(216,92): warning C4100: 'end': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\pathfinding.h(216,92):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\pathfinding.h(79,4):
+          see reference to function template instantiation 'void bwgame::state_functions::binary_heap_up<_BidIt,bwgame::state_functions::pathfinder_find_long_path::cmp_node>(random_iterator_T,random_iterator_T,random_iterator_T,compare_T) const' being compiled
+          with
+          [
+              _BidIt=std::_Vector_iterator<std::_Vector_val<std::_Simple_types<bwgame::state_functions::pathfinder_find_long_path::node_t *>>>,
+              random_iterator_T=std::_Vector_iterator<std::_Vector_val<std::_Simple_types<bwgame::state_functions::pathfinder_find_long_path::node_t *>>>,
+              compare_T=bwgame::state_functions::pathfinder_find_long_path::cmp_node
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4975,15): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4975,15):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2685,7):
+          see reference to function template instantiation 'void bwgame::ui_functions::async_read_file<bwgame::ui_functions::is_new_image::<lambda_c168d47a6a1fd2bc9b0b3bf72ab0d8ab>>(bwgame::a_string,cb_F)' being compiled
+          with
+          [
+              cb_F=bwgame::ui_functions::is_new_image::<lambda_c168d47a6a1fd2bc9b0b3bf72ab0d8ab>
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\util.h(641,29): warning C4267: 'argument': conversion from 'size_t' to 'unsigned int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\util.h(641,29):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2938,48):
+          see reference to function template instantiation 'bwgame::fixed_point<16,16,false,false> bwgame::fixed_point<16,16,false,false>::operator /<size_t,0x0>(T) const' being compiled
+          with
+          [
+              T=size_t
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2938,16):
+              see the first reference to 'bwgame::fixed_point<16,16,false,false>::operator /' in 'bwgame::ui_functions::resize'
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(584,35): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(584,35): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(584,35): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(584,35): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(584,35): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(584,35):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3383,10):
+          see reference to function template instantiation 'void bwgame::replay_saver_functions::save_replay<bwgame::data_loading::file_writer<true>>(int,writer_T &)' being compiled
+          with
+          [
+              writer_T=bwgame::data_loading::file_writer<true>
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(585,35): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(585,35): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(585,35): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(585,35): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(585,35): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(586,35): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(586,35): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(586,35): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(586,35): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(586,35): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(588,36): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(588,36): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(588,36): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(588,36): warning C4244:             T=uint16_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(588,36): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(591,36): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(591,36): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(591,36): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(591,36): warning C4244:             T=uint16_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(591,36): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(596,36): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(596,36): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(596,36): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(596,36): warning C4244:             T=uint16_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(596,36): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(600,46): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(600,46): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(600,46): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(600,46): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(600,46): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(601,46): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(601,46): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(601,46): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(601,46): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(601,46): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(604,46): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(604,46): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(604,46): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(604,46): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(604,46): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(610,46): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(610,46): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(610,46): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(610,46): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(610,46): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(617,22): warning C4267: 'argument': conversion from 'size_t' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(617,22): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(617,22): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(617,22): warning C4267:             T=uint32_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(617,22): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(618,22): warning C4267: 'argument': conversion from 'size_t' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(618,22): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(618,22): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(618,22): warning C4267:             T=uint32_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(618,22): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(619,47): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(619,47): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(619,47): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(619,47): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(619,47): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(620,52): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(620,52): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(620,52): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(620,52): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(620,52): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(621,47): warning C4244: 'argument': conversion from 'int' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(621,47): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(621,47): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(621,47): warning C4244:             T=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(621,47): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(639,29): warning C4267: 'argument': conversion from 'size_t' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(639,29): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(639,29): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(639,29): warning C4267:             T=uint32_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(639,29): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(648,44): warning C4267: 'argument': conversion from 'size_t' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(648,44): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(648,44): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(648,44): warning C4267:             T=uint32_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(648,44): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18987,13): warning C4456: declaration of 'in' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18973,11):
+      see declaration of 'in'
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18987,13):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19229,3):
+          see reference to function template instantiation 'void bwgame::game_player::init<data_files_loader_T>(load_data_file_F &&)' being compiled
+          with
+          [
+              data_files_loader_T=bwgame::data_loading::data_files_loader<bwgame::data_loading::mpq_file<bwgame::data_loading::file_reader<true>>>,
+              load_data_file_F=bwgame::data_loading::data_files_loader<bwgame::data_loading::mpq_file<bwgame::data_loading::file_reader<true>>>
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19248,3):
+          see reference to function template instantiation 'void bwgame::global_init<_Ty>(bwgame::global_state &,load_data_file_F &&)' being compiled
+          with
+          [
+              _Ty=bwgame::data_loading::data_files_loader<bwgame::data_loading::mpq_file<bwgame::data_loading::file_reader<true>>>,
+              load_data_file_F=bwgame::data_loading::data_files_loader<bwgame::data_loading::mpq_file<bwgame::data_loading::file_reader<true>>>
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1136,62): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1136,62):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1641,10):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1453,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_cancel_building_unit<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1342,54): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1342,54):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1455,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_cancel_morph<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1352,54): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1352,54):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1459,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_carrier_stop<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1367,53): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1367,53):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1461,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_reaver_stop<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1357,55): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1357,55):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1483,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_train_fighter<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1347,54): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1347,54):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1489,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_morph_archon<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1298,53): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1298,53):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1497,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_cancel_nuke<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1180,57): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1180,57):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1503,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_cancel_research<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1191,56): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1191,56):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1507,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_cancel_upgrade<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1270,54): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1270,54):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1509,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_cancel_addon<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1275,51): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1275,51):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1513,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_stim_pack<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1303,36): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1303,36):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1604,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_ping_minimap<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1362,59): warning C4100: 'r': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1362,59):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1609,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_morph_dark_archon<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1208,28): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1208,28):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1614,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_chat<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\actions.h(1378,33): warning C4100: 'owner': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\actions.h(1378,33):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\actions.h(1616,11):
+          see reference to function template instantiation 'bool bwgame::action_functions::read_action_ext_cheat<bwgame::data_loading::data_reader_le&>(int,reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(287,23): warning C4245: 'initializing': conversion from 'int' to 'size_t', signed/unsigned mismatch [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(287,23):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1160,5):
+          see reference to function template instantiation 'void bwgame::ui_functions::load_all_image_data<std::function<void (std::vector<uint8_t,std::allocator<uint8_t>> &,bwgame::a_string)>&>(load_data_file_F)' being compiled
+          with
+          [
+              load_data_file_F=std::function<void (std::vector<uint8_t,std::allocator<uint8_t>> &,bwgame::a_string)> &
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(4996,7):
+          see reference to function template instantiation 'void bwgame::load_tileset_image_data<std::function<void (std::vector<uint8_t,std::allocator<uint8_t>> &,bwgame::a_string)>&>(bwgame::tileset_image_data &,size_t,load_data_file_F)' being compiled
+          with
+          [
+              load_data_file_F=std::function<void (std::vector<uint8_t,std::allocator<uint8_t>> &,bwgame::a_string)> &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(301,49): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(308,34): warning C4244: '=': conversion from 'int' to '_Ty', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(308,34): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(308,34): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(308,34): warning C4244:             _Ty=uint8_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(308,34): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(401,37): warning C4244: 'argument': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(401,37):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(1338,17):
+          see reference to function template instantiation 'void bwgame::draw_frame<bwgame::no_remap>(const bwgame::grp_t::frame_t &,bool,uint8_t *,size_t,size_t,size_t,size_t,size_t,remap_F &&)' being compiled
+          with
+          [
+              remap_F=bwgame::no_remap
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(450,7):
+          see reference to function template instantiation 'void bwgame::draw_frame<false,true,false,_Ty>(const bwgame::grp_t::frame_t &,const uint8_t *,uint8_t *,size_t,size_t,size_t,size_t,size_t,remap_F &&)' being compiled
+          with
+          [
+              _Ty=bwgame::no_remap,
+              remap_F=bwgame::no_remap
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(412,37): warning C4244: 'argument': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\static_vector.h(275,25): warning C4100: 'p': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\static_vector.h(275,25):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(1381,30):
+          see reference to class template instantiation 'bwgame::static_vector<size_t,12>' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\static_vector.h(312,3):
+          while compiling class template member function 'bwgame::static_vector<size_t,12>::~static_vector(void)'
+              D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(1381,30):
+              see the first reference to 'bwgame::static_vector<size_t,12>::~static_vector' in 'main_t::load_single_player_map::<lambda_9c5f265418c19651c9a3f0dbd6e8ebd7>::operator ()'
+          D:\Games\OpenSnowstorm---Brood-War\static_vector.h(314,4):
+          see reference to function template instantiation 'void bwgame::static_vector<size_t,12>::m_destroy<unsigned __int64,0>(unsigned __int64 *)' being compiled
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(419,28): warning C4267: 'argument': conversion from 'size_t' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(419,28): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(419,28): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(419,28): warning C4267:             T=uint32_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(419,28): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(419,28):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3383,10):
+          see reference to function template instantiation 'void bwgame::replay_saver_functions::save_replay<bwgame::data_loading::file_writer<true>>(int,writer_T &)' being compiled
+          with
+          [
+              writer_T=bwgame::data_loading::file_writer<true>
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(632,27):
+          see reference to function template instantiation 'bwgame::data_loading::replay_file_writer<base_writer_T,true> bwgame::data_loading::make_replay_file_writer<writer_T>(base_writer_T &)' being compiled
+          with
+          [
+              base_writer_T=bwgame::data_loading::file_writer<true>,
+              writer_T=bwgame::data_loading::file_writer<true>
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(448,42):
+          see reference to class template instantiation 'bwgame::data_loading::replay_file_writer<base_writer_T,true>' being compiled
+          with
+          [
+              base_writer_T=bwgame::data_loading::file_writer<true>
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(416,7):
+          while compiling class template member function 'void bwgame::data_loading::replay_file_writer<base_writer_T,true>::put_bytes(const uint8_t *,size_t)'
+          with
+          [
+              base_writer_T=bwgame::data_loading::file_writer<true>
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(635,15):
+              see the first reference to 'bwgame::data_loading::replay_file_writer<base_writer_T,true>::put_bytes' in 'bwgame::replay_saver_functions::save_replay'
+          with
+          [
+              base_writer_T=bwgame::data_loading::file_writer<true>
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(433,50): warning C4267: 'argument': conversion from 'size_t' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(433,50): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(433,50): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(433,50): warning C4267:             T=uint32_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(433,50): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(436,30): warning C4267: 'argument': conversion from 'size_t' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(436,30): warning C4267:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(436,30): warning C4267:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(436,30): warning C4267:             T=uint32_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(436,30): warning C4267:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(472,21): warning C4458: declaration of 'filename' hides class member [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(453,11):
+      see declaration of 'bwgame::data_loading::file_writer<true>::filename'
+      D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(472,21):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3381,32):
+          see reference to class template instantiation 'bwgame::data_loading::file_writer<true>' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(472,7):
+          while compiling class template member function 'void bwgame::data_loading::file_writer<true>::open(bwgame::a_string)'
+              D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(457,7):
+              see the first reference to 'bwgame::data_loading::file_writer<true>::open' in 'bwgame::data_loading::file_writer<true>::file_writer'
+              D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(3381,34):
+              see the first reference to 'bwgame::data_loading::file_writer<true>::file_writer' in 'run_gen_test_replay'
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(474,7): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(231,21): warning C4458: declaration of 'filename' hides class member [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\data_loading.h(211,11):
+      see declaration of 'bwgame::data_loading::file_reader<true>::filename'
+      D:\Games\OpenSnowstorm---Brood-War\data_loading.h(231,21):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18088,36):
+          see reference to class template instantiation 'bwgame::data_loading::mpq_file<bwgame::data_loading::file_reader<true>>' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1286,16):
+          see reference to class template instantiation 'bwgame::data_loading::file_reader<true>' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\data_loading.h(231,7):
+          while compiling class template member function 'void bwgame::data_loading::file_reader<true>::open(bwgame::a_string)'
+              D:\Games\OpenSnowstorm---Brood-War\data_loading.h(215,7):
+              see the first reference to 'bwgame::data_loading::file_reader<true>::open' in 'bwgame::data_loading::file_reader<true>::file_reader'
+              D:\Games\OpenSnowstorm---Brood-War\replay.h(98,15):
+              see the first reference to 'bwgame::data_loading::file_reader<true>::file_reader' in 'bwgame::replay_functions::load_replay_file'
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(233,7): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18830,18): warning C4456: declaration of 'i' hides previous local declaration [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18800,14):
+      see declaration of 'i'
+      D:\Games\OpenSnowstorm---Brood-War\bwgame.h(18830,18):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19248,3):
+          see reference to function template instantiation 'void bwgame::global_init<_Ty>(bwgame::global_state &,load_data_file_F &&)' being compiled
+          with
+          [
+              _Ty=bwgame::data_loading::data_files_loader<bwgame::data_loading::mpq_file<bwgame::data_loading::file_reader<true>>>,
+              load_data_file_F=bwgame::data_loading::data_files_loader<bwgame::data_loading::mpq_file<bwgame::data_loading::file_reader<true>>>
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\bwgame.h(19085,19):
+          see reference to function template instantiation 'bwgame::grp_t bwgame::read_grp<bwgame::data_loading::data_reader_le&>(reader_T)' being compiled
+          with
+          [
+              reader_T=bwgame::data_loading::data_reader_le &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(76,19): warning C4244: '=': conversion from 'T' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(76,19): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(76,19): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(76,19): warning C4244:             T=uint32_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(76,19): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\data_loading.h(76,19):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(574,7):
+          see reference to function template instantiation 'void bwgame::data_loading::data_writer<true,true>::put<uint32_t,true>(T)' being compiled
+          with
+          [
+              T=uint32_t
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(23,17):
+          see reference to function template instantiation 'void bwgame::data_loading::set_value_at<true,T>(uint8_t *,T)' being compiled
+          with
+          [
+              T=uint32_t
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(76,19): warning C4244: '=': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\data_loading.h(76,19):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(575,7):
+          see reference to function template instantiation 'void bwgame::data_loading::data_writer<true,true>::put<uint16_t,true>(T)' being compiled
+          with
+          [
+              T=uint16_t
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(23,17):
+          see reference to function template instantiation 'void bwgame::data_loading::set_value_at<true,T>(uint8_t *,T)' being compiled
+          with
+          [
+              T=uint16_t
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(380,32): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(380,32):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(416,7):
+          while compiling class template member function 'void bwgame::data_loading::replay_file_writer<base_writer_T,true>::put_bytes(const uint8_t *,size_t)'
+          with
+          [
+              base_writer_T=bwgame::data_loading::file_writer<true>
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(635,15):
+              see the first reference to 'bwgame::data_loading::replay_file_writer<base_writer_T,true>::put_bytes' in 'bwgame::replay_saver_functions::save_replay'
+          with
+          [
+              base_writer_T=bwgame::data_loading::file_writer<true>
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(431,18):
+          see reference to function template instantiation 'void bwgame::data_loading::compress<true,bwgame::data_loading::vector_writer<dst_T,true>>(const uint8_t *,size_t,writer_T &)' being compiled
+          with
+          [
+              dst_T=std::vector<uint8_t,std::allocator<uint8_t>>,
+              writer_T=bwgame::data_loading::vector_writer<std::vector<uint8_t,std::allocator<uint8_t>>,true>
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(382,37): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(385,37): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(388,37): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\replay_saver.h(391,37): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(435,7): warning C4458: declaration of 'r' hides class member [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\data_loading.h(399,17):
+      see declaration of 'bwgame::data_loading::bit_reader<base_reader_T,true>::r'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+      D:\Games\OpenSnowstorm---Brood-War\data_loading.h(435,7):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\replay.h(103,29):
+          see reference to function template instantiation 'bwgame::data_loading::replay_file_reader<base_reader_T,true> bwgame::data_loading::make_replay_file_reader<bwgame::data_loading::data_reader_le>(base_reader_T &)' being compiled
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader_le
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay.h(79,42):
+          see reference to class template instantiation 'bwgame::data_loading::replay_file_reader<base_reader_T,true>' being compiled
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader_le
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay.h(41,7):
+          while compiling class template member function 'void bwgame::data_loading::replay_file_reader<base_reader_T,true>::get_bytes(uint8_t *,size_t)'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader_le
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\replay.h(112,14):
+              see the first reference to 'bwgame::data_loading::replay_file_reader<base_reader_T,true>::get_bytes' in 'bwgame::replay_functions::load_replay'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader_le
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\replay.h(60,5):
+          see reference to function template instantiation 'void bwgame::data_loading::decompress<true>(uint8_t *,size_t,uint8_t *,size_t)' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\data_loading.h(461,22):
+          see reference to function template instantiation 'auto bwgame::data_loading::bit_reader<base_reader_T,true>::get_bits<2,true>(void)' being compiled
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(910,12): warning C4244: '=': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(925,19): warning C4244: '=': conversion from 'int' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(993,32): warning C4244: '=': conversion from 'int32_t' to '_Ty', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(993,32): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(993,32): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(993,32): warning C4244:             _Ty=int16_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(993,32): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\data_loading.h(993,32):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1120,24):
+          see reference to function template instantiation 'size_t bwgame::data_loading::decompress_adpcm<true>(uint8_t *,size_t,uint8_t *,size_t,size_t)' being compiled
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(995,51): warning C4244: 'argument': conversion from 'int32_t' to 'T', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(995,51): warning C4244:         with [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(995,51): warning C4244:         [ [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(995,51): warning C4244:             T=int16_t [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(995,51): warning C4244:         ] [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(338,19): warning C4244: '=': conversion from 'uint32_t' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\data_loading.h(338,19):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1050,2):
+          while compiling class template member function 'bwgame::data_loading::mpq_archive_file_reader<base_reader_T,true>::mpq_archive_file_reader(bwgame::a_string,base_reader_T &,size_t,bwgame::data_loading::block_table_entry,uint32_t,const bwgame::data_loading::crypt_table_t &)'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1261,3):
+              see the first reference to 'bwgame::data_loading::mpq_archive_file_reader<base_reader_T,true>::mpq_archive_file_reader' in 'bwgame::data_loading::mpq_archive_reader<bwgame::data_loading::data_reader<true,true>,true>::open'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1276,21):
+              see the first reference to 'bwgame::data_loading::mpq_archive_reader<bwgame::data_loading::data_reader<true,true>,true>::open' in 'bwgame::data_loading::mpq_data::operator ()'
+          D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1069,17):
+          see reference to function template instantiation 'bwgame::data_loading::encrypted_reader<base_reader_T,true> bwgame::data_loading::make_encrypted_reader<true,base_reader_T>(base_reader_T &,size_t,uint32_t,const bwgame::data_loading::crypt_table_t &)' being compiled
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\data_loading.h(381,55):
+          see reference to class template instantiation 'bwgame::data_loading::encrypted_reader<base_reader_T,true>' being compiled
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\data_loading.h(333,7):
+          while compiling class template member function 'void bwgame::data_loading::encrypted_reader<base_reader_T,true>::get_bytes(uint8_t *,size_t)'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1086,28):
+              see the first reference to 'bwgame::data_loading::encrypted_reader<base_reader_T,true>::get_bytes' in 'bwgame::data_loading::mpq_archive_file_reader<base_reader_T,true>::read_sector::<lambda_1b5bb9e8b1012cec8aff65b50bd9c581>::operator ()'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1102,28):
+              see the first reference to 'bwgame::data_loading::mpq_archive_file_reader<base_reader_T,true>::read_sector::<lambda_1b5bb9e8b1012cec8aff65b50bd9c581>::operator ()' in 'bwgame::data_loading::mpq_archive_file_reader<base_reader_T,true>::read_sector'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1136,65):
+              see the first reference to 'bwgame::data_loading::mpq_archive_file_reader<base_reader_T,true>::read_sector' in 'bwgame::data_loading::mpq_archive_file_reader<base_reader_T,true>::get_bytes'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\data_loading.h(1279,19):
+              see the first reference to 'bwgame::data_loading::mpq_archive_file_reader<base_reader_T,true>::get_bytes' in 'bwgame::data_loading::mpq_data::operator ()'
+          with
+          [
+              base_reader_T=bwgame::data_loading::data_reader<true,true>
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\data_loading.h(356,20): warning C4244: '=': conversion from 'uint32_t' to 'uint8_t', possible loss of data [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(430,27): warning C4100: 'b': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(430,27):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\bwgame.h(1613,52):
+          see reference to function template instantiation 'void bwgame::error<>(const char *)' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\util.h(836,18):
+          see reference to function template instantiation 'bwgame::a_string bwgame::format<>(const char *)' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\util.h(826,16):
+          see reference to function template instantiation 'const char *bwgame::strf::format<bwgame::a_string,>(dst_T &,const char *)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(443,16):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::advance<bwgame::strf::strf_detail::builder<dst_T>>(builder_T &)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              builder_T=bwgame::strf::strf_detail::builder<bwgame::a_string>
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(84,14): warning C4245: '=': conversion from 'int' to 'unsigned int', signed/unsigned mismatch [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(84,14):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\ui.h(2748,31):
+          see reference to function template instantiation 'bwgame::a_string bwgame::format<bwgame::a_string&,size_t&>(const char *,bwgame::a_string &,size_t &)' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\util.h(826,16):
+          see reference to function template instantiation 'const char *bwgame::strf::format<bwgame::a_string,bwgame::a_string&,size_t&>(dst_T &,const char *,bwgame::a_string &,size_t &)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(442,31):
+          see reference to class template instantiation 'bwgame::strf::strf_detail::builder<dst_T>' being compiled
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(60,15):
+          while compiling class template member function 'bwgame::strf::strf_detail::descriptor bwgame::strf::strf_detail::builder<dst_T>::next(void)'
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\strf.h(418,14):
+              see the first reference to 'bwgame::strf::strf_detail::builder<dst_T>::next' in 'bwgame::strf::strf_detail::builder<dst_T>::finish'
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\strf.h(444,3):
+              see the first reference to 'bwgame::strf::strf_detail::builder<dst_T>::finish' in 'bwgame::strf::format'
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\util.h(826,16):
+              see the first reference to 'bwgame::strf::format' in 'bwgame::format'
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(116,18): warning C4245: '=': conversion from 'int' to 'unsigned int', signed/unsigned mismatch [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(117,22): warning C4245: '=': conversion from 'int' to 'unsigned int', signed/unsigned mismatch [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(54,11): warning C4458: declaration of 'dst' hides class member [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(35,11):
+      see declaration of 'bwgame::strf::strf_detail::builder<dst_T>::dst'
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(54,11):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(52,9):
+          while compiling class template member function 'void bwgame::strf::strf_detail::builder<dst_T>::bad(const char *)'
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\strf.h(414,9):
+              see the first reference to 'bwgame::strf::strf_detail::builder<dst_T>::bad' in 'bwgame::strf::strf_detail::builder<dst_T>::finish'
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\strf.h(444,3):
+              see the first reference to 'bwgame::strf::strf_detail::builder<dst_T>::finish' in 'bwgame::strf::format'
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+              D:\Games\OpenSnowstorm---Brood-War\util.h(826,16):
+              see the first reference to 'bwgame::strf::format' in 'bwgame::format'
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(229,29): warning C4100: 'v': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(229,29):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(443,16):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::advance<bwgame::strf::strf_detail::builder<dst_T>,bwgame::a_string&,size_t&>(builder_T &,A1,size_t &)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              builder_T=bwgame::strf::strf_detail::builder<bwgame::a_string>,
+              A1=bwgame::a_string &
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(434,6):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::builder<dst_T>::advance<bwgame::a_string&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=bwgame::a_string &
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(368,19):
+          see reference to function template instantiation 'unsigned int bwgame::strf::strf_detail::builder<dst_T>::to_uint<bwgame::a_string&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=bwgame::a_string &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(242,27): warning C4100: 'v': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(242,27):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(378,6):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::builder<dst_T>::do_signed_int<10,false,bwgame::a_string&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=bwgame::a_string &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(258,29): warning C4100: 'v': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(258,29):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(381,6):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::builder<dst_T>::do_unsigned_int<10,false,bwgame::a_string&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=bwgame::a_string &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(331,21): warning C4100: 'v': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(331,21):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(396,6):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::builder<dst_T>::do_char<bwgame::a_string&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=bwgame::a_string &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(288,24): warning C4100: 'v': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(288,24):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(399,6):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::builder<dst_T>::do_pointer<bwgame::a_string&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=bwgame::a_string &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(299,22): warning C4100: 'v': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(299,22):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(406,6):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::builder<dst_T>::do_float<bwgame::a_string&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=bwgame::a_string &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\strf.h(274,23): warning C4100: 'v': unreferenced parameter [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  (compiling source file '../ui/gfxtest.cpp')
+      D:\Games\OpenSnowstorm---Brood-War\strf.h(274,23):
+      the template instantiation context (the oldest one first) is
+          D:\Games\OpenSnowstorm---Brood-War\ui\gfxtest.cpp(2985,11):
+          see reference to function template instantiation 'bwgame::a_string bwgame::format<const int&,const uint32_t&>(const char *,const int &,const uint32_t &)' being compiled
+          D:\Games\OpenSnowstorm---Brood-War\util.h(826,16):
+          see reference to function template instantiation 'const char *bwgame::strf::format<bwgame::a_string,const int&,const uint32_t&>(dst_T &,const char *,const int &,const uint32_t &)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(443,16):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::advance<bwgame::strf::strf_detail::builder<dst_T>,const int&,const uint32_t&>(builder_T &,A1,const uint32_t &)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              builder_T=bwgame::strf::strf_detail::builder<bwgame::a_string>,
+              A1=const int &
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(434,6):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::builder<dst_T>::advance<const int&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=const int &
+          ]
+          D:\Games\OpenSnowstorm---Brood-War\strf.h(393,6):
+          see reference to function template instantiation 'void bwgame::strf::strf_detail::builder<dst_T>::do_string<const int&>(T)' being compiled
+          with
+          [
+              dst_T=bwgame::a_string,
+              T=const int &
+          ]
+  
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(1426,1): warning C4702: unreachable code [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17475,1): warning C4701: potentially uninitialized local variable 'highest_nindex' used [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(17520,1): warning C4701: potentially uninitialized local variable 'highest_nindex' used [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(2699,1): warning C4701: potentially uninitialized local variable 'prev_larva_spawn_side_values' used [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(2723,1): warning C4701: potentially uninitialized local variable 'data1' used [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+D:\Games\OpenSnowstorm---Brood-War\bwgame.h(2723,1): warning C4701: potentially uninitialized local variable 'data2' used [D:\Games\OpenSnowstorm---Brood-War\build\gfxtest.vcxproj]
+  gfxtest.vcxproj -> D:\Games\OpenSnowstorm---Brood-War\build\Release\gfxtest.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.

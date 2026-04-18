@@ -1167,45 +1167,77 @@ struct main_t {
 		int width = frontend_surface->w;
 		int height = frontend_surface->h;
 
+		auto now = clock.now();
+		double t = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 1000.0;
+
+		// Deep space gradient
 		for (int y = 0; y < height; ++y) {
-			uint8_t r = (uint8_t)(6 + (20 * y) / std::max(1, height));
-			uint8_t g = (uint8_t)(10 + (28 * y) / std::max(1, height));
-			uint8_t b = (uint8_t)(20 + (58 * y) / std::max(1, height));
+			double f = (double)y / std::max(1, height);
+			uint8_t r = (uint8_t)(4 + 8 * f);
+			uint8_t g = (uint8_t)(6 + 12 * f);
+			uint8_t b = (uint8_t)(12 + 24 * f);
 			uint32_t color = rgba32(r, g, b, 255);
 			uint32_t* row = pixels + y * pitch;
 			for (int x = 0; x < width; ++x) row[x] = color;
 		}
-		for (int y = 0; y < height; y += 4) {
-			fill_rgba_rect(pixels, pitch, width, height, 0, y, width, 1, rgba32(0, 0, 0, 48));
-		}
-		
-		auto now = clock.now();
-		auto drift = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 40;
-		for (int i = 0; i < 96; ++i) {
+
+		// Nebula effect - layered noise
+		auto draw_nebula = [&](double ox, double oy, double scale, uint32_t color_base, double alpha) {
+			for (int i = 0; i < 6; ++i) {
+				double nx = ox + sin(t * 0.1 + i * 1.5) * 100;
+				double ny = oy + cos(t * 0.15 + i * 1.2) * 80;
+				int rx = (int)(width * 0.5 + nx);
+				int ry = (int)(height * 0.4 + ny);
+				int rw = (int)(800 * scale * (1.0 + 0.1 * sin(t * 0.5 + i)));
+				int rh = (int)(600 * scale * (1.0 + 0.1 * cos(t * 0.4 + i)));
+				fill_rgba_rect(pixels, pitch, width, height, rx - rw / 2, ry - rh / 2, rw, rh, 
+					rgba32((color_base >> 0) & 0xFF, (color_base >> 8) & 0xFF, (color_base >> 16) & 0xFF, (uint8_t)(alpha * 20)));
+			}
+		};
+		draw_nebula(150, -100, 1.2, rgba32(40, 20, 80), 1.0);  // Purple
+		draw_nebula(-200, 150, 1.0, rgba32(20, 60, 100), 0.8); // Blue
+		draw_nebula(300, 200, 0.8, rgba32(80, 40, 20), 0.5);   // Red/Orange
+
+		// Starfield
+		auto drift = (long long)(t * 25);
+		for (int i = 0; i < 128; ++i) {
 			uint32_t seed = (uint32_t)(i * 1103515245u + 12345u);
 			int star_x = (int)((seed + drift * (1 + seed % 3)) % (uint32_t)std::max(1, width));
 			int star_y = (int)((seed / 97u) % (uint32_t)std::max(1, height));
-			uint8_t shade = (uint8_t)(140 + seed % 100u);
-			if (seed % 10 == 0) shade = (uint8_t)(shade * (0.6 + 0.4 * sin(drift * 0.05 + i)));
+			uint8_t shade = (uint8_t)(160 + seed % 95u);
+			if (seed % 12 == 0) shade = (uint8_t)(shade * (0.5 + 0.5 * sin(t * 2.0 + i)));
 			fill_rgba_rect(pixels, pitch, width, height, star_x, star_y, 2, 2, rgba32(shade, shade, 255, 255));
 		}
 
-		fill_rgba_rect(pixels, pitch, width, height, 40, 36, width - 80, height - 72, rgba32(5, 8, 18, 220));
+		// CRT Scanlines
+		for (int y = 0; y < height; y += 3) {
+			fill_rgba_rect(pixels, pitch, width, height, 0, y, width, 1, rgba32(0, 0, 0, 32));
+		}
+
+		// Main container
+		fill_rgba_rect(pixels, pitch, width, height, 40, 36, width - 80, height - 72, rgba32(2, 4, 12, 180));
 		draw_rgba_frame(pixels, pitch, width, height, 40, 36, width - 80, height - 72, 2, rgba32(171, 124, 48, 255));
 
 		std::string title = "OPENSNOWSTORM";
-		std::string subtitle = "BROOD WAR STARTUP";
+		std::string subtitle = "BROOD WAR ENGINE";
+		uint32_t subtitle_color = rgba32(216, 180, 104, 255);
+
 		if (frontend_current_view == frontend_view::episodes) {
 			subtitle = "SELECT CAMPAIGN EPISODE";
 		} else if (frontend_current_view == frontend_view::missions) {
 			auto eps = get_all_campaigns();
 			if (frontend_selected_episode >= 0 && frontend_selected_episode < (int)eps.size()) {
 				subtitle = eps[frontend_selected_episode].title + ": " + eps[frontend_selected_episode].subtitle;
+				// Race colors
+				if (subtitle.find("TERRAN") != std::string::npos) subtitle_color = rgba32(100, 160, 255, 255);
+				else if (subtitle.find("ZERG") != std::string::npos) subtitle_color = rgba32(255, 100, 255, 255);
+				else if (subtitle.find("PROTOSS") != std::string::npos) subtitle_color = rgba32(100, 255, 100, 255);
 			}
 		}
+
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(title, 4)) / 2 + 3, 62 + 3, title, 4, rgba32(0, 0, 0, 160));
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(title, 4)) / 2, 62, title, 4, rgba32(255, 220, 132, 255));
-		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(subtitle, 2)) / 2, 106, subtitle, 2, rgba32(216, 180, 104, 255));
+		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width(subtitle, 2)) / 2, 106, subtitle, 2, subtitle_color);
 
 		std::string hint = "UP DOWN OR CLICK TO CHOOSE. ENTER TO LAUNCH.";
 		if (frontend_current_view != frontend_view::startup) {
@@ -1260,7 +1292,6 @@ struct main_t {
 		frontend_surface->blit(&*window_surface, 0, 0);
 		ui.wnd.update_surface();
 	}
-
 	void update_frontend() {
 		if (!ui.wnd) return;
 		native_window::event_t e;
@@ -1352,6 +1383,10 @@ struct main_t {
 		ui.is_live_game_mode = true;
 		ui.default_enforce_local_visibility = campaign_fog_of_war;
 		ui.enforce_local_visibility = campaign_fog_of_war;
+
+		log("client: load_single_player_map(fog=%s, local_slot=%d, local_race=%d, enemy_race=%d)\n",
+			campaign_fog_of_war ? "on" : "off", campaign_local_player_slot, campaign_local_race, campaign_enemy_race);
+
 
 		int selected_local = -1;
 		int selected_enemy = -1;
@@ -1872,20 +1907,39 @@ struct main_t {
 
 		int scale = 1;
 		int line_h = 10 * scale;
-		int pad = 8;
-		int longest = 0;
+		int pad = 12;
+		int longest = text_pixel_width("MISSION OBJECTIVES", scale);
 		for (const std::string& line : cached_objectives_lines) longest = std::max(longest, text_pixel_width(line, scale));
 		int box_w = longest + 2 * pad;
-		int box_h = (int)cached_objectives_lines.size() * line_h + 2 * pad + 12;
-		int x = 16;
-		int y = 16;
-		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(8, 12, 22, 210));
-		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 1, rgba32(171, 124, 48, 220));
-		draw_rgba_text(pixels, pitch, width, height, x + pad, y + pad, "OBJECTIVES", scale, rgba32(255, 220, 132, 255));
-		int ty = y + pad + 12;
+		int box_h = (int)cached_objectives_lines.size() * line_h + pad * 2 + 16;
+		int x = 24;
+		int y = 24;
+
+		// HUD Terminal background
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(4, 6, 12, 190));
+		uint32_t border = rgba32(171, 124, 48, 200);
+		
+		// Race header color
+		uint32_t header_color = rgba32(255, 220, 132, 255);
+		race_t local_race = ui.st.players[ui.local_player_id].race;
+		if (local_race == race_t::zerg) { border = rgba32(180, 80, 180, 200); header_color = rgba32(255, 100, 255, 255); }
+		else if (local_race == race_t::terran) { border = rgba32(80, 140, 220, 200); header_color = rgba32(100, 200, 255, 255); }
+		else if (local_race == race_t::protoss) { border = rgba32(80, 200, 100, 200); header_color = rgba32(150, 255, 150, 255); }
+
+		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 1, border);
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, 18, rgba32((border >> 0) & 0xFF, (border >> 8) & 0xFF, (border >> 16) & 0xFF, 128));
+
+		draw_rgba_text(pixels, pitch, width, height, x + pad, y + 4, "MISSION OBJECTIVES", scale, header_color);
+		
+		int ty = y + 24;
 		for (const std::string& line : cached_objectives_lines) {
 			draw_rgba_text(pixels, pitch, width, height, x + pad, ty, line, scale, rgba32(220, 228, 240, 255));
 			ty += line_h;
+		}
+
+		// Subtle scanlines in objectives panel
+		for (int sy = y; sy < y + box_h; sy += 2) {
+			fill_rgba_rect(pixels, pitch, width, height, x, sy, box_w, 1, rgba32(0, 0, 0, 32));
 		}
 	}
 
@@ -1916,7 +1970,7 @@ struct main_t {
 	                         int scale, uint32_t border, uint32_t veil) {
 		if (lines.empty()) return;
 		int line_h = 9 * scale + 4;
-		int pad = 20;
+		int pad = 24;
 		int longest = 0;
 		for (const std::string& l : lines) longest = std::max(longest, text_pixel_width(l, scale));
 		int box_w = longest + 2 * pad;
@@ -1924,8 +1978,19 @@ struct main_t {
 		int x = (width - box_w) / 2;
 		int y = (height - box_h) / 2;
 		if (veil) fill_rgba_rect(pixels, pitch, width, height, 0, 0, width, height, veil);
-		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(10, 16, 30, 235));
+		
+		// Styled box with double border
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(8, 12, 24, 230));
 		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 2, border);
+		draw_rgba_frame(pixels, pitch, width, height, x + 4, y + 4, box_w - 8, box_h - 8, 1, rgba32((border >> 0) & 0xFF, (border >> 8) & 0xFF, (border >> 16) & 0xFF, 100));
+		
+		// Corner accents
+		int cs = 12;
+		fill_rgba_rect(pixels, pitch, width, height, x - 2, y - 2, cs, 4, border);
+		fill_rgba_rect(pixels, pitch, width, height, x - 2, y - 2, 4, cs, border);
+		fill_rgba_rect(pixels, pitch, width, height, x + box_w - cs + 2, y - 2, cs, 4, border);
+		fill_rgba_rect(pixels, pitch, width, height, x + box_w - 2, y - 2, 4, cs, border);
+		
 		int ty = y + pad;
 		bool first = true;
 		for (const std::string& l : lines) {
@@ -2011,24 +2076,62 @@ struct main_t {
 			return;
 		}
 
-		int scale = 1;
-		int box_w = 160;
-		int box_h = 140;
-		int x = width - box_w - 16;
-		int y = 16;
-		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(8, 12, 22, 210));
+		auto now = clock.now();
+		double t = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 1000.0;
+
+		int box_w = 200;
+		int box_h = 160;
+		int x = width - box_w - 24;
+		int y = 24;
+		
+		// Terminal background
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(4, 8, 16, 220));
 		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 1, rgba32(171, 124, 48, 220));
+		
+		// Header bar
+		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, 24, rgba32(20, 30, 60, 200));
+		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, 24, 1, rgba32(100, 140, 200, 180));
 
-		// Show character name if possible
-		std::string name = "COMM TRANSMISSION";
-		if (ui.active_portrait.unit_type >= 0) {
-			name = "UNIT TYPE " + std::to_string(ui.active_portrait.unit_type);
+		std::string label = "COMM TRANSMISSION";
+		uint32_t text_color = rgba32(255, 232, 160, 255);
+		const unit_type_t* put = ui.get_unit_type((UnitTypes)ui.active_portrait.unit_type);
+		if (put) {
+			auto race = ui.st.players[ui.active_portrait.player_id].race;
+			label = uppercase_copy(race == race_t::zerg ? "ZERG SIGNAL" : 
+			                       race == race_t::terran ? "TERRAN SIGNAL" : 
+			                       race == race_t::protoss ? "PROTOSS SIGNAL" : "COMM SIGNAL");
+			if (race == race_t::terran) text_color = rgba32(100, 200, 255, 255);
+			else if (race == race_t::zerg) text_color = rgba32(255, 100, 255, 255);
+			else if (race == race_t::protoss) text_color = rgba32(150, 255, 150, 255);
 		}
-		draw_rgba_text(pixels, pitch, width, height, x + 8, y + 8, uppercase_copy(name), scale, rgba32(255, 232, 160, 255));
+		draw_rgba_text(pixels, pitch, width, height, x + (box_w - text_pixel_width(label, 1)) / 2, y + 6, label, 1, text_color);
 
-		// Placeholder for portrait animation
-		fill_rgba_rect(pixels, pitch, width, height, x + 10, y + 24, box_w - 20, box_h - 34, rgba32(40, 50, 80, 128));
-		draw_rgba_text(pixels, pitch, width, height, x + 30, y + box_h / 2, "PORTRAIT", 2, rgba32(100, 120, 160, 200));
+		// Portrait Area
+		int px = x + 10;
+		int py = y + 34;
+		int pw = box_w - 20;
+		int ph = box_h - 44;
+		fill_rgba_rect(pixels, pitch, width, height, px, py, pw, ph, rgba32(20, 24, 32, 255));
+		draw_rgba_frame(pixels, pitch, width, height, px, py, pw, ph, 1, rgba32(80, 100, 120, 100));
+
+		// Signal Wave Animation
+		for (int wx = 0; wx < pw - 4; ++wx) {
+			double wave1 = sin(t * 10.0 + wx * 0.1) * (ph * 0.2);
+			double wave2 = cos(t * 15.0 - wx * 0.08) * (ph * 0.1);
+			int wy = (int)(py + ph / 2 + wave1 + wave2);
+			if (wy >= py + 2 && wy < py + ph - 2) {
+				pixels[wy * pitch + px + 2 + wx] = text_color;
+			}
+		}
+
+		// Placeholder for portrait content
+		std::string term_status = "RECEIVING...";
+		draw_rgba_text(pixels, pitch, width, height, px + (pw - text_pixel_width(term_status, 1)) / 2, py + ph - 16, term_status, 1, rgba32(200, 210, 230, 200));
+
+		// Scanlines in portrait
+		for (int sy = py; sy < py + ph; sy += 2) {
+			fill_rgba_rect(pixels, pitch, width, height, px, sy, pw, 1, rgba32(0, 0, 0, 64));
+		}
 	}
 
 	void draw_mission_timer(uint32_t* pixels, int pitch, int width, int height) {
@@ -3615,6 +3718,7 @@ int main(int argc, char** argv) {
 			m.campaign_fog_of_war = map_fog_of_war;
 			m.campaign_local_race = local_race;
 			m.campaign_enemy_race = enemy_race;
+			m.campaign_game_type = map_game_type;
 			m.load_single_player_map(map_file);
 		} else if (replay_file) {
 			m.load_replay_session(replay_file);

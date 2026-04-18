@@ -45,6 +45,8 @@ struct image_data {
   std::array<uint8_t, 24> selection_colors;
   std::array<uint8_t, 24> hp_bar_colors;
   std::array<int, 0x100> creep_edge_frame_index{};
+  grp_t cmdbtns;
+  grp_t icons;
 };
 
 template <typename data_T> pcx_image load_pcx_data(const data_T &data) {
@@ -210,6 +212,21 @@ void load_image_data(image_data &img, load_data_file_F &&load_data_file) {
   for (size_t i = 0; i != 19; ++i) {
     img.hp_bar_colors[i] = thpbar_pcx.data[i];
   }
+
+  auto load_grp_file = [&](const a_vector<uint8_t> &data) {
+    if (data.empty()) return grp_t{};
+    return read_grp(data_loading::data_reader_le(data.data(), data.data() + data.size()));
+  };
+
+  try {
+    load_data_file(tmp_data, "unit\\cmdbtns\\cmdbtns.grp");
+    img.cmdbtns = load_grp_file(tmp_data);
+  } catch (...) {}
+
+  try {
+    load_data_file(tmp_data, "game\\icons.grp");
+    img.icons = load_grp_file(tmp_data);
+  } catch (...) {}
 }
 
 template <typename load_data_file_F>
@@ -849,6 +866,7 @@ struct ui_functions : ui_util_functions {
     } else {
       active_portrait.unit_type = unit_type;
       active_portrait.end_frame = st.current_frame + (duration_ms * 24 / 1000);
+      active_portrait.player_id = owner;
     }
   }
 
@@ -937,6 +955,7 @@ struct ui_functions : ui_util_functions {
   struct portrait_info {
     int unit_type = -1;
     int end_frame = 0;
+    int player_id = 0;
   } active_portrait;
 
   struct briefing_slot_info {
@@ -1350,7 +1369,7 @@ struct ui_functions : ui_util_functions {
           if ((tile->explored & visibility_mask) == 0) {
             fill_rectangle(data, data_pitch, tile_area, 0);
           } else if ((tile->visible & visibility_mask) == 0) {
-            darken_rectangle(data, data_pitch, tile_area);
+            darken_rectangle(data, data_pitch, tile_area, 14);
           }
         }
 
@@ -1862,19 +1881,8 @@ struct ui_functions : ui_util_functions {
     }
   }
 
-  void darken_rectangle(uint8_t *data, size_t data_pitch, rect area) {
-    if (area.from.x < 0)
-      area.from.x = 0;
-    if (area.from.y < 0)
-      area.from.y = 0;
-    if (area.to.x > (int)screen_width)
-      area.to.x = screen_width;
-    if (area.to.y > (int)screen_height)
-      area.to.y = screen_height;
-    if (area.from.x >= area.to.x || area.from.y >= area.to.y)
-      return;
-
-    uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * 18];
+  void darken_rectangle(uint8_t *data, size_t data_pitch, rect area, int row = 14) {
+    uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * row];
     size_t width = (size_t)(area.to.x - area.from.x);
     uint8_t *ptr =
         data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
@@ -1995,7 +2003,7 @@ struct ui_functions : ui_util_functions {
     for (size_t y = 0; y != game_st.map_tile_height; ++y) {
       for (size_t x = 0; x != game_st.map_tile_width; ++x) {
         const tile_t &t = st.tiles[y * game_st.map_tile_width + x];
-        if (apply_local_visibility && (t.explored & visibility_mask) == 0) {
+        if (apply_local_visibility && (t.explored & visibility_mask) != 0) {
           *p++ = 0;
           continue;
         }
@@ -2011,8 +2019,8 @@ struct ui_functions : ui_util_functions {
         auto val = bitmap[55 / sizeof(vr4_entry::bitmap_t)];
         size_t shift = 8 * (55 % sizeof(vr4_entry::bitmap_t));
         val >>= shift;
-        if (apply_local_visibility && (t.visible & visibility_mask) == 0) {
-          uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * 18];
+        if ((t.visible & visibility_mask) == 0) {
+          uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * 14];
           val = dark_row[val];
         }
         *p++ = (uint8_t)val;
@@ -2273,25 +2281,28 @@ struct ui_functions : ui_util_functions {
                              st.supply_available[owner][2].raw_value;
       int supply_used = supply_used_raw / 2;
       int supply_avail = supply_avail_raw / 2;
+    // Resource Display
+    {
+      const int icon_y = 6;
+      auto draw_resource_icon = [&](int frame, int x, uint8_t color) {
+        if (img.icons.frames.empty()) {
+            fill_rectangle(data, data_pitch, rect{area.from + xy(x, 8), area.from + xy(x + 5, 13)}, color);
+            return;
+        }
+        const auto &f = img.icons.frames[frame % img.icons.frames.size()];
+        draw_frame(f, false, data, data_pitch, area.from.x + x, area.from.y + icon_y, screen_width, screen_height, no_remap());
+      };
 
-      fill_rectangle(data, data_pitch,
-                     rect{area.from + xy(8, 8), area.from + xy(13, 13)}, 111);
-      draw_small_number(data, data_pitch, area.from + xy(16, 7), minerals, 3,
-                        255);
+      draw_resource_icon(0, 8, 110); // Minerals
+      draw_small_number(data, data_pitch, area.from + xy(22, 7), minerals, 3, 255);
 
-      fill_rectangle(data, data_pitch,
-                     rect{area.from + xy(62, 8), area.from + xy(67, 13)}, 117);
-      draw_small_number(data, data_pitch, area.from + xy(70, 7), gas, 3, 255);
+      draw_resource_icon(1, 62, 117); // Gas
+      draw_small_number(data, data_pitch, area.from + xy(76, 7), gas, 3, 255);
 
-      fill_rectangle(data, data_pitch,
-                     rect{area.from + xy(116, 8), area.from + xy(121, 13)}, 10);
-      draw_small_number(data, data_pitch, area.from + xy(124, 7), supply_used,
-                        2, 255);
-      fill_rectangle(data, data_pitch,
-                     rect{area.from + xy(140, 11), area.from + xy(142, 13)},
-                     255);
-      draw_small_number(data, data_pitch, area.from + xy(145, 7), supply_avail,
-                        2, 255);
+      draw_resource_icon(3, 116, 10); // Supply
+      draw_small_number(data, data_pitch, area.from + xy(130, 7), supply_used, 2, 255);
+      fill_rectangle(data, data_pitch, rect{area.from + xy(146, 11), area.from + xy(148, 13)}, 255);
+      draw_small_number(data, data_pitch, area.from + xy(151, 7), supply_avail, 2, 255);
     }
     
     // Portrait rendering
@@ -2318,151 +2329,65 @@ struct ui_functions : ui_util_functions {
 
       const auto &cmd = live_commands[i];
       bool enabled = live_command_is_enabled(cmd, source);
-      uint8_t fill = 20;
+      
+      int icon_index = -1;
       switch (cmd.kind) {
       case live_command_kind_t::train:
-        fill = 79;
-        break;
-      case live_command_kind_t::train_fighter:
-        fill = 81;
-        break;
       case live_command_kind_t::morph:
-        fill = 93;
-        break;
       case live_command_kind_t::morph_building:
-        fill = 95;
-        break;
       case live_command_kind_t::build_place:
-        fill = 117;
+      case live_command_kind_t::train_fighter:
+      case live_command_kind_t::ability_liftoff_land_toggle:
+        if (cmd.unit_type) icon_index = cmd.unit_type->unknown2; 
         break;
       case live_command_kind_t::research:
-        fill = 68;
+        if (cmd.tech_type) icon_index = cmd.tech_type->icon;
         break;
       case live_command_kind_t::upgrade:
-        fill = 54;
+        if (cmd.upgrade_type) icon_index = cmd.upgrade_type->icon;
         break;
-      case live_command_kind_t::tactical_stop:
-        fill = 33;
-        break;
-      case live_command_kind_t::tactical_hold_position:
-        fill = 74;
-        break;
-      case live_command_kind_t::tactical_attack_move_mode:
-        fill = 140;
-        break;
-      case live_command_kind_t::tactical_patrol_mode:
-        fill = 111;
-        break;
-      case live_command_kind_t::ability_cancel:
-        fill = 33;
-        break;
-      case live_command_kind_t::ability_burrow_toggle:
-        fill = 48;
-        break;
-      case live_command_kind_t::ability_siege_toggle:
-        fill = 74;
-        break;
-      case live_command_kind_t::ability_cloak_toggle:
-        fill = 140;
-        break;
-      case live_command_kind_t::ability_return_cargo:
-        fill = 111;
-        break;
-      case live_command_kind_t::ability_unload_all:
-        fill = 102;
-        break;
-      case live_command_kind_t::ability_liftoff_land_toggle:
-        fill = 122;
-        break;
-      case live_command_kind_t::ability_stim:
-        fill = 162;
-        break;
-      case live_command_kind_t::ability_morph_archon:
-        fill = 175;
-        break;
-      case live_command_kind_t::ability_morph_dark_archon:
-        fill = 186;
-        break;
-      case live_command_kind_t::ability_scanner_sweep:
-        fill = 33;
-        break;
-      case live_command_kind_t::ability_defensive_matrix:
-        fill = 48;
-        break;
-      case live_command_kind_t::ability_irradiate:
-        fill = 74;
-        break;
-      case live_command_kind_t::ability_emp_shockwave:
-        fill = 93;
-        break;
-      case live_command_kind_t::ability_yamato_gun:
-        fill = 140;
-        break;
-      case live_command_kind_t::ability_lockdown:
-        fill = 111;
-        break;
-      case live_command_kind_t::ability_spider_mines:
-        fill = 102;
-        break;
-      case live_command_kind_t::ability_healing:
-        fill = 122;
-        break;
-      case live_command_kind_t::ability_restoration:
-        fill = 162;
-        break;
-      case live_command_kind_t::ability_optical_flare:
-        fill = 175;
-        break;
-      case live_command_kind_t::ability_spawn_broodlings:
-        fill = 186;
-        break;
-      case live_command_kind_t::ability_parasite:
-        fill = 33;
-        break;
-      case live_command_kind_t::ability_dark_swarm:
-        fill = 48;
-        break;
-      case live_command_kind_t::ability_plague:
-        fill = 74;
-        break;
-      case live_command_kind_t::ability_consume:
-        fill = 93;
-        break;
-      case live_command_kind_t::ability_ensnare:
-        fill = 140;
-        break;
-      case live_command_kind_t::ability_psionic_storm:
-        fill = 111;
-        break;
-      case live_command_kind_t::ability_hallucination:
-        fill = 102;
-        break;
-      case live_command_kind_t::ability_recall:
-        fill = 122;
-        break;
-      case live_command_kind_t::ability_stasis_field:
-        fill = 162;
-        break;
-      case live_command_kind_t::ability_disruption_web:
-        fill = 175;
-        break;
-      case live_command_kind_t::ability_mind_control:
-        fill = 186;
-        break;
-      case live_command_kind_t::ability_feedback:
-        fill = 33;
-        break;
-      case live_command_kind_t::ability_maelstrom:
-        fill = 48;
-        break;
-      case live_command_kind_t::ability_infestation:
-        fill = 74;
-        break;
+      case live_command_kind_t::tactical_stop: icon_index = 236; break;
+      case live_command_kind_t::tactical_hold_position: icon_index = 241; break;
+      case live_command_kind_t::tactical_attack_move_mode: icon_index = 237; break;
+      case live_command_kind_t::tactical_patrol_mode: icon_index = 240; break;
+      case live_command_kind_t::ability_cancel: icon_index = 232; break;
+      case live_command_kind_t::ability_burrow_toggle: icon_index = 250; break; // Heuristic
+      case live_command_kind_t::ability_siege_toggle: icon_index = 249; break;
+      case live_command_kind_t::ability_cloak_toggle: icon_index = 248; break;
+      case live_command_kind_t::ability_stim: icon_index = 265; break;
+      default: break;
       }
-      if (!enabled)
-        fill = 14;
-      fill_rectangle(data, data_pitch,
-                     rect{slot.from + xy(2, 2), slot.to - xy(2, 2)}, fill);
+
+      bool icon_drawn = false;
+      if (icon_index >= 0 && !img.cmdbtns.frames.empty()) {
+          const auto &f = img.cmdbtns.frames[icon_index % img.cmdbtns.frames.size()];
+          xy p = slot.from + xy((slot.to.x - slot.from.x - 32) / 2, (slot.to.y - slot.from.y - 32) / 2);
+          auto shadow = [&](uint8_t color, uint8_t old_color) {
+            if (!enabled) {
+              uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * 14];
+              return dark_row[color];
+            }
+            return color;
+          };
+          draw_frame(f, false, data, data_pitch, p.x, p.y, screen_width, screen_height, shadow);
+          icon_drawn = true;
+      }
+
+      if (!icon_drawn) {
+          uint8_t fill = 20;
+          if (!enabled) fill = 14;
+          else {
+              switch (cmd.kind) {
+              case live_command_kind_t::train: fill = 79; break;
+              case live_command_kind_t::train_fighter: fill = 81; break;
+              case live_command_kind_t::morph: fill = 93; break;
+              case live_command_kind_t::morph_building: fill = 95; break;
+              case live_command_kind_t::build_place: fill = 117; break;
+              default: fill = 33; break;
+              }
+          }
+          fill_rectangle(data, data_pitch, rect{slot.from + xy(2, 2), slot.to - xy(2, 2)}, fill);
+      }
       if (live_build_placement_armed &&
           ((cmd.kind == live_command_kind_t::build_place &&
             live_build_placement_command.kind ==
@@ -2539,6 +2464,7 @@ struct ui_functions : ui_util_functions {
                         enabled ? 255 : 51);
     }
   }
+}
 
   void draw_ui(uint8_t *data, size_t data_pitch) {
     if (is_replay_mode)
