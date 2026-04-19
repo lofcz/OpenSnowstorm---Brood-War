@@ -938,20 +938,13 @@ struct main_t {
 		r.lines.push_back(pad_stat("UNIT SCORE", std::to_string(unit_score), col_w));
 		r.lines.push_back(pad_stat("BUILDING SCORE", std::to_string(building_score), col_w));
 		r.lines.push_back("");
-		if (won && next_ready) {
-			r.lines.push_back("ENTER   NEXT MISSION");
-			r.lines.push_back("F7      REPLAY MISSION");
-			r.lines.push_back("F10     STARTUP MENU");
-		} else if (won) {
-			r.lines.push_back("ENTER   STARTUP MENU");
-			r.lines.push_back("F7      REPLAY MISSION");
-		} else {
-			r.lines.push_back("F7      RETRY MISSION");
-			r.lines.push_back("F8      QUICKLOAD");
-			r.lines.push_back("ENTER   STARTUP MENU");
+		mission_result = std::move(r);
+		
+		// Stable campaign progression: persist progress to disk immediately when a mission ends.
+		if (!current_map_file.empty()) {
+			write_campaign_progress(current_map_file, won);
 		}
 
-		mission_result = std::move(r);
 		log("result: %s name='%s' time=%ds units=%d buildings=%d kills=%d losses=%d\n",
 			won ? "victory" : "defeat",
 			mission_name.c_str(),
@@ -1209,9 +1202,15 @@ struct main_t {
 			fill_rgba_rect(pixels, pitch, width, height, star_x, star_y, 2, 2, rgba32(shade, shade, 255, 255));
 		}
 
-		// CRT Scanlines
-		for (int y = 0; y < height; y += 3) {
-			fill_rgba_rect(pixels, pitch, width, height, 0, y, width, 1, rgba32(0, 0, 0, 32));
+		// CRT Scanlines & Visual Static
+		for (int y = 0; y < height; y += 2) {
+			uint8_t alpha = (y % 4 == 0) ? 40 : 20;
+			fill_rgba_rect(pixels, pitch, width, height, 0, y, width, 1, rgba32(0, 0, 0, alpha));
+		}
+		// Moving Scanline Beam
+		int beam_y = (int)(t * 150) % (height + 200) - 100;
+		if (beam_y >= 0 && beam_y < height) {
+			fill_rgba_rect(pixels, pitch, width, height, 0, beam_y, width, 4, rgba32(180, 220, 255, 30));
 		}
 
 		// Main container
@@ -2069,69 +2068,85 @@ struct main_t {
 	}
 
 	void draw_portrait_overlay(uint32_t* pixels, int pitch, int width, int height) {
-		if (frontend_active || !ui.is_live_game_mode) return;
-		if (ui.active_portrait.unit_type == -1) return;
-		if (ui.st.current_frame > ui.active_portrait.end_frame) {
-			ui.active_portrait.unit_type = -1;
+		if (frontend_active || !ui.is_live_game_mode || mission_result.active) return;
+		if (ui.st.is_mission_briefing) {
+			draw_briefing_portrait_overlay(pixels, pitch, width, height);
 			return;
 		}
+		if (ui.active_portrait.unit_type == -1 || ui.st.current_frame >= ui.active_portrait.end_frame) return;
 
+		int pw = 120;
+		int ph = 120;
+		int px = width - pw - 32;
+		int py = height - ph - 160; 
+
+		draw_high_fidelity_portrait(pixels, pitch, width, height, px, py, pw, ph, "TRANSMISSION");
+	}
+
+	void draw_briefing_portrait_overlay(uint32_t* pixels, int pitch, int width, int height) {
+		for (int i = 0; i < 4; ++i) {
+			auto& slot = ui.briefing_slots[i];
+			if (slot.unit_type == -1 || ui.st.current_frame >= slot.end_frame) continue;
+
+			int sx = 80 + i * 160;
+			int sy = 80;
+			draw_high_fidelity_portrait(pixels, pitch, width, height, sx, sy, 128, 128, "BRIEFING");
+		}
+	}
+
+	void draw_high_fidelity_portrait(uint32_t* pixels, int pitch, int width, int height, int px, int py, int pw, int ph, const char* label) {
 		auto now = clock.now();
 		double t = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 1000.0;
 
-		int box_w = 200;
-		int box_h = 160;
-		int x = width - box_w - 24;
-		int y = 24;
-		
-		// Terminal background
-		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, box_h, rgba32(4, 8, 16, 220));
-		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, box_h, 1, rgba32(171, 124, 48, 220));
-		
-		// Header bar
-		fill_rgba_rect(pixels, pitch, width, height, x, y, box_w, 24, rgba32(20, 30, 60, 200));
-		draw_rgba_frame(pixels, pitch, width, height, x, y, box_w, 24, 1, rgba32(100, 140, 200, 180));
+		// Premium Backdrop Container
+		fill_rgba_rect(pixels, pitch, width, height, px - 4, py - 4, pw + 8, ph + 8, rgba32(8, 12, 24, 230));
+		draw_rgba_frame(pixels, pitch, width, height, px - 4, py - 4, pw + 8, ph + 8, 2, rgba32(100, 140, 220, 180));
 
-		std::string label = "COMM TRANSMISSION";
-		uint32_t text_color = rgba32(255, 232, 160, 255);
-		const unit_type_t* put = ui.get_unit_type((UnitTypes)ui.active_portrait.unit_type);
-		if (put) {
-			auto race = ui.st.players[ui.active_portrait.player_id].race;
-			label = uppercase_copy(race == race_t::zerg ? "ZERG SIGNAL" : 
-			                       race == race_t::terran ? "TERRAN SIGNAL" : 
-			                       race == race_t::protoss ? "PROTOSS SIGNAL" : "COMM SIGNAL");
-			if (race == race_t::terran) text_color = rgba32(100, 200, 255, 255);
-			else if (race == race_t::zerg) text_color = rgba32(255, 100, 255, 255);
-			else if (race == race_t::protoss) text_color = rgba32(150, 255, 150, 255);
-		}
-		draw_rgba_text(pixels, pitch, width, height, x + (box_w - text_pixel_width(label, 1)) / 2, y + 6, label, 1, text_color);
-
-		// Portrait Area
-		int px = x + 10;
-		int py = y + 34;
-		int pw = box_w - 20;
-		int ph = box_h - 44;
-		fill_rgba_rect(pixels, pitch, width, height, px, py, pw, ph, rgba32(20, 24, 32, 255));
-		draw_rgba_frame(pixels, pitch, width, height, px, py, pw, ph, 1, rgba32(80, 100, 120, 100));
-
-		// Signal Wave Animation
-		for (int wx = 0; wx < pw - 4; ++wx) {
-			double wave1 = sin(t * 10.0 + wx * 0.1) * (ph * 0.2);
-			double wave2 = cos(t * 15.0 - wx * 0.08) * (ph * 0.1);
-			int wy = (int)(py + ph / 2 + wave1 + wave2);
-			if (wy >= py + 2 && wy < py + ph - 2) {
-				pixels[wy * pitch + px + 2 + wx] = text_color;
+		// High-fidelity background (Animated noise/static)
+		for (int sy = py; sy < py + ph; ++sy) {
+			if (sy < 0 || sy >= height) continue;
+			for (int sx = px; sx < px + pw; ++sx) {
+				if (sx < 0 || sx >= width) continue;
+				uint32_t seed = (uint32_t)(sx * 374761393u + sy * 668265263u + (uint32_t)(t * 120));
+				uint8_t noise = (uint8_t)(seed % 28);
+				pixels[sy * pitch + sx] = rgba32(15 + noise, 20 + noise, 40 + noise);
 			}
 		}
 
-		// Placeholder for portrait content
-		std::string term_status = "RECEIVING...";
-		draw_rgba_text(pixels, pitch, width, height, px + (pw - text_pixel_width(term_status, 1)) / 2, py + ph - 16, term_status, 1, rgba32(200, 210, 230, 200));
-
-		// Scanlines in portrait
+		// CRT Pixel Grid (every 2px horizontally and vertically)
 		for (int sy = py; sy < py + ph; sy += 2) {
-			fill_rgba_rect(pixels, pitch, width, height, px, sy, pw, 1, rgba32(0, 0, 0, 64));
+			if (sy < 0 || sy >= height) continue;
+			for (int sx = px; sx < px + pw; sx += 2) {
+				if (sx < 0 || sx >= width) continue;
+				pixels[sy * pitch + sx] = (pixels[sy * pitch + sx] & 0xFEFEFEFE) >> 1;
+			}
 		}
+
+		// Moving Scanline Effect
+		int scan_y = (int)(t * 120) % (ph + 100) - 50;
+		if (scan_y >= 0 && scan_y < ph) {
+			fill_rgba_rect(pixels, pitch, width, height, px, py + scan_y, pw, 3, rgba32(180, 240, 255, 40));
+		}
+
+		// Horizontal interference lines
+		if ((int)(t * 15) % 10 == 0) {
+			int iy = (int)(t * 1234567) % ph;
+			fill_rgba_rect(pixels, pitch, width, height, px, py + iy, pw, 1, rgba32(255, 255, 255, 30));
+		}
+
+		draw_rgba_text(pixels, pitch, width, height, px + (pw - text_pixel_width(label, 1)) / 2, py - 18, label, 1, rgba32(140, 200, 255, 255));
+	}
+
+	virtual void draw_briefing_screen(uint8_t *data, size_t data_pitch) override {
+		// Fill background with space-like dark index
+		fill_rectangle(data, data_pitch, rect{xy(0,0), xy((int)ui.screen_width, (int)ui.screen_height)}, 0);
+		
+		// Draw frame
+		rect frame_box{xy(20, 20), xy((int)ui.screen_width - 20, (int)ui.screen_height - 20)};
+		line_rectangle(data, data_pitch, frame_box, 117);
+		
+		// Labels
+		draw_small_number(data, data_pitch, xy(40, 30), ui.st.current_frame, 1, 100);
 	}
 
 	void draw_mission_timer(uint32_t* pixels, int pitch, int width, int height) {

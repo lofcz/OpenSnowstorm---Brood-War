@@ -1708,30 +1708,37 @@ struct state_functions {
 
 	bool any_neighbor_tile_unoccupied(const unit_t* u) const {
 		auto unit_bb = unit_sprite_inner_bounding_box(u);
-		rect_t<xy_t<size_t>> tile_bb;
-		tile_bb.from.x = unit_bb.from.x / 32u - 1;
-		tile_bb.from.y = unit_bb.from.y / 32u - 1;
-		tile_bb.to.x = unit_bb.to.x / 32u + 1;
-		tile_bb.to.y = unit_bb.to.y / 32u + 1;
-		if (tile_bb.from.x >= game_st.map_tile_width) tile_bb.from.x = 0;
-		if (tile_bb.from.y >= game_st.map_tile_height) tile_bb.from.y = 0;
-		if (tile_bb.to.x >= game_st.map_tile_width) tile_bb.to.x = game_st.map_tile_width - 1;
-		if (tile_bb.to.y >= game_st.map_tile_height) tile_bb.to.y = game_st.map_tile_height - 1;
-		size_t tile_width = (u->unit_type->dimensions.from.x + u->unit_type->dimensions.to.x + 1) / 32u;
-		size_t tile_height = (u->unit_type->dimensions.from.y + u->unit_type->dimensions.to.y + 1) / 32u;
-		size_t top_index = tile_bb.from.y * game_st.map_tile_width + (tile_bb.from.x + 1);
-		size_t bottom_index = tile_bb.to.y * game_st.map_tile_width + (tile_bb.from.x + 1);
+		rect_t<xy_t<int>> tile_bb;
+		tile_bb.from.x = (int)unit_bb.from.x / 32 - 1;
+		tile_bb.from.y = (int)unit_bb.from.y / 32 - 1;
+		tile_bb.to.x = (int)unit_bb.to.x / 32 + 1;
+		tile_bb.to.y = (int)unit_bb.to.y / 32 + 1;
+		
+		int mw = (int)game_st.map_tile_width;
+		int mh = (int)game_st.map_tile_height;
+		
+		if (tile_bb.from.x < 0) tile_bb.from.x = 0;
+		if (tile_bb.from.y < 0) tile_bb.from.y = 0;
+		if (tile_bb.to.x >= mw) tile_bb.to.x = mw - 1;
+		if (tile_bb.to.y >= mh) tile_bb.to.y = mh - 1;
+		
+		size_t tile_width = (size_t)(u->unit_type->dimensions.from.x + u->unit_type->dimensions.to.x + 1) / 32u;
+		size_t tile_height = (size_t)(u->unit_type->dimensions.from.y + u->unit_type->dimensions.to.y + 1) / 32u;
+		
+		size_t top_index = (size_t)tile_bb.from.y * game_st.map_tile_width + (size_t)(tile_bb.from.x + 1);
+		size_t bottom_index = (size_t)tile_bb.to.y * game_st.map_tile_width + (size_t)(tile_bb.from.x + 1);
 		for (size_t i = 0; i != tile_width; ++i) {
-			if (~st.tiles.at(top_index).flags & tile_t::flag_occupied) return true;
-			if (~st.tiles.at(bottom_index).flags & tile_t::flag_occupied) return true;
+			if (top_index < st.tiles.size() && (~st.tiles.at(top_index).flags & tile_t::flag_occupied)) return true;
+			if (bottom_index < st.tiles.size() && (~st.tiles.at(bottom_index).flags & tile_t::flag_occupied)) return true;
 			++top_index;
 			++bottom_index;
 		}
-		size_t left_index = (tile_bb.from.y + 1) * game_st.map_tile_width + tile_bb.from.x;
-		size_t right_index = (tile_bb.from.y + 1) * game_st.map_tile_width + tile_bb.to.x;
+		
+		size_t left_index = (size_t)(tile_bb.from.y + 1) * game_st.map_tile_width + (size_t)tile_bb.from.x;
+		size_t right_index = (size_t)(tile_bb.from.y + 1) * game_st.map_tile_width + (size_t)tile_bb.to.x;
 		for (size_t i = 0; i != tile_height; ++i) {
-			if (~st.tiles.at(left_index).flags & tile_t::flag_occupied) return true;
-			if (~st.tiles.at(right_index).flags & tile_t::flag_occupied) return true;
+			if (left_index < st.tiles.size() && (~st.tiles.at(left_index).flags & tile_t::flag_occupied)) return true;
+			if (right_index < st.tiles.size() && (~st.tiles.at(right_index).flags & tile_t::flag_occupied)) return true;
 			left_index += game_st.map_tile_width;
 			right_index += game_st.map_tile_width;
 		}
@@ -17455,7 +17462,7 @@ struct game_load_functions : state_functions {
 						n_walkable[2] = count_1x4_walkable(walk_x + 3, walk_y);
 						n_walkable[3] = count_4x1_walkable(walk_x, walk_y + 3);
 						size_t highest_n = 0;
-						size_t highest_nindex;
+						size_t highest_nindex = 0;
 						for (size_t i = 4; i != 0;) {
 							--i;
 							size_t n = n_walkable[i];

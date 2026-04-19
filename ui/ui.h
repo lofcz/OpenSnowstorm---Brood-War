@@ -860,11 +860,13 @@ struct ui_functions : ui_util_functions {
         briefing_slots[slot].unit_type = -1;
       } else {
         briefing_slots[slot].unit_type = unit_type;
+        briefing_slots[slot].start_frame = st.current_frame;
         briefing_slots[slot].end_frame =
             st.current_frame + (duration_ms * 24 / 1000);
       }
     } else {
       active_portrait.unit_type = unit_type;
+      active_portrait.start_frame = st.current_frame;
       active_portrait.end_frame = st.current_frame + (duration_ms * 24 / 1000);
       active_portrait.player_id = owner;
     }
@@ -954,12 +956,14 @@ struct ui_functions : ui_util_functions {
   };
   struct portrait_info {
     int unit_type = -1;
+    int start_frame = 0;
     int end_frame = 0;
     int player_id = 0;
   } active_portrait;
 
   struct briefing_slot_info {
     int unit_type = -1;
+    int start_frame = 0;
     int end_frame = 0;
   };
   std::array<briefing_slot_info, 4> briefing_slots;
