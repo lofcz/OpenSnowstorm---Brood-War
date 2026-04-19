@@ -47,6 +47,12 @@ struct image_data {
   std::array<int, 0x100> creep_edge_frame_index{};
   grp_t cmdbtns;
   grp_t icons;
+  grp_t wireframes;
+  grp_t tranwire;
+  grp_t grpwire;
+  pcx_image tconsole;
+  pcx_image zconsole;
+  pcx_image pconsole;
 };
 
 template <typename data_T> pcx_image load_pcx_data(const data_T &data) {
@@ -227,6 +233,23 @@ void load_image_data(image_data &img, load_data_file_F &&load_data_file) {
     load_data_file(tmp_data, "game\\icons.grp");
     img.icons = load_grp_file(tmp_data);
   } catch (...) {}
+
+  try {
+    load_data_file(tmp_data, "unit\\wirefram\\wirefram.grp");
+    img.wireframes = load_grp_file(tmp_data);
+  } catch (...) {}
+  try {
+    load_data_file(tmp_data, "unit\\wirefram\\tranwire.grp");
+    img.tranwire = load_grp_file(tmp_data);
+  } catch (...) {}
+  try {
+    load_data_file(tmp_data, "unit\\wirefram\\grpwire.grp");
+    img.grpwire = load_grp_file(tmp_data);
+  } catch (...) {}
+
+  try { img.tconsole = load_pcx_file("console\\tconsole.pcx"); } catch (...) {}
+  try { img.zconsole = load_pcx_file("console\\zconsole.pcx"); } catch (...) {}
+  try { img.pconsole = load_pcx_file("console\\pconsole.pcx"); } catch (...) {}
 }
 
 template <typename load_data_file_F>
@@ -905,8 +928,9 @@ struct ui_functions : ui_util_functions {
                           current_replay_state),
         player(std::move(player)) {}
 
-  std::function<void(a_vector<uint8_t> &, a_string)> load_data_file;
   std::function<bool(const a_string &)> load_data_file_exists;
+
+  int current_console_race = -1; // 0=Zerg, 1=Terran, 2=Protoss
 
   sound_types_t sound_types;
   a_vector<a_string> sound_filenames;
@@ -1523,6 +1547,22 @@ struct ui_functions : ui_util_functions {
       error("don't know how to draw image modifier %d", image->modifier);
   }
 
+  int unit_hp_percent(const unit_t* u) const {
+      if (!u || !u->unit_type) return 0;
+      int hp = u->hp.ceil().integer_part();
+      int max_hp = u->unit_type->hitpoints.integer_part();
+      if (max_hp <= 0) return 0;
+      return std::min(100, (hp * 100) / max_hp);
+  }
+
+  int unit_shield_percent(const unit_t* u) const {
+      if (!u || !u->unit_type || !u->unit_type->has_shield) return 0;
+      int shields = u->shield_points.integer_part();
+      int max_shields = u->unit_type->shield_points;
+      if (max_shields <= 0) return 0;
+      return std::min(100, (shields * 100) / max_shields);
+  }
+
   a_vector<const unit_t *> current_selection_sprites_set =
       a_vector<const unit_t *>(2500);
   a_vector<const sprite_t *> current_selection_sprites;
@@ -1964,60 +2004,55 @@ struct ui_functions : ui_util_functions {
   }
 
   rect get_minimap_area() {
-    size_t minimap_width =
-        std::max(game_st.map_tile_width, game_st.map_tile_height);
-    size_t minimap_height =
-        std::max(game_st.map_tile_width, game_st.map_tile_height);
-    if (game_st.map_width < game_st.map_height) {
-      minimap_width = minimap_width * minimap_width * game_st.map_tile_width /
-                      (minimap_height * game_st.map_tile_height);
-    } else if (game_st.map_height < game_st.map_width) {
-      minimap_height = minimap_height * minimap_height *
-                       game_st.map_tile_height /
-                       (minimap_width * game_st.map_tile_width);
-    }
-    if (screen_width < minimap_width || screen_height < minimap_height)
-      return {};
-    int map_screen_x = 4;
-    int map_screen_y = screen_height - 4 - minimap_height;
-    rect area;
-    area.from = {map_screen_x, map_screen_y};
-    area.to = area.from + xy{(int)minimap_width, (int)minimap_height};
-    return area;
+    auto ui_area = get_minimap_ui_area();
+    if (ui_area == rect{}) return {};
+    
+    // BW Minimap is 128x128, positioned inside the 176x144 console area.
+    // Usually at offset (6, 9) within that area for Terran? 
+    // We'll center it roughly.
+    int mw = 128;
+    int mh = 128;
+    int x = ui_area.from.x + (176 - mw) / 2;
+    int y = ui_area.from.y + (144 - mh) / 2;
+    
+    // Scale to map aspect ratio if needed, but BW usually keeps it square-ish and letterboxes it inside the 128x128.
+    // For now we'll match the map tile dimensions to the square.
+    return rect{xy(x, y), xy(x + mw, y + mh)};
   }
 
   void draw_minimap(uint8_t *data, size_t data_pitch) {
     auto area = get_minimap_area();
-    size_t minimap_width = area.to.x - area.from.x;
-    size_t minimap_height = area.to.y - area.from.y;
-    if (minimap_width != game_st.map_tile_width)
-      return;
-    if (minimap_height != game_st.map_tile_height)
-      return;
+    if (area == rect{}) return;
+
     fill_rectangle(data, data_pitch, area, 0);
-    line_rectangle(data, data_pitch, {area.from - xy(1, 1), area.to + xy(1, 1)},
-                   0);
 
     uint8_t *p = data + data_pitch * (size_t)area.from.y + (size_t)area.from.x;
     bool apply_local_visibility =
         enforce_local_visibility && has_local_player();
     uint8_t visibility_mask = local_visibility_mask();
 
-    size_t pitch = data_pitch - game_st.map_tile_width;
-    for (size_t y = 0; y != game_st.map_tile_height; ++y) {
-      for (size_t x = 0; x != game_st.map_tile_width; ++x) {
-        const tile_t &t = st.tiles[y * game_st.map_tile_width + x];
-        if (apply_local_visibility && (t.explored & visibility_mask) != 0) {
-          *p++ = 0;
+    size_t map_w = game_st.map_tile_width;
+    size_t map_h = game_st.map_tile_height;
+    size_t mm_w = 128;
+    size_t mm_h = 128;
+
+    for (size_t y = 0; y != mm_h; ++y) {
+      size_t ty = y * map_h / mm_h;
+      uint8_t *row_dst = data + (area.from.y + y) * data_pitch + area.from.x;
+      for (size_t x = 0; x != mm_w; ++x) {
+        size_t tx = x * map_w / mm_w;
+        const tile_t &t = st.tiles[ty * map_w + tx];
+        if (apply_local_visibility && (t.explored & visibility_mask) == 0) {
+          row_dst[x] = 0;
           continue;
         }
         size_t index;
         if (~t.flags & tile_t::flag_has_creep)
-          index = st.tiles_mega_tile_index[y * game_st.map_tile_width + x];
+          index = st.tiles_mega_tile_index[ty * map_w + tx];
         else
           index =
               game_st.cv5.at(1).mega_tile_index
-                  [creep_random_tile_indices[y * game_st.map_tile_width + x]];
+                  [creep_random_tile_indices[ty * map_w + tx]];
         auto *images = &tileset_img.vx4.at(index).images[0];
         auto *bitmap = &tileset_img.vr4.at(*images / 2).bitmap[0];
         auto val = bitmap[55 / sizeof(vr4_entry::bitmap_t)];
@@ -2027,9 +2062,8 @@ struct ui_functions : ui_util_functions {
           uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * 14];
           val = dark_row[val];
         }
-        *p++ = (uint8_t)val;
+        row_dst[x] = (uint8_t)val;
       }
-      p += pitch;
     }
 
     for (size_t i = 12; i != 0;) {
@@ -2056,17 +2090,16 @@ struct ui_functions : ui_util_functions {
           h = 2;
         rect unit_area;
         unit_area.from =
-            area.from +
-            (u->sprite->position - u->unit_type->placement_size / 2) / 32u;
-        unit_area.to = unit_area.from + xy(w, h);
+            area.from + xy((int)(u->sprite->position.x * mm_w / (map_w * 32)), (int)(u->sprite->position.y * mm_h / (map_h * 32)));
+        unit_area.to = unit_area.from + xy((int)std::max(1u, (uint32_t)(w * mm_w / map_w)), (int)std::max(1u, (uint32_t)(h * mm_h / map_h)));
         fill_rectangle(data, data_pitch, unit_area, color);
       }
     }
 
     rect view_rect;
-    view_rect.from = area.from + xy(screen_pos.x / 32u, screen_pos.y / 32u);
+    view_rect.from = area.from + xy((int)(screen_pos.x * mm_w / (map_w * 32)), (int)(screen_pos.y * mm_h / (map_h * 32)));
     view_rect.to =
-        view_rect.from + xy((view_width + 31) / 32u, (view_height + 31) / 32u);
+        view_rect.from + xy((int)((view_width + 31) * mm_w / (map_w * 32)), (int)((view_height + 31) * mm_h / (map_h * 32)));
     line_rectangle(data, data_pitch, view_rect, 255);
 
     auto it = active_minimap_pings.begin();
@@ -2120,31 +2153,44 @@ struct ui_functions : ui_util_functions {
   rect get_live_ui_area() const {
     if (!is_live_game_mode || !has_local_player())
       return {};
-    int width = 168;
-    int height = 146;
-    rect r;
-    r.from.x = (int)screen_width - 8 - width;
-    r.from.y = (int)screen_height - 8 - height;
-    r.to = r.from + xy(width, height);
-    if (r.from.x < 0 || r.from.y < 0)
-      return {};
-    return r;
+    // Full width console at the bottom
+    return rect{xy(0, (int)screen_height - 144), xy((int)screen_width, (int)screen_height)};
+  }
+
+  rect get_live_command_area() const {
+    auto area = get_live_ui_area();
+    if (area == rect{}) return {};
+    // Command card is always bottom-right
+    return rect{area.to - xy(176, 144), area.to};
   }
 
   rect get_live_command_slot_area(size_t slot_n) const {
     if (slot_n >= live_command_slots_n)
       return {};
-    auto area = get_live_ui_area();
+    auto area = get_live_command_area();
     if (area == rect{})
       return {};
-    int col = (int)(slot_n % 4);
-    int row = (int)(slot_n / 4);
+    int col = (int)(slot_n % 3);
+    int row = (int)(slot_n / 3);
     int slot_w = 34;
     int slot_h = 34;
-    int gap = 2;
-    int x = area.from.x + 8 + col * (slot_w + gap);
-    int y = area.from.y + 30 + row * (slot_h + gap);
+    int x = area.from.x + 58 + col * 36;
+    int y = area.from.y + 24 + row * 36;
     return rect{xy(x, y), xy(x + slot_w, y + slot_h)};
+  }
+
+  rect get_selection_info_area() const {
+    auto area = get_live_ui_area();
+    if (area == rect{}) return {};
+    // Selection info in the center
+    return rect{area.from + xy(176, 0), area.to - xy(176, 0)};
+  }
+
+  rect get_minimap_ui_area() const {
+    auto area = get_live_ui_area();
+    if (area == rect{}) return {};
+    // Minimap on the bottom-left
+    return rect{area.from, area.from + xy(176, 144)};
   }
 
   size_t live_command_slot_at(int mouse_x, int mouse_y) const {
@@ -2263,73 +2309,65 @@ struct ui_functions : ui_util_functions {
     if (area == rect{})
       return;
 
-    fill_rectangle(data, data_pitch, area, 1);
-    line_rectangle(data, data_pitch, area, 12);
+    int owner = local_player_id;
+    int race = (int)st.players[owner].race;
+    if (current_console_race != race) {
+        current_console_race = race;
+    }
 
-    unit_t *source = get_single_local_selected_unit();
+    // 1. Draw Console Backdrop
+    const pcx_image* console = race == 0 ? &img.zconsole : (race == 1 ? &img.tconsole : &img.pconsole);
+    if (console && !console->data.empty()) {
+        // Console PCX is 640x176 or similar. We scale/center it at the bottom.
+        // For now, we draw it as a strip.
+        uint8_t* dst = data + (size_t)area.from.y * data_pitch + (size_t)area.from.x;
+        const uint8_t* src = console->data.data();
+        size_t ch = std::min(console->height, (size_t)144);
+        size_t cw = std::min(console->width, (size_t)screen_width);
+        for(size_t y=0; y<ch; ++y) {
+            memcpy(dst + y * data_pitch, src + (console->height - ch + y) * console->width, cw);
+        }
+    } else {
+        fill_rectangle(data, data_pitch, area, 1);
+        line_rectangle(data, data_pitch, area, 12);
+    }
 
-    rect hud_area{area.from + xy(4, 4),
-                  area.from + xy(area.to.x - area.from.x - 4, 26)};
-    fill_rectangle(data, data_pitch, hud_area, 0);
-    line_rectangle(data, data_pitch, hud_area, 50);
+    // 2. Draw Minimap (Bottom-Left)
+    draw_minimap(data, data_pitch);
 
-    if (has_local_player()) {
-      int owner = local_player_id;
+    // 3. Draw Resources (Top panel)
+    {
       int minerals = st.current_minerals[owner];
       int gas = st.current_gas[owner];
-      int supply_used_raw = st.supply_used[owner][0].raw_value +
-                            st.supply_used[owner][1].raw_value +
-                            st.supply_used[owner][2].raw_value;
-      int supply_avail_raw = st.supply_available[owner][0].raw_value +
-                             st.supply_available[owner][1].raw_value +
-                             st.supply_available[owner][2].raw_value;
-      int supply_used = supply_used_raw / 2;
-      int supply_avail = supply_avail_raw / 2;
-    // Resource Display
-    {
-      const int icon_y = 6;
-      auto draw_resource_icon = [&](int frame, int x, uint8_t color) {
-        if (img.icons.frames.empty()) {
-            fill_rectangle(data, data_pitch, rect{area.from + xy(x, 8), area.from + xy(x + 5, 13)}, color);
-            return;
-        }
-        const auto &f = img.icons.frames[frame % img.icons.frames.size()];
-        draw_frame(f, false, data, data_pitch, area.from.x + x, area.from.y + icon_y, screen_width, screen_height, no_remap());
+      int supply_used = (st.supply_used[owner][0].raw_value + st.supply_used[owner][1].raw_value + st.supply_used[owner][2].raw_value) / 2;
+      int supply_avail = (st.supply_available[owner][0].raw_value + st.supply_available[owner][1].raw_value + st.supply_available[owner][2].raw_value) / 2;
+      
+      const int res_y = 8;
+      const int res_x_base = (int)screen_width - 240;
+      
+      auto draw_res = [&](int frame, int x, int val, int digits) {
+          if (!img.icons.frames.empty()) {
+              const auto &f = img.icons.frames[frame % img.icons.frames.size()];
+              draw_frame(f, false, data, data_pitch, res_x_base + x, res_y, screen_width, screen_height, no_remap());
+          }
+          draw_small_number(data, data_pitch, xy(res_x_base + x + 20, res_y + 2), val, digits, 255);
       };
-
-      draw_resource_icon(0, 8, 110); // Minerals
-      draw_small_number(data, data_pitch, area.from + xy(22, 7), minerals, 3, 255);
-
-      draw_resource_icon(1, 62, 117); // Gas
-      draw_small_number(data, data_pitch, area.from + xy(76, 7), gas, 3, 255);
-
-      draw_resource_icon(3, 116, 10); // Supply
-      draw_small_number(data, data_pitch, area.from + xy(130, 7), supply_used, 2, 255);
-      fill_rectangle(data, data_pitch, rect{area.from + xy(146, 11), area.from + xy(148, 13)}, 255);
-      draw_small_number(data, data_pitch, area.from + xy(151, 7), supply_avail, 2, 255);
-    }
-    
-    // Portrait rendering
-    if (active_portrait.end_frame > st.current_frame && active_portrait.unit_type >= 0) {
-      const unit_type_t* put = get_unit_type((UnitTypes)active_portrait.unit_type);
-      if (put && put->portrait >= 0) {
-         // Placeholder: In a full engine we would draw the portrait animation
-         // For now, we draw a box and the unit's name
-         rect pbox = { area.from + xy(4, HUD_PORTRAIT_Y), area.from + xy(60, HUD_PORTRAIT_Y + 56) };
-         fill_rectangle(data, data_pitch, pbox, 14);
-         line_rectangle(data, data_pitch, pbox, 117);
-         // (Actual portrait rendering logic would go here)
-      }
+      draw_res(0, 0, minerals, 3);
+      draw_res(1, 80, gas, 3);
+      draw_res(3, 160, supply_used, 2);
+      draw_small_number(data, data_pitch, xy(res_x_base + 160 + 40, res_y + 2), supply_avail, 2, 255);
     }
 
-    for (size_t i = 0; i != live_command_slots_n; ++i) {
+    // 4. Draw Selection Info (Bottom-Middle)
+    draw_selection_info(data, data_pitch);
+
+    // 5. Draw Command Card (Bottom-Right)
+    unit_t *source = get_single_local_selected_unit();
+    for (size_t i = 0; i != 9; ++i) { // BW has 9 command slots (3x3)
       auto slot = get_live_command_slot_area(i);
-      if (slot == rect{})
-        continue;
-      fill_rectangle(data, data_pitch, slot, 3);
-      line_rectangle(data, data_pitch, slot, 50);
-      if (i >= live_commands.size())
-        continue;
+      if (slot == rect{}) continue;
+      
+      if (i >= live_commands.size()) continue;
 
       const auto &cmd = live_commands[i];
       bool enabled = live_command_is_enabled(cmd, source);
@@ -2355,17 +2393,11 @@ struct ui_functions : ui_util_functions {
       case live_command_kind_t::tactical_attack_move_mode: icon_index = 237; break;
       case live_command_kind_t::tactical_patrol_mode: icon_index = 240; break;
       case live_command_kind_t::ability_cancel: icon_index = 232; break;
-      case live_command_kind_t::ability_burrow_toggle: icon_index = 250; break; // Heuristic
-      case live_command_kind_t::ability_siege_toggle: icon_index = 249; break;
-      case live_command_kind_t::ability_cloak_toggle: icon_index = 248; break;
-      case live_command_kind_t::ability_stim: icon_index = 265; break;
       default: break;
       }
 
-      bool icon_drawn = false;
       if (icon_index >= 0 && !img.cmdbtns.frames.empty()) {
           const auto &f = img.cmdbtns.frames[icon_index % img.cmdbtns.frames.size()];
-          xy p = slot.from + xy((slot.to.x - slot.from.x - 32) / 2, (slot.to.y - slot.from.y - 32) / 2);
           auto shadow = [&](uint8_t color, uint8_t old_color) {
             if (!enabled) {
               uint8_t *dark_row = &tileset_img.dark_pcx.data[256 * 14];
@@ -2373,25 +2405,74 @@ struct ui_functions : ui_util_functions {
             }
             return color;
           };
-          draw_frame(f, false, data, data_pitch, p.x, p.y, screen_width, screen_height, shadow);
-          icon_drawn = true;
+          draw_frame(f, false, data, data_pitch, slot.from.x, slot.from.y, screen_width, screen_height, shadow);
       }
+    }
+  }
 
-      if (!icon_drawn) {
-          uint8_t fill = 20;
-          if (!enabled) fill = 14;
-          else {
-              switch (cmd.kind) {
-              case live_command_kind_t::train: fill = 79; break;
-              case live_command_kind_t::train_fighter: fill = 81; break;
-              case live_command_kind_t::morph: fill = 93; break;
-              case live_command_kind_t::morph_building: fill = 95; break;
-              case live_command_kind_t::build_place: fill = 117; break;
-              default: fill = 33; break;
-              }
+  void draw_selection_info(uint8_t *data, size_t data_pitch) {
+      auto area = get_selection_info_area();
+      if (area == rect{}) return;
+
+      auto selected = get_local_selected_units();
+      if (selected.empty()) return;
+
+      if (selected.size() == 1) {
+          unit_t* u = selected[0];
+          // Single Unit: Large Wireframe + Stats
+          int utid = (int)u->unit_type->id;
+          if (!img.wireframes.frames.empty()) {
+              const auto &wf = img.wireframes.frames[utid % img.wireframes.frames.size()];
+              // Wireframes are often larger/smaller; BW scales them. 
+              // For now, center them in the middle of selection area.
+              int wx = area.from.x + 20;
+              int wy = area.from.y + 40;
+              
+              auto hp_color = [&](uint8_t c, uint8_t) {
+                  int p = unit_hp_percent(u);
+                  if (c >= 1 && c <= 8) { // Wireframe lines
+                      if (p >= 66) return img.hp_bar_colors[1]; // Green
+                      if (p >= 33) return img.hp_bar_colors[4]; // Yellow
+                      return img.hp_bar_colors[7]; // Red
+                  }
+                  return c;
+              };
+              draw_frame(wf, false, data, data_pitch, wx, wy, screen_width, screen_height, hp_color);
           }
-          fill_rectangle(data, data_pitch, rect{slot.from + xy(2, 2), slot.to - xy(2, 2)}, fill);
+          // Health Bar
+          draw_health_bars(u->sprite, u, data, data_pitch);
+      } else {
+          // Multi Units: Grid of small wireframes
+          int row = 0, col = 0;
+          for (unit_t* u : selected) {
+              int utid = (int)u->unit_type->id;
+              
+              int gx = area.from.x + 10 + col * 40;
+              int gy = area.from.y + 10 + row * 40;
+              
+              if (!img.tranwire.frames.empty()) {
+                  const auto &wf = img.tranwire.frames[utid % img.tranwire.frames.size()];
+                  auto hp_color = [&](uint8_t c, uint8_t) {
+                      int p = unit_hp_percent(u);
+                      if (c >= 1 && c <= 8) { // Wireframe lines
+                          if (p >= 66) return img.hp_bar_colors[1]; // Green
+                          if (p >= 33) return img.hp_bar_colors[4]; // Yellow
+                          return img.hp_bar_colors[7]; // Red
+                      }
+                      return c;
+                  };
+                  draw_frame(wf, false, data, data_pitch, gx, gy, screen_width, screen_height, hp_color);
+              } else {
+                  uint8_t dot_color = img.hp_bar_colors[unit_hp_percent(u) >= 66 ? 1 : (unit_hp_percent(u) >= 33 ? 4 : 7)];
+                  fill_rectangle(data, data_pitch, rect{xy(gx, gy), xy(gx+28, gy+28)}, 0);
+                  line_rectangle(data, data_pitch, rect{xy(gx, gy), xy(gx+28, gy+28)}, dot_color);
+              }
+
+              col++; if (col >= 6) { col = 0; row++; }
+              if (row >= 2) break; // Max 12 units in BW multi-selection
+          }
       }
+  }
       if (live_build_placement_armed &&
           ((cmd.kind == live_command_kind_t::build_place &&
             live_build_placement_command.kind ==
