@@ -53,6 +53,7 @@ struct image_data {
   pcx_image tconsole;
   pcx_image zconsole;
   pcx_image pconsole;
+  grp_t portraits;
 };
 
 template <typename data_T> pcx_image load_pcx_data(const data_T &data) {
@@ -250,6 +251,11 @@ void load_image_data(image_data &img, load_data_file_F &&load_data_file) {
   try { img.tconsole = load_pcx_file("console\\tconsole.pcx"); } catch (...) {}
   try { img.zconsole = load_pcx_file("console\\zconsole.pcx"); } catch (...) {}
   try { img.pconsole = load_pcx_file("console\\pconsole.pcx"); } catch (...) {}
+
+  try {
+    load_data_file(tmp_data, "unit\\portraits\\portraits.grp");
+    img.portraits = load_grp_file(tmp_data);
+  } catch (...) {}
 }
 
 template <typename load_data_file_F>
@@ -928,6 +934,7 @@ struct ui_functions : ui_util_functions {
                           current_replay_state),
         player(std::move(player)) {}
 
+  std::function<void(a_vector<uint8_t>&, a_string)> load_data_file;
   std::function<bool(const a_string &)> load_data_file_exists;
 
   int current_console_race = -1; // 0=Zerg, 1=Terran, 2=Protoss
@@ -2407,72 +2414,6 @@ struct ui_functions : ui_util_functions {
           };
           draw_frame(f, false, data, data_pitch, slot.from.x, slot.from.y, screen_width, screen_height, shadow);
       }
-    }
-  }
-
-  void draw_selection_info(uint8_t *data, size_t data_pitch) {
-      auto area = get_selection_info_area();
-      if (area == rect{}) return;
-
-      auto selected = get_local_selected_units();
-      if (selected.empty()) return;
-
-      if (selected.size() == 1) {
-          unit_t* u = selected[0];
-          // Single Unit: Large Wireframe + Stats
-          int utid = (int)u->unit_type->id;
-          if (!img.wireframes.frames.empty()) {
-              const auto &wf = img.wireframes.frames[utid % img.wireframes.frames.size()];
-              // Wireframes are often larger/smaller; BW scales them. 
-              // For now, center them in the middle of selection area.
-              int wx = area.from.x + 20;
-              int wy = area.from.y + 40;
-              
-              auto hp_color = [&](uint8_t c, uint8_t) {
-                  int p = unit_hp_percent(u);
-                  if (c >= 1 && c <= 8) { // Wireframe lines
-                      if (p >= 66) return img.hp_bar_colors[1]; // Green
-                      if (p >= 33) return img.hp_bar_colors[4]; // Yellow
-                      return img.hp_bar_colors[7]; // Red
-                  }
-                  return c;
-              };
-              draw_frame(wf, false, data, data_pitch, wx, wy, screen_width, screen_height, hp_color);
-          }
-          // Health Bar
-          draw_health_bars(u->sprite, u, data, data_pitch);
-      } else {
-          // Multi Units: Grid of small wireframes
-          int row = 0, col = 0;
-          for (unit_t* u : selected) {
-              int utid = (int)u->unit_type->id;
-              
-              int gx = area.from.x + 10 + col * 40;
-              int gy = area.from.y + 10 + row * 40;
-              
-              if (!img.tranwire.frames.empty()) {
-                  const auto &wf = img.tranwire.frames[utid % img.tranwire.frames.size()];
-                  auto hp_color = [&](uint8_t c, uint8_t) {
-                      int p = unit_hp_percent(u);
-                      if (c >= 1 && c <= 8) { // Wireframe lines
-                          if (p >= 66) return img.hp_bar_colors[1]; // Green
-                          if (p >= 33) return img.hp_bar_colors[4]; // Yellow
-                          return img.hp_bar_colors[7]; // Red
-                      }
-                      return c;
-                  };
-                  draw_frame(wf, false, data, data_pitch, gx, gy, screen_width, screen_height, hp_color);
-              } else {
-                  uint8_t dot_color = img.hp_bar_colors[unit_hp_percent(u) >= 66 ? 1 : (unit_hp_percent(u) >= 33 ? 4 : 7)];
-                  fill_rectangle(data, data_pitch, rect{xy(gx, gy), xy(gx+28, gy+28)}, 0);
-                  line_rectangle(data, data_pitch, rect{xy(gx, gy), xy(gx+28, gy+28)}, dot_color);
-              }
-
-              col++; if (col >= 6) { col = 0; row++; }
-              if (row >= 2) break; // Max 12 units in BW multi-selection
-          }
-      }
-  }
       if (live_build_placement_armed &&
           ((cmd.kind == live_command_kind_t::build_place &&
             live_build_placement_command.kind ==
@@ -2549,7 +2490,70 @@ struct ui_functions : ui_util_functions {
                         enabled ? 255 : 51);
     }
   }
-}
+
+  void draw_selection_info(uint8_t *data, size_t data_pitch) {
+      auto area = get_selection_info_area();
+      if (area == rect{}) return;
+
+      auto selected = get_local_selected_units();
+      if (selected.empty()) return;
+
+      if (selected.size() == 1) {
+          unit_t* u = selected[0];
+          // Single Unit: Large Wireframe + Stats
+          int utid = (int)u->unit_type->id;
+          if (!img.wireframes.frames.empty()) {
+              const auto &wf = img.wireframes.frames[utid % img.wireframes.frames.size()];
+              // Wireframes are often larger/smaller; BW scales them. 
+              // For now, center them in the middle of selection area.
+              int wx = area.from.x + 20;
+              int wy = area.from.y + 40;
+              
+              auto hp_color = [&](uint8_t c, uint8_t) {
+                  int p = unit_hp_percent(u);
+                  if (c >= 1 && c <= 8) { // Wireframe lines
+                      if (p >= 66) return img.hp_bar_colors[1]; // Green
+                      if (p >= 33) return img.hp_bar_colors[4]; // Yellow
+                      return img.hp_bar_colors[7]; // Red
+                  }
+                  return c;
+              };
+              draw_frame(wf, false, data, data_pitch, wx, wy, screen_width, screen_height, hp_color);
+          }
+          // Health Bar
+          draw_health_bars(u->sprite, u, data, data_pitch);
+      } else {
+          // Multi Units: Grid of small wireframes
+          int row = 0, col = 0;
+          for (unit_t* u : selected) {
+              int utid = (int)u->unit_type->id;
+              
+              int gx = area.from.x + 10 + col * 40;
+              int gy = area.from.y + 10 + row * 40;
+              
+              if (!img.tranwire.frames.empty()) {
+                  const auto &wf = img.tranwire.frames[utid % img.tranwire.frames.size()];
+                  auto hp_color = [&](uint8_t c, uint8_t) {
+                      int p = unit_hp_percent(u);
+                      if (c >= 1 && c <= 8) { // Wireframe lines
+                          if (p >= 66) return img.hp_bar_colors[1]; // Green
+                          if (p >= 33) return img.hp_bar_colors[4]; // Yellow
+                          return img.hp_bar_colors[7]; // Red
+                      }
+                      return c;
+                  };
+                  draw_frame(wf, false, data, data_pitch, gx, gy, screen_width, screen_height, hp_color);
+              } else {
+                  uint8_t dot_color = img.hp_bar_colors[unit_hp_percent(u) >= 66 ? 1 : (unit_hp_percent(u) >= 33 ? 4 : 7)];
+                  fill_rectangle(data, data_pitch, rect{xy(gx, gy), xy(gx+28, gy+28)}, 0);
+                  line_rectangle(data, data_pitch, rect{xy(gx, gy), xy(gx+28, gy+28)}, dot_color);
+              }
+
+              col++; if (col >= 6) { col = 0; row++; }
+              if (row >= 2) break; // Max 12 units in BW multi-selection
+          }
+      }
+  }
 
   void draw_ui(uint8_t *data, size_t data_pitch) {
     if (is_replay_mode)
@@ -3120,6 +3124,21 @@ struct ui_functions : ui_util_functions {
       if (result)
         return nullptr;
       result = u;
+    }
+    return result;
+  }
+
+  a_vector<unit_t*> get_local_selected_units() {
+    a_vector<unit_t*> result;
+    if (!has_local_player())
+      return result;
+    for (auto uid : current_selection) {
+      unit_t *u = get_unit(uid);
+      if (!u || unit_dead(u) || us_hidden(u))
+        continue;
+      if (!unit_is_local_controllable(u))
+        continue;
+      result.push_back(u);
     }
     return result;
   }

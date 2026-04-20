@@ -726,6 +726,52 @@ void draw_rgba_text(uint32_t* pixels, int pitch, int width, int height, int x, i
 	}
 }
 
+std::vector<uint8_t> decode_grp_frame_indices(const grp_t::frame_t& frame) {
+	std::vector<uint8_t> buf(frame.size.x * frame.size.y, 0);
+	for (size_t y = 0; y < frame.size.y; ++y) {
+		const uint8_t* d = frame.data_container.data() + frame.line_data_offset[y];
+		size_t x = 0;
+		while (x < frame.size.x) {
+			int v = *d++;
+			if (v & 0x80) {
+				x += v & 0x7f;
+			} else if (v & 0x40) {
+				int count = v & 0x3f;
+				int c = *d++;
+				for (int i = 0; i < count && x < frame.size.x; ++i, ++x)
+					buf[y * frame.size.x + x] = (uint8_t)c;
+			} else {
+				for (int i = 0; i < v && x < frame.size.x; ++i, ++x)
+					buf[y * frame.size.x + x] = *d++;
+			}
+		}
+	}
+	return buf;
+}
+
+void draw_grp_scaled_rgba(uint32_t* pixels, int pitch, int width, int height,
+                           const grp_t::frame_t& frame, const a_vector<uint8_t>& wpe,
+                           int px, int py, int target_w, int target_h) {
+	auto indices = decode_grp_frame_indices(frame);
+	float sx = (float)frame.size.x / target_w;
+	float sy = (float)frame.size.y / target_h;
+	for (int ty = 0; ty < target_h; ++ty) {
+		int src_y = (int)(ty * sy);
+		if (src_y < 0 || src_y >= (int)frame.size.y) continue;
+		int dy = py + ty;
+		if (dy < 0 || dy >= height) continue;
+		for (int tx = 0; tx < target_w; ++tx) {
+			int src_x = (int)(tx * sx);
+			if (src_x < 0 || src_x >= (int)frame.size.x) continue;
+			uint8_t idx = indices[src_y * frame.size.x + src_x];
+			if (idx == 0) continue;
+			int dx = px + tx;
+			if (dx < 0 || dx >= width) continue;
+			pixels[dy * pitch + dx] = rgba32(wpe[idx * 4 + 0], wpe[idx * 4 + 1], wpe[idx * 4 + 2]);
+		}
+	}
+}
+
 }
 
 namespace bwgame {
@@ -2080,73 +2126,91 @@ struct main_t {
 		int px = width - pw - 32;
 		int py = height - ph - 160; 
 
-		draw_high_fidelity_portrait(pixels, pitch, width, height, px, py, pw, ph, "TRANSMISSION");
+		draw_high_fidelity_portrait(pixels, pitch, width, height, px, py, pw, ph, "TRANSMISSION", ui.active_portrait.unit_type);
 	}
 
 	void draw_briefing_portrait_overlay(uint32_t* pixels, int pitch, int width, int height) {
+		int portrait_w = 140;
+		int portrait_h = 140;
 		for (int i = 0; i < 4; ++i) {
 			auto& slot = ui.briefing_slots[i];
 			if (slot.unit_type == -1 || ui.st.current_frame >= slot.end_frame) continue;
 
-			int sx = 80 + i * 160;
-			int sy = 80;
-			draw_high_fidelity_portrait(pixels, pitch, width, height, sx, sy, 128, 128, "BRIEFING");
+			int sx = 24 + (portrait_w + 8) * i;
+			if (sx + portrait_w > 16 + 160) break;
+			int sy = 50;
+			draw_high_fidelity_portrait(pixels, pitch, width, height, sx, sy, portrait_w, portrait_h, "BRIEFING", slot.unit_type);
 		}
 	}
 
-	void draw_high_fidelity_portrait(uint32_t* pixels, int pitch, int width, int height, int px, int py, int pw, int ph, const char* label) {
-		auto now = clock.now();
-		double t = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 1000.0;
-
-		// Premium Backdrop Container
+	void draw_high_fidelity_portrait(uint32_t* pixels, int pitch, int width, int height, int px, int py, int pw, int ph, const char* label, int unit_type) {
 		fill_rgba_rect(pixels, pitch, width, height, px - 4, py - 4, pw + 8, ph + 8, rgba32(8, 12, 24, 230));
 		draw_rgba_frame(pixels, pitch, width, height, px - 4, py - 4, pw + 8, ph + 8, 2, rgba32(100, 140, 220, 180));
 
-		// High-fidelity background (Animated noise/static)
-		for (int sy = py; sy < py + ph; ++sy) {
-			if (sy < 0 || sy >= height) continue;
-			for (int sx = px; sx < px + pw; ++sx) {
-				if (sx < 0 || sx >= width) continue;
-				uint32_t seed = (uint32_t)(sx * 374761393u + sy * 668265263u + (uint32_t)(t * 120));
-				uint8_t noise = (uint8_t)(seed % 28);
-				pixels[sy * pitch + sx] = rgba32(15 + noise, 20 + noise, 40 + noise);
+		auto& portraits_grp = ui.img.portraits;
+		auto& wpe = ui.tileset_img.wpe;
+		bool rendered = false;
+
+		if (unit_type >= 0 && (size_t)unit_type < portraits_grp.frames.size() && wpe.size() == 256 * 4) {
+			auto& frame = portraits_grp.frames[unit_type];
+			if (!frame.data_container.empty() && frame.size.x > 0 && frame.size.y > 0) {
+				draw_grp_scaled_rgba(pixels, pitch, width, height, frame, wpe, px, py, pw, ph);
+				rendered = true;
 			}
 		}
 
-		// CRT Pixel Grid (every 2px horizontally and vertically)
-		for (int sy = py; sy < py + ph; sy += 2) {
-			if (sy < 0 || sy >= height) continue;
-			for (int sx = px; sx < px + pw; sx += 2) {
-				if (sx < 0 || sx >= width) continue;
-				pixels[sy * pitch + sx] = (pixels[sy * pitch + sx] & 0xFEFEFEFE) >> 1;
+		if (!rendered) {
+			auto now = clock.now();
+			double t = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 1000.0;
+			for (int sy = py; sy < py + ph; ++sy) {
+				if (sy < 0 || sy >= height) continue;
+				for (int sx = px; sx < px + pw; ++sx) {
+					if (sx < 0 || sx >= width) continue;
+					uint32_t seed = (uint32_t)(sx * 374761393u + sy * 668265263u + (uint32_t)(t * 120));
+					uint8_t noise = (uint8_t)(seed % 28);
+					pixels[sy * pitch + sx] = rgba32(15 + noise, 20 + noise, 40 + noise);
+				}
 			}
-		}
-
-		// Moving Scanline Effect
-		int scan_y = (int)(t * 120) % (ph + 100) - 50;
-		if (scan_y >= 0 && scan_y < ph) {
-			fill_rgba_rect(pixels, pitch, width, height, px, py + scan_y, pw, 3, rgba32(180, 240, 255, 40));
-		}
-
-		// Horizontal interference lines
-		if ((int)(t * 15) % 10 == 0) {
-			int iy = (int)(t * 1234567) % ph;
-			fill_rgba_rect(pixels, pitch, width, height, px, py + iy, pw, 1, rgba32(255, 255, 255, 30));
+			int scan_y = (int)(t * 120) % (ph + 100) - 50;
+			if (scan_y >= 0 && scan_y < ph) {
+				fill_rgba_rect(pixels, pitch, width, height, px, py + scan_y, pw, 3, rgba32(180, 240, 255, 40));
+			}
+			draw_rgba_text(pixels, pitch, width, height, px + (pw - text_pixel_width("NO SIGNAL", 1)) / 2, py + ph / 2 - 4, "NO SIGNAL", 1, rgba32(180, 60, 60, 255));
+		} else {
+			auto now = clock.now();
+			double t = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 1000.0;
+			int scan_y = (int)(t * 80) % (ph + 60) - 30;
+			if (scan_y >= 0 && scan_y < ph) {
+				for (int sx = px; sx < px + pw; ++sx) {
+					if (sx < 0 || sx >= width) continue;
+					int dy = py + scan_y;
+					if (dy < 0 || dy >= height) continue;
+					uint32_t& p = pixels[dy * pitch + sx];
+					p = ((p & 0xFEFEFEFE) >> 1) + rgba32(0, 30, 60, 0);
+				}
+			}
 		}
 
 		draw_rgba_text(pixels, pitch, width, height, px + (pw - text_pixel_width(label, 1)) / 2, py - 18, label, 1, rgba32(140, 200, 255, 255));
 	}
 
-	virtual void draw_briefing_screen(uint8_t *data, size_t data_pitch) override {
-		// Fill background with space-like dark index
-		fill_rectangle(data, data_pitch, rect{xy(0,0), xy((int)ui.screen_width, (int)ui.screen_height)}, 0);
-		
-		// Draw frame
-		rect frame_box{xy(20, 20), xy((int)ui.screen_width - 20, (int)ui.screen_height - 20)};
-		line_rectangle(data, data_pitch, frame_box, 117);
-		
-		// Labels
-		draw_small_number(data, data_pitch, xy(40, 30), ui.st.current_frame, 1, 100);
+	void draw_briefing_bg_overlay(uint32_t* pixels, int pitch, int width, int height) {
+		if (!ui.st.is_mission_briefing) return;
+
+		fill_rgba_rect(pixels, pitch, width, height, 0, 0, width, height, rgba32(2, 4, 12, 255));
+
+		draw_rgba_frame(pixels, pitch, width, height, 10, 10, width - 20, height - 20, 2, rgba32(100, 140, 220, 180));
+
+		fill_rgba_rect(pixels, pitch, width, height, 12, 12, width - 24, 24, rgba32(8, 16, 32, 230));
+		draw_rgba_frame(pixels, pitch, width, height, 12, 12, width - 24, 24, 1, rgba32(80, 120, 180, 150));
+
+		int portrait_area_w = 160;
+		draw_rgba_frame(pixels, pitch, width, height, 16, 40, portrait_area_w, height - 100, 1, rgba32(60, 100, 160, 120));
+
+		draw_rgba_frame(pixels, pitch, width, height, 20 + portrait_area_w, 40, width - 36 - portrait_area_w, height - 100, 1, rgba32(50, 90, 140, 120));
+
+		fill_rgba_rect(pixels, pitch, width, height, 12, height - 48, width - 24, 36, rgba32(8, 16, 32, 230));
+		draw_rgba_frame(pixels, pitch, width, height, 12, height - 48, width - 24, 36, 1, rgba32(80, 120, 180, 150));
 	}
 
 	void draw_mission_timer(uint32_t* pixels, int pitch, int width, int height) {
@@ -2171,13 +2235,77 @@ struct main_t {
 		draw_rgba_text(pixels, pitch, width, height, x + 6, y + 4, buf, scale, rgba32(200, 220, 240, 255));
 	}
 
+	void draw_briefing_text_overlay(uint32_t* pixels, int pitch, int width, int height) {
+		if (!ui.st.is_mission_briefing) return;
+
+		int text_x = 20 + 160 + 10;
+		int text_y_start = 48;
+		int text_y = text_y_start;
+		int text_w = width - text_x - 20;
+		int text_y_max = height - 70;
+
+		std::string mission_name(ui.game_st.scenario_name.c_str());
+		if (!mission_name.empty()) {
+			std::string display = uppercase_copy(mission_name);
+			draw_rgba_text(pixels, pitch, width, height, text_x + 4, text_y, display, 2, rgba32(255, 220, 132, 255));
+			text_y += 24;
+		}
+
+		std::string desc(ui.game_st.scenario_description.c_str());
+		if (!desc.empty()) {
+			int max_chars = text_w / 6;
+			size_t pos = 0;
+			while (pos < desc.size() && text_y < text_y_max - 12) {
+				std::string line = desc.substr(pos, max_chars);
+				draw_rgba_text(pixels, pitch, width, height, text_x + 4, text_y, line, 1, rgba32(200, 210, 230, 255));
+				text_y += 12;
+				pos += line.size();
+			}
+			text_y += 8;
+		}
+
+		text_y += 4;
+		if (text_y < text_y_max - 14)
+			draw_rgba_text(pixels, pitch, width, height, text_x + 4, text_y, "TRANSMISSIONS:", 1, rgba32(255, 200, 100, 255));
+		text_y += 14;
+
+		int hud_count = 0;
+		for (int i = 0; i < ui.k_hud_max_lines; ++i) {
+			if (ui.hud_messages[i].expiry_frame > 0 && ui.st.current_frame < ui.hud_messages[i].expiry_frame) {
+				++hud_count;
+			}
+		}
+		if (hud_count > 0) {
+			for (int slot = ui.hud_next_slot - 1; slot >= ui.hud_next_slot - ui.k_hud_max_lines; --slot) {
+				int idx = ((slot % ui.k_hud_max_lines) + ui.k_hud_max_lines) % ui.k_hud_max_lines;
+				auto& hm = ui.hud_messages[idx];
+				if (hm.expiry_frame <= 0 || ui.st.current_frame >= hm.expiry_frame) continue;
+				std::string msg(hm.text.c_str());
+				int max_chars = text_w / 6;
+				size_t pos = 0;
+				while (pos < msg.size() && text_y < text_y_max) {
+					std::string line = msg.substr(pos, max_chars);
+					draw_rgba_text(pixels, pitch, width, height, text_x + 8, text_y, line, 1, rgba32(180, 220, 255, 255));
+					text_y += 11;
+					pos += line.size();
+				}
+				text_y += 4;
+			}
+		}
+
+		int bottom_y = height - 44;
+		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width("PRESS SPACE TO BEGIN", 2)) / 2, bottom_y, "PRESS SPACE TO BEGIN", 2, rgba32(255, 210, 96, 255));
+	}
+
 	void draw_client_overlays(uint32_t* pixels, int pitch, int width, int height) {
+		draw_briefing_bg_overlay(pixels, pitch, width, height);
 		draw_portrait_overlay(pixels, pitch, width, height);
 		draw_objectives_overlay(pixels, pitch, width, height);
 		draw_speed_indicator(pixels, pitch, width, height);
 		draw_mission_timer(pixels, pitch, width, height);
 		draw_pause_overlay(pixels, pitch, width, height);
 		draw_debrief_overlay(pixels, pitch, width, height);
+		draw_briefing_text_overlay(pixels, pitch, width, height);
 	}
 };
 
