@@ -178,6 +178,26 @@ cmake -S ui -B build/ui
 cmake --build build/ui -j
 ```
 
+### WebAssembly build (Emscripten)
+
+With `emsdk` activated in your shell:
+
+```bash
+emcmake cmake --preset wasm-release
+cmake --build --preset wasm-release
+```
+
+Or on Windows PowerShell:
+
+```powershell
+./scripts/build_wasm.ps1
+```
+
+Notes:
+- The `wasm-release` preset builds the browser-facing `gfxtest` target and disables `mini-openbwapi`.
+- The generated artifact is `build/wasm-release/gfxtest.html`.
+- `emcmake` / `emcc` must already be on `PATH`; the repo does not vendor `emsdk`.
+
 ### Single-player map mode (foundation)
 
 ```bash

@@ -331,6 +331,36 @@ bool has_extension_ci(const std::string& path, const char* extension) {
 	return lower_path.compare(lower_path.size() - lower_ext.size(), lower_ext.size(), lower_ext) == 0;
 }
 
+std::vector<uint8_t> read_binary_file_or_throw(const char* path) {
+	std::ifstream f(path, std::ios::binary);
+	if (!f) error("unable to open file '%s': %s", path, std::strerror(errno));
+	f.seekg(0, std::ios::end);
+	std::streamoff size = f.tellg();
+	if (size < 0) error("unable to determine size of '%s'", path);
+	std::vector<uint8_t> data((size_t)size);
+	f.seekg(0, std::ios::beg);
+	if (!data.empty()) {
+		f.read((char*)data.data(), size);
+		if (!f) error("failed while reading '%s'", path);
+	}
+	return data;
+}
+
+void write_binary_file_or_throw(const char* path, const uint8_t* data, size_t size) {
+	std::ofstream f(path, std::ios::binary | std::ios::out | std::ios::trunc);
+	if (!f) error("unable to open '%s' for writing: %s", path, std::strerror(errno));
+	if (size) f.write((const char*)data, (std::streamsize)size);
+	if (!f) error("failed while writing '%s'", path);
+}
+
+std::vector<uint8_t> load_scenario_chk_bytes_or_throw(const char* map_file) {
+	if (has_extension_ci(map_file, ".chk")) return read_binary_file_or_throw(map_file);
+	data_loading::mpq_file<> mpq{a_string(map_file)};
+	a_vector<uint8_t> chk;
+	mpq(chk, "staredit/scenario.chk");
+	return std::vector<uint8_t>(chk.begin(), chk.end());
+}
+
 std::string make_startup_title(startup_content_kind kind, const std::string& path) {
 	std::string stem = humanize_map_stem(path);
 	std::string lower_path = lowercase_copy(path);
@@ -3059,7 +3089,7 @@ static std::vector<replay_hash_checkpoint> sample_replay_hashes_or_throw(
 		error("record_hashes: hash interval must be > 0, got %d", hash_interval);
 	}
 
-	auto load_data_file = data_loading::data_files_directory("");
+	auto load_data_file = make_load_data_file();
 
 	replay_player player;
 	player.init(load_data_file);
@@ -3096,7 +3126,7 @@ static std::vector<replay_hash_checkpoint> sample_replay_hashes_or_throw(
 static replay_validation_report validate_replay_or_throw(const char* replay_file) {
 	using namespace bwgame;
 
-	auto load_data_file = data_loading::data_files_directory("");
+	auto load_data_file = make_load_data_file();
 
 	// replay_player owns its own global/game/sim state.
 	replay_player player;
@@ -3238,10 +3268,10 @@ static int run_record_hashes(const char* replay_file, const char* fixture_file, 
 		log("record-hashes: PASS\n"
 			"  map         : %s\n"
 			"  end frame   : %d\n"
-			"  checkpoints : %lld\n",
+			"  checkpoints : %d\n",
 			map_name_str,
 			end_frame,
-			(long long)checkpoints.size());
+			(int)checkpoints.size());
 		return 0;
 	} catch (const exception& e) {
 		log("record-hashes: FAIL (%s)\n", e.what());
@@ -3270,7 +3300,7 @@ static int run_verify_hashes(const char* replay_file, const char* fixture_file) 
 
 		log("verify-hashes: replay '%s' against fixture '%s'\n", rep, fixture_file);
 
-		auto load_data_file = data_loading::data_files_directory("");
+		auto load_data_file = make_load_data_file();
 
 		replay_player player;
 		player.init(load_data_file);
@@ -3321,12 +3351,12 @@ static int run_verify_hashes(const char* replay_file, const char* fixture_file) 
 
 		if (mismatch_count != 0) {
 			if (mismatch_count > printed_mismatches) {
-				log("verify-hashes: ... %lld additional mismatches omitted\n",
-					(long long)(mismatch_count - printed_mismatches));
+				log("verify-hashes: ... %d additional mismatches omitted\n",
+					(int)(mismatch_count - printed_mismatches));
 			}
-			log("verify-hashes: FAIL (%lld/%lld checkpoints mismatched)\n",
-				(long long)mismatch_count,
-				(long long)fixture.checkpoints.size());
+			log("verify-hashes: FAIL (%d/%d checkpoints mismatched)\n",
+				(int)mismatch_count,
+				(int)fixture.checkpoints.size());
 			return 1;
 		}
 
@@ -3334,10 +3364,10 @@ static int run_verify_hashes(const char* replay_file, const char* fixture_file) 
 		log("verify-hashes: PASS\n"
 			"  map         : %s\n"
 			"  end frame   : %d\n"
-			"  checkpoints : %lld\n",
+			"  checkpoints : %d\n",
 			map_name,
 			player.replay_st.end_frame,
-			(long long)fixture.checkpoints.size());
+			(int)fixture.checkpoints.size());
 		return 0;
 	} catch (const exception& e) {
 		log("verify-hashes: FAIL (%s)\n", e.what());
@@ -3411,6 +3441,11 @@ static void print_usage(const char* argv0) {
 		"  %s --validate-replay [--replay <file.rep>] [--data-dir <path>]\n"
 		"  %s --record-hashes <fixture.txt> [--hash-interval <n>] [--replay <file.rep>] [--data-dir <path>]\n"
 		"  %s --verify-hashes <fixture.txt> [--replay <file.rep>] [--data-dir <path>]\n"
+		"  %s --extract-scenario-chk <output.chk> --map <file.scx|file.scm> [--data-dir <path>]\n"
+		"  %s --gen-test-replay <output.rep> --map <file.scx|file.scm|scenario.chk>\n"
+		"     [--frames <n>] [--record-hashes <fixture.txt>] [--hash-interval <n>] [--use-map-settings]\n"
+		"     [--fixture-script <transport_unload|worker_resource>]\n"
+		"     [--data-dir <path>]\n"
 		"\n"
 		"note: --game-type auto (default) selects ums for authored/campaign-like slots, else melee.\n"
 		"      --game-type ums preserves authored slot topology by default.\n"
@@ -3457,7 +3492,7 @@ static void print_usage(const char* argv0) {
 		"  Arbiter: recall, stasis field\n"
 		"  Dark Archon: mind control, feedback, maelstrom\n"
 		"  Corsair: disruption web\n",
-		argv0, argv0, argv0, argv0, argv0, argv0, argv0);
+		argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0, argv0);
 }
 
 static int parse_slot_or_error(const char* value, const char* flag_name) {
@@ -3491,16 +3526,52 @@ static int parse_race_or_error(const char* value, const char* flag_name) {
 // without needing extra configuration.
 //
 // Usage:
-//   gfxtest --gen-test-replay <output.rep> --map <file.scx|scm>
+//   gfxtest --extract-scenario-chk <output.chk> --map <file.scx|scm>
+//   gfxtest --gen-test-replay <output.rep> --map <file.scx|scm|scenario.chk>
 //              [--frames <n>] [--record-hashes <fixture.txt>]
-//              [--hash-interval <n>]
+//              [--hash-interval <n>] [--use-map-settings]
 // ---------------------------------------------------------------------------
+static int run_extract_scenario_chk(const char* map_file, const char* output_chk) {
+	if (!map_file || map_file[0] == '\0') {
+		log("extract-scenario-chk: FAIL (--map is required)\n");
+		return 2;
+	}
+	if (!output_chk || output_chk[0] == '\0') {
+		log("extract-scenario-chk: FAIL (output chk path is required)\n");
+		return 2;
+	}
+
+	try {
+		auto chk = load_scenario_chk_bytes_or_throw(map_file);
+		write_binary_file_or_throw(output_chk, chk.data(), chk.size());
+		log("extract-scenario-chk: PASS\n"
+			"  map         : %s\n"
+			"  scenario    : %s\n"
+			"  size        : %d bytes\n",
+			map_file,
+			output_chk,
+			(int)chk.size());
+		return 0;
+	} catch (const exception& e) {
+		log("extract-scenario-chk: FAIL (%s)\n", e.what());
+		return 1;
+	} catch (const std::exception& e) {
+		log("extract-scenario-chk: FAIL (%s)\n", e.what());
+		return 1;
+	} catch (...) {
+		log("extract-scenario-chk: FAIL (unknown exception)\n");
+		return 1;
+	}
+}
+
 static int run_gen_test_replay(
 		const char* map_file,
 		const char* output_rep,
 		const char* output_hashes,
 		int frames,
-		int hash_interval) {
+		int hash_interval,
+		bool use_map_settings,
+		const char* fixture_script_name) {
 	using namespace bwgame;
 
 	if (!map_file || map_file[0] == '\0') {
@@ -3513,7 +3584,25 @@ static int run_gen_test_replay(
 	}
 	if (frames <= 0) frames = 240;
 
-	log("gen-test-replay: map='%s' output='%s' frames=%d\n", map_file, output_rep, frames);
+	log("gen-test-replay: map='%s' output='%s' frames=%d mode=%s\n",
+		map_file, output_rep, frames, use_map_settings ? "map-settings" : "melee");
+
+	enum class fixture_script_kind {
+		none,
+		transport_unload,
+		worker_resource
+	};
+	fixture_script_kind fixture_script = fixture_script_kind::none;
+	if (fixture_script_name && fixture_script_name[0] != '\0') {
+		if (std::strcmp(fixture_script_name, "transport_unload") == 0) {
+			fixture_script = fixture_script_kind::transport_unload;
+		} else if (std::strcmp(fixture_script_name, "worker_resource") == 0) {
+			fixture_script = fixture_script_kind::worker_resource;
+		} else {
+			log("gen-test-replay: FAIL (unknown fixture script '%s')\n", fixture_script_name);
+			return 2;
+		}
+	}
 
 	try {
 		auto load_data_file = make_load_data_file();
@@ -3528,9 +3617,11 @@ static int run_gen_test_replay(
 
 		// Capture the raw map bytes during load so the saver can embed them.
 		std::vector<uint8_t> map_data_buf;
+		bool raw_chk_input = has_extension_ci(map_file, ".chk");
+		if (raw_chk_input) map_data_buf = read_binary_file_or_throw(map_file);
 
-		load_funcs.load_map_file(map_file, [&]() {
-			// Melee setup: slot 0 = player, slot 1 = computer.
+		auto setup_fixture = [&]() {
+			// Deterministic two-player fixture setup: slot 0 = player, slot 1 = computer.
 			for (size_t i = 0; i < 8; ++i) {
 				if (st.players[i].controller == player_t::controller_open ||
 				    st.players[i].controller == player_t::controller_computer) {
@@ -3542,23 +3633,19 @@ static int run_gen_test_replay(
 			st.players[1].controller = player_t::controller_computer_game;
 			st.players[1].race = race_t::zerg;
 
-			load_funcs.setup_info.victory_condition = 1;
-			load_funcs.setup_info.starting_units = 1;
+			load_funcs.setup_info.victory_condition = use_map_settings ? 0 : 1;
+			load_funcs.setup_info.tournament_mode = 0;
+			load_funcs.setup_info.starting_units = use_map_settings ? 0 : 1;
 
 			saver_st.random_seed = 42;
 			st.lcg_rand_state = 42;
-		});
+		};
 
-		// Read the raw map bytes (needed by replay_saver_functions::save_replay).
-		{
-			std::ifstream mf(map_file, std::ios::binary);
-			if (!mf) {
-				error("gen-test-replay: unable to open map file '%s'", map_file);
-			}
-			mf.seekg(0, std::ios::end);
-			map_data_buf.resize(mf.tellg());
-			mf.seekg(0);
-			mf.read((char*)map_data_buf.data(), (std::streamsize)map_data_buf.size());
+		if (raw_chk_input) {
+			load_funcs.load_map_data(map_data_buf.data(), map_data_buf.size(), setup_fixture);
+		} else {
+			load_funcs.load_map_file(map_file, setup_fixture);
+			map_data_buf = read_binary_file_or_throw(map_file);
 		}
 		saver_st.map_data = map_data_buf.data();
 		saver_st.map_data_size = map_data_buf.size();
@@ -3566,7 +3653,7 @@ static int run_gen_test_replay(
 		saver_st.map_tile_width  = st.game->map_tile_width;
 		saver_st.map_tile_height = st.game->map_tile_height;
 		saver_st.tileset         = (int)st.game->tileset_index;
-		saver_st.game_type       = 2; // melee
+		saver_st.game_type       = use_map_settings ? 10 : 2; // UMS/custom vs melee
 		saver_st.game_speed      = 3;
 		saver_st.player_name     = "OpenSnowstorm";
 		saver_st.game_name       = "Test";
@@ -3579,47 +3666,91 @@ static int run_gen_test_replay(
 
 		// Step the simulation.
 		state_functions sf(st);
-		std::vector<replay_hash_checkpoint> checkpoints;
-		if (output_hashes && output_hashes[0] != '\0') {
-			// Record frame-0 hash before stepping.
-			// Reuse compute_replay_checkpoint_hash via an action_state shim.
-			// Since we have no replay player, compute a simpler frame hash.
-			auto simple_hash = [&]() -> uint32_t {
-				uint32_t h = 2166136261u;
-				auto add = [&](auto v) { h ^= (uint32_t)v; h *= 16777619u; };
-				add(st.current_frame);
-				add(st.lcg_rand_state);
-				for (auto v : st.current_minerals) add(v);
-				for (auto v : st.current_gas) add(v);
-				add(st.active_orders_size);
-				for (const unit_t* u : ptr(st.visible_units)) {
-					add((u->shield_points + u->hp).raw_value);
-					add(u->exact_position.x.raw_value);
-					add(u->exact_position.y.raw_value);
-					add(u->owner);
-					add((int)u->order_type->id);
+		bool transport_move_unload_issued = false;
+		for (int f = 0; f < frames; ++f) {
+			if (fixture_script == fixture_script_kind::transport_unload) {
+				auto distance_sq = [](xy a, xy b) {
+					int dx = a.x - b.x;
+					int dy = a.y - b.y;
+					return dx * dx + dy * dy;
+				};
+				unit_t* dropship = nullptr;
+				unit_t* closest_marine = nullptr;
+				unit_t* closest_enemy = nullptr;
+				int closest_marine_dist = std::numeric_limits<int>::max();
+				int closest_enemy_dist = std::numeric_limits<int>::max();
+				for (unit_t* u : ptr(st.visible_units)) {
+					if (sf.unit_dying(u)) continue;
+					if (u->owner == 0 && u->unit_type->id == UnitTypes::Terran_Dropship) {
+						dropship = u;
+					}
 				}
-				return h;
-			};
-			if (hash_interval <= 0) hash_interval = 240;
-			replay_hash_checkpoint cp0;
-			cp0.frame = 0;
-			cp0.hash  = simple_hash();
-			checkpoints.push_back(cp0);
+				if (dropship) {
+					for (unit_t* u : ptr(st.visible_units)) {
+						if (sf.unit_dying(u)) continue;
+						if (u->owner == 0 && u->unit_type->id == UnitTypes::Terran_Marine && !sf.u_loaded(u)) {
+							int dist = distance_sq(u->sprite->position, dropship->sprite->position);
+							if (dist < closest_marine_dist) {
+								closest_marine_dist = dist;
+								closest_marine = u;
+							}
+						}
+						if (u->owner == 1) {
+							int dist = distance_sq(u->sprite->position, dropship->sprite->position);
+							if (dist < closest_enemy_dist) {
+								closest_enemy_dist = dist;
+								closest_enemy = u;
+							}
+						}
+					}
 
-			for (int f = 0; f < frames; ++f) {
-				sf.next_frame();
-				int frame = (int)st.current_frame;
-				if (frame % hash_interval == 0 || f == frames - 1) {
-					replay_hash_checkpoint cp;
-					cp.frame = frame;
-					cp.hash  = simple_hash();
-					if (checkpoints.empty() || checkpoints.back().frame != frame)
-						checkpoints.push_back(cp);
+					bool has_loaded_units = !sf.loaded_units(dropship).empty();
+					if (!has_loaded_units && closest_marine) {
+						sf.set_unit_order(dropship, sf.get_order_type(Orders::PickupTransport), closest_marine);
+					} else if (has_loaded_units && !transport_move_unload_issued && closest_enemy) {
+						xy unload_pos = closest_enemy->sprite->position - xy(32, 0);
+						sf.set_unit_order(dropship, sf.get_order_type(Orders::MoveUnload), unload_pos);
+						transport_move_unload_issued = true;
+					}
 				}
 			}
-		} else {
-			for (int f = 0; f < frames; ++f) sf.next_frame();
+			if (fixture_script == fixture_script_kind::worker_resource) {
+				unit_t* worker = nullptr;
+				unit_t* mineral = nullptr;
+				int closest_mineral_dist = std::numeric_limits<int>::max();
+				auto distance_sq = [](xy a, xy b) {
+					int dx = a.x - b.x;
+					int dy = a.y - b.y;
+					return dx * dx + dy * dy;
+				};
+				for (unit_t* u : ptr(st.visible_units)) {
+					if (sf.unit_dying(u)) continue;
+					if (!worker && u->owner == 0 &&
+						(u->unit_type->id == UnitTypes::Terran_SCV ||
+						 u->unit_type->id == UnitTypes::Protoss_Probe ||
+						 u->unit_type->id == UnitTypes::Zerg_Drone)) {
+						worker = u;
+					}
+				}
+				if (worker &&
+					worker->order_type->id == Orders::Nothing &&
+					worker->worker.resources_carried == 0 &&
+					worker->worker.target_resource_unit == nullptr) {
+					for (unit_t* u : ptr(st.visible_units)) {
+						if (sf.unit_dying(u)) continue;
+						if (!sf.unit_is_mineral_field(u)) continue;
+						int dist = distance_sq(u->sprite->position, worker->sprite->position);
+						if (dist < closest_mineral_dist) {
+							closest_mineral_dist = dist;
+							mineral = u;
+						}
+					}
+					if (mineral) {
+						sf.set_unit_order(worker, sf.get_order_type(Orders::MoveToMinerals), mineral);
+					}
+				}
+			}
+			sf.next_frame();
 		}
 
 		// Write the replay file.
@@ -3631,8 +3762,14 @@ static int run_gen_test_replay(
 
 		log("gen-test-replay: wrote replay '%s' (%d frames)\n", output_rep, (int)st.current_frame);
 
-		// Write hash fixture if requested.
-		if (output_hashes && output_hashes[0] != '\0' && !checkpoints.empty()) {
+		// Write hash fixture if requested. Generate checkpoints from the saved
+		// replay so fixture generation and verification share the exact same
+		// hashing path.
+		if (output_hashes && output_hashes[0] != '\0') {
+			if (hash_interval <= 0) hash_interval = 240;
+			a_string map_name;
+			int end_frame = 0;
+			auto checkpoints = sample_replay_hashes_or_throw(output_rep, hash_interval, &map_name, &end_frame);
 			std::ofstream hf(output_hashes, std::ios::out | std::ios::trunc);
 			if (!hf) {
 				error("gen-test-replay: unable to open fixture '%s' for writing: %s",
@@ -3648,8 +3785,8 @@ static int run_gen_test_replay(
 			if (!hf) {
 				error("gen-test-replay: failed writing fixture '%s'", output_hashes);
 			}
-			log("gen-test-replay: wrote hash fixture '%s' (%lld checkpoints)\n",
-				output_hashes, (long long)checkpoints.size());
+			log("gen-test-replay: wrote hash fixture '%s' (%d checkpoints)\n",
+				output_hashes, (int)checkpoints.size());
 		}
 
 		log("gen-test-replay: PASS\n");
@@ -3695,6 +3832,9 @@ int main(int argc, char** argv) {
 		int headless_map_frame_limit = 0;
 		const char* gen_test_replay_file = nullptr;
 		int gen_test_replay_frames = 240;
+		const char* extract_scenario_chk_file = nullptr;
+		bool gen_test_replay_use_map_settings = false;
+		const char* fixture_script_name = nullptr;
 
 		for (int i = 1; i < argc; ++i) {
 			if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
@@ -3749,6 +3889,20 @@ int main(int argc, char** argv) {
 					return 2;
 				}
 				gen_test_replay_file = argv[++i];
+			} else if (strcmp(argv[i], "--extract-scenario-chk") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --extract-scenario-chk requires an output path\n");
+					return 2;
+				}
+				extract_scenario_chk_file = argv[++i];
+			} else if (strcmp(argv[i], "--use-map-settings") == 0) {
+				gen_test_replay_use_map_settings = true;
+			} else if (strcmp(argv[i], "--fixture-script") == 0) {
+				if (i + 1 >= argc) {
+					log("error: --fixture-script requires a script name\n");
+					return 2;
+				}
+				fixture_script_name = argv[++i];
 			} else if (strcmp(argv[i], "--headless") == 0) {
 				headless = true;
 			} else if (strcmp(argv[i], "--debug-overlay") == 0) {
@@ -3818,13 +3972,16 @@ int main(int argc, char** argv) {
 			return run_bench(bench_frames, replay_file);
 		}
 		if (verify_hashes_file) {
-			return run_verify_hashes(verify_hashes_file, replay_file);
+			return run_verify_hashes(replay_file, verify_hashes_file);
 		}
 		if (record_hashes_file && !gen_test_replay_file) {
 			return run_record_hashes(record_hashes_file, replay_file, hash_interval);
 		}
+		if (extract_scenario_chk_file) {
+			return run_extract_scenario_chk(map_file, extract_scenario_chk_file);
+		}
 		if (gen_test_replay_file) {
-			return run_gen_test_replay(map_file, gen_test_replay_file, record_hashes_file, gen_test_replay_frames, hash_interval);
+			return run_gen_test_replay(map_file, gen_test_replay_file, record_hashes_file, gen_test_replay_frames, hash_interval, gen_test_replay_use_map_settings, fixture_script_name);
 		}
 
 		auto load_data_file = make_load_data_file();

@@ -40,7 +40,7 @@ def run_test(bin_path, replay_path, hash_path):
 def main():
     parser = argparse.ArgumentParser(description="OpenSnowstorm Regression Harness")
     parser.add_argument("--bin", help="Path to gfxtest binary")
-    parser.add_argument("--dir", default=os.path.join("tests", "replays"), help="Directory containing .rep/.hash pairs")
+    parser.add_argument("--dir", default=os.path.join("tests", "replays"), help="Directory containing .rep/.hashes pairs")
     args = parser.parse_args()
 
     bin_path = args.bin
@@ -53,7 +53,7 @@ def main():
         print(f"Error: Binary not found at {bin_path}. Build the project first or use --bin.")
         sys.exit(1)
 
-    replays = glob.glob(os.path.join(args.dir, "*.rep"))
+    replays = glob.glob(os.path.join(args.dir, "**", "*.rep"), recursive=True)
     if not replays:
         print(f"No replays found in {args.dir}. Check your configuration.")
         sys.exit(0)
@@ -63,13 +63,17 @@ def main():
     
     for rep in sorted(replays):
         name = os.path.splitext(rep)[0]
-        hash_file = name + ".hash"
-        if os.path.exists(hash_file):
+        hash_file = None
+        for candidate in (name + ".hashes", name + ".hash"):
+            if os.path.exists(candidate):
+                hash_file = candidate
+                break
+        if hash_file:
             passed, log = run_test(bin_path, rep, hash_file)
             if not passed:
                 failed_tests.append((rep, log))
         else:
-            print(f"  {os.path.basename(rep):<40} [\033[94mSKIP\033[0m] (No .hash)")
+            print(f"  {os.path.basename(rep):<40} [\033[94mSKIP\033[0m] (No .hashes/.hash)")
 
     print("-" * 60)
     if not failed_tests:

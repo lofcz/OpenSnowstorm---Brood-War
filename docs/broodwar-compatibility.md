@@ -18,10 +18,34 @@ The goal is to make compatibility work concrete, testable, and incrementally shi
 |---|---|---|---|
 | Core simulation determinism | Replay and sync correctness depend on frame-identical outcomes. | **Partially validated** | Insync hash now includes frame counter, unit owner, and order type for finer divergence detection. `gfxtest --record-hashes` and `--verify-hashes` provide replay fixture checkpoints; next step is enforcing them in CI. |
 | Order/AI behavior parity | Unit command edge-cases drive real gameplay differences. | **In progress** | Patrol (action 29) and building Land (action 36) are now dispatched. Continue with remaining BW-specific actions. |
-| Combat and damage interactions | Small damage/timing mismatches cascade into macro-level divergence. | **Planned** | Start fixture scenarios for cooldown timing, armor/upgrade interactions, splash behavior. |
-| Economy timings | Worker and production timing parity is essential for bots and replays. | **Partially validated** | Starting gas is now loaded from replays and applied via `setup_info.starting_gas`. Resource-type-1 custom starts correctly set both minerals and gas. |
+| Combat and damage interactions | Small damage/timing mismatches cascade into macro-level divergence. | **Planned** | Highest-priority simulation slice. Add deterministic fixtures for weapon cooldown cadence, armor/upgrade math, splash falloff, spell application timing, and cloak/detection reveal timing before additional UI polish. |
+| Economy timings | Worker and production timing parity is essential for bots and replays. | **Partially validated** | Starting gas is now loaded from replays and applied via `setup_info.starting_gas`. Resource-type-1 custom starts correctly set both minerals and gas. Next step is deterministic fixtures for worker mining/return loops, build-start/build-finish timing, larva/energy/resource edge cases, and transport/unload interactions that affect economy state. |
 | Replay format compatibility | Durable replay I/O is required for regression and tooling interoperability. | **Partially validated** | `is_broodwar` flag now captured in `replay_state`. Starting gas round-trips correctly. Replay saver writes `starting_gas` from setup info. `gfxtest --validate-replay` now validates replay container/header and action frame-stream consistency. |
 | Multiplayer sync behavior | Action scheduling and frame stepping must stay BWAPI-compatible. | **Partially validated** | Protocol version constant (`sync_protocol_version`) and `desync_report` structure added. Hash divergences now emit a structured diagnostic before client kill. |
+
+## Current priority: simulation truth first
+
+The repository now has enough client/UI surface to exercise campaign flows. The next milestone is **behavioral parity in the simulation itself**, not additional frontend polish.
+
+That means:
+
+- Combat, order, spell, visibility, transport, and economy correctness take precedence over launcher/HUD cosmetics.
+- `docs/broodwar-compatibility.md` is the canonical progress tracker for Brood War parity work.
+- Every tracker item must point to at least one deterministic check (`--validate-replay`, `--verify-hashes`, or a committed fixture-generation command) before it can be marked **Validated**.
+
+## Simulation parity fixture backlog
+
+The following fixture families are the current P0 simulation backlog. Each family should land with a compact replay/map fixture, a hash/invariant file, and a documented verification command.
+
+| Fixture family | Why it matters | Minimum deterministic check |
+|---|---|---|
+| Weapon cooldown cadence | Attack-period drift breaks every combat matchup over time. | `./gfxtest --verify-hashes <combat-cooldown.hashes> --replay <combat-cooldown.rep>` |
+| Armor and upgrade math | Incorrect damage rounding or upgrade application causes silent parity loss. | `./gfxtest --verify-hashes <combat-armor-upgrade.hashes> --replay <combat-armor-upgrade.rep>` |
+| Splash and area damage | Radial falloff and target selection differences create large battle divergences. | `./gfxtest --verify-hashes <combat-splash.hashes> --replay <combat-splash.rep>` |
+| Spell timing and effect windows | Spell cast latency, duration, and on-hit timing are mission- and ladder-critical. | `./gfxtest --verify-hashes <spell-timing.hashes> --replay <spell-timing.rep>` |
+| Cloak and detection | Visibility transitions affect targeting, AI, and combat outcomes. | `./gfxtest --verify-hashes <cloak-detection.hashes> --replay <cloak-detection.rep>` |
+| Transport and unload semantics | Load/unload ordering changes unit positions, timings, and scripted mission behavior. | `./gfxtest --verify-hashes <transport-unload.hashes> --replay <transport-unload.rep>` |
+| Worker and resource loops | Gather/return/build timing parity is required for bots, campaigns, and replay sync. | `./gfxtest --verify-hashes <worker-resource.hashes> --replay <worker-resource.rep>` |
 
 ## Current phase focus
 
@@ -140,18 +164,19 @@ The goal is to make compatibility work concrete, testable, and incrementally shi
 
 ## Immediate backlog (starter slice)
 
-1. Add a small set of deterministic replay fixtures that exercise high-risk command and combat cases.
-2. Gate fixture checks in CI as non-optional compatibility regressions.
-3. Expand each fixture with compact invariant summaries (player resources, unit counts, etc.) alongside hashes.
-4. Expand this tracker with links to concrete tests/checks as they land.
+1. Land the P0 simulation fixture families in this order: cooldown cadence, armor/upgrade math, splash, spell timing, cloak/detection, transport/unload, worker/resource loops.
+2. Gate fixture checks in CI as non-optional compatibility regressions once the first committed set lands.
+3. Expand each fixture with compact invariant summaries (player resources, unit counts, order states, visibility flags) alongside hashes.
+4. Expand this tracker with links to concrete tests/checks as they land, and do not mark a slice **Validated** without a committed deterministic check.
 
 ## Next steps
 
 1. Generate `maps/test.rep` + `maps/test.hashes` from a BW map file using `--gen-test-replay` and commit them to enable the CI `validate-replay` gate.
 2. Add `maps/test.hashes` produced by `--record-hashes` and run `--verify-hashes` in CI.
 3. Extend `desync_report` with a recent action-history ring buffer for deeper triage.
-4. Begin combat fixture scenarios for damage-type / armor / splash edge cases.
-5. Add briefing-flow fixture (briefing entry/exit loop without soft-lock).
+4. Begin combat fixture scenarios for cooldown cadence, armor/upgrade math, and splash edge cases.
+5. Add spell-timing, cloak/detection, transport/unload, and worker/resource fixture scenarios.
+6. Add briefing-flow fixture (briefing entry/exit loop without soft-lock) after the simulation P0 set is in place.
 
 ## Definition of done for each compatibility slice
 
@@ -160,5 +185,6 @@ Each slice should include:
 1. A focused scenario (fixture or scripted action sequence).
 2. A deterministic pass/fail assertion (hash/invariant/expected state).
 3. A brief note in this tracker linking to implementation and verification command(s).
+4. A clear statement of what Brood War behavior is being matched and what edge case the fixture is intended to lock down.
 
 This keeps compatibility work observable and prevents silent regressions while the codebase is modernized.

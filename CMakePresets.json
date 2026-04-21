@@ -78,6 +78,16 @@
         "CMAKE_BUILD_TYPE": "Release",
         "OPENSNOWSTORM_BUILD_UI": "OFF"
       }
+    },
+    {
+      "name": "wasm-release",
+      "displayName": "Release - WebAssembly (Emscripten)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OPENSNOWSTORM_BUILD_UI": "ON",
+        "OPENSNOWSTORM_BUILD_BWAPI": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -108,6 +118,10 @@
     {
       "name": "no-ui",
       "configurePreset": "no-ui"
+    },
+    {
+      "name": "wasm-release",
+      "configurePreset": "wasm-release"
     }
   ]
 }

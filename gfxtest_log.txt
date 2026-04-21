@@ -442,3 +442,331 @@ ui initialized
 client: load_single_player_map(fog=on, local_slot=-1, local_race=5, enemy_race=5)
 play_music: protoss1.wav not found in data archives, skipping
 single-player: map='E:\Starcraft\maps\campaign\(1)Enslavers01.scm' local_slot=0 enemy_slot=3 mode=melee (auto) fog=on
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : (unrecognized specifier in format string)ld bytes
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: FAIL (place_completed_unit failed)
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' ((unrecognized specifier in format string)ld checkpoints)
+gen-test-replay: PASS
+verify-hashes: FAIL (verify_hashes: D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep:1 expected '<frame> <hash>' or 'replay: <path>')
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes'
+verify-hashes: FAIL (file_reader: failed to open Patch_rt.mpq for reading)
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes'
+verify-hashes: mismatch frame 0 expected=0x793f33c5 got=0xd90dadaf
+verify-hashes: mismatch frame 24 expected=0x9d5aff17 got=0x41279687
+verify-hashes: mismatch frame 48 expected=0x9bb4f09f got=0x5fa5557f
+verify-hashes: mismatch frame 72 expected=0x3547faf5 got=0xf7063405
+verify-hashes: mismatch frame 96 expected=0xc715e91d got=0x66fa3bbd
+verify-hashes: mismatch frame 120 expected=0xa42fd785 got=0x88ff98d5
+verify-hashes: mismatch frame 144 expected=0x9745a9b2 got=0x06987aba
+verify-hashes: mismatch frame 168 expected=0x2f1cda25 got=0x0a62b515
+verify-hashes: mismatch frame 192 expected=0x513576cd got=0xf5f8b52d
+verify-hashes: mismatch frame 216 expected=0x709e98ea got=0x73b46422
+verify-hashes: mismatch frame 240 expected=0x45143a2d got=0xcd67520d
+verify-hashes: FAIL ((unrecognized specifier in format string)ld/(unrecognized specifier in format string)ld checkpoints mismatched)
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: FAIL (file_reader: failed to open Patch_rt.mpq for reading)
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+extract-scenario-chk: PASS
+  map         : E:\Starcraft\maps\ladder\(4)Lost Temple.scm
+  scenario    : D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\base_template.chk
+  size        : 183471 bytes
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_cooldown.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_armor_upgrades.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\combat_splash.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\spell_timing_healing.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\cloak_detection.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\transport_unload.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11
+gen-test-replay: map='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\worker_resource.chk' output='D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\worker_resource.rep' frames=240 mode=map-settings
+gen-test-replay: wrote replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\worker_resource.rep' (240 frames)
+gen-test-replay: wrote hash fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\worker_resource.hashes' (11 checkpoints)
+gen-test-replay: PASS
+verify-hashes: replay 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\worker_resource.rep' against fixture 'D:\Games\OpenSnowstorm---Brood-War\tests\generated\first_sim_family\worker_resource.hashes'
+verify-hashes: PASS
+  map         : D:\Games\OpenSnowstorm---Brood-W
+  end frame   : 240
+  checkpoints : 11

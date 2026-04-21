@@ -28,6 +28,27 @@ function(opensnowstorm_apply_common_compile_options target_name)
     endif()
 endfunction()
 
+function(opensnowstorm_append_target_flags target_name property_name flags)
+    get_target_property(existing_flags ${target_name} ${property_name})
+    if(NOT existing_flags OR existing_flags STREQUAL "existing_flags-NOTFOUND")
+        set(existing_flags "")
+    endif()
+    set_target_properties(${target_name} PROPERTIES ${property_name} "${existing_flags} ${flags}")
+endfunction()
+
+function(opensnowstorm_apply_emscripten_sdl_flags target_name)
+    opensnowstorm_append_target_flags(${target_name} COMPILE_FLAGS
+        " -sUSE_SDL=2 -sUSE_SDL_MIXER=2")
+    opensnowstorm_append_target_flags(${target_name} LINK_FLAGS
+        " -sUSE_SDL=2 -sUSE_SDL_MIXER=2")
+endfunction()
+
+function(opensnowstorm_apply_emscripten_executable_defaults target_name)
+    opensnowstorm_apply_emscripten_sdl_flags(${target_name})
+    opensnowstorm_append_target_flags(${target_name} LINK_FLAGS
+        " --bind -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1 -sWASM=1 -sASSERTIONS=1")
+endfunction()
+
 if(MSVC)
     add_compile_options(/bigobj)
 endif()
@@ -48,17 +69,23 @@ add_test(NAME DeterminismCheck COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_SOURCE_
 # SDL2 UI + gfxtest executable
 # ---------------------------------------------------------------------------
 if(OPENSNOWSTORM_BUILD_UI)
-    find_package(SDL2 REQUIRED)
-    find_package(SDL2_mixer REQUIRED)
+    if(NOT EMSCRIPTEN)
+        find_package(SDL2 REQUIRED)
+        find_package(SDL2_mixer REQUIRED)
+    endif()
 
     add_definitions(-DOPENBW_NO_SDL_IMAGE)
     add_definitions(-DOPENBW_ENABLE_UI)
 
     # Rendering backend selection (SDL2 vs Headless)
-    if(1 OR SDL2_FOUND)
+    if(EMSCRIPTEN OR 1 OR SDL2_FOUND)
         add_library(openbw_ui ui/sdl2.cpp)
-        target_link_libraries(openbw_ui "${SDL2_LIBRARY}" "${SDL2_MIXER_LIBRARY}")
-        target_include_directories(openbw_ui PUBLIC "${SDL2_INCLUDE_DIR}" "${SDL2_MIXER_INCLUDE_DIR}")
+        if(NOT EMSCRIPTEN)
+            target_link_libraries(openbw_ui "${SDL2_LIBRARY}" "${SDL2_MIXER_LIBRARY}")
+            target_include_directories(openbw_ui PUBLIC "${SDL2_INCLUDE_DIR}" "${SDL2_MIXER_INCLUDE_DIR}")
+        else()
+            opensnowstorm_apply_emscripten_sdl_flags(openbw_ui)
+        endif()
         add_definitions(-DOPENBW_ENABLE_SDL)
     else()
         add_library(openbw_ui ui/headless_backend.cpp)
@@ -80,7 +107,15 @@ if(OPENSNOWSTORM_BUILD_UI)
         ${SDL2_INCLUDE_DIRS}
         ${SDL2_MIXER_INCLUDE_DIRS}
     )
-    target_link_libraries(gfxtest openbw_ui ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
+    if(NOT EMSCRIPTEN)
+        target_link_libraries(gfxtest openbw_ui ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
+    else()
+        target_link_libraries(gfxtest openbw_ui)
+        opensnowstorm_apply_emscripten_executable_defaults(gfxtest)
+        opensnowstorm_append_target_flags(gfxtest LINK_FLAGS
+            " -sEXPORTED_FUNCTIONS=['_main','_malloc','_free','_ui_resize','_replay_get_value','_replay_set_value','_load_map_data','_player_get_value','_load_replay'] -sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','FS']")
+        set_target_properties(gfxtest PROPERTIES SUFFIX ".html")
+    endif()
     opensnowstorm_apply_common_compile_options(gfxtest)
 endif()
 
