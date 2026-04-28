@@ -2328,14 +2328,20 @@ struct ui_functions : ui_util_functions {
     // 1. Draw Console Backdrop
     const pcx_image* console = race == 0 ? &img.zconsole : (race == 1 ? &img.tconsole : &img.pconsole);
     if (console && !console->data.empty()) {
-        // Console PCX is 640x176 or similar. We scale/center it at the bottom.
-        // For now, we draw it as a strip.
+        int console_h = area.to.y - area.from.y;
+        int console_w = area.to.x - area.from.x;
         uint8_t* dst = data + (size_t)area.from.y * data_pitch + (size_t)area.from.x;
         const uint8_t* src = console->data.data();
-        size_t ch = std::min(console->height, (size_t)144);
-        size_t cw = std::min(console->width, (size_t)screen_width);
-        for(size_t y=0; y<ch; ++y) {
-            memcpy(dst + y * data_pitch, src + (console->height - ch + y) * console->width, cw);
+        float sx = (float)console->width / console_w;
+        float sy = (float)console->height / console_h;
+        for (int y = 0; y < console_h; ++y) {
+            int src_y = (int)(y * sy);
+            if (src_y < 0 || src_y >= (int)console->height) continue;
+            for (int x = 0; x < console_w; ++x) {
+                int src_x = (int)(x * sx);
+                if (src_x < 0 || src_x >= (int)console->width) continue;
+                dst[y * data_pitch + x] = src[src_y * console->width + src_x];
+            }
         }
     } else {
         fill_rectangle(data, data_pitch, area, 1);
