@@ -1908,46 +1908,73 @@ struct main_t {
 			log("briefing: dismissed at frame %d\n", ui.st.current_frame);
 		}
 
-		// Quicksave/quickload are armed by F5/F8 inside ui.update() and
-		// fulfilled here where we can safely deep-copy the game state.
+		handle_save_load();
+
+		service_client_requests();
+	}
+
+	std::string save_slot_path(int slot) const {
+		char buf[64];
+		if (slot <= 0) sprintf(buf, "saves/quicksave.osv");
+		else sprintf(buf, "saves/slot%d.osv", slot);
+		return buf;
+	}
+
+	void do_save(const std::string& path) {
+		serialization::state_serializer serializer{ui.st};
+		serialization::state_serializer::save_metadata_t md;
+		md.current_map_file = a_string(current_map_file.c_str());
+		md.objectives_text = ui.current_objectives_text;
+		md.pending_next_scenario = ui.pending_next_scenario;
+		md.portrait_unit_type = ui.active_portrait.unit_type;
+		md.portrait_end_frame = ui.active_portrait.end_frame;
+		create_directory_if_not_exists("saves");
+		serializer.save_full(a_string(path.c_str()), ui.action_st, ui.apm, md);
+		log("save: saved to %s at frame %d\n", path.c_str(), ui.st.current_frame);
+		ui.push_hud_message("Saved.", 3 * 24);
+	}
+
+	void do_load(const std::string& path) {
+		serialization::state_serializer serializer{ui.st};
+		serialization::state_serializer::save_metadata_t md;
+		if (serializer.load_full(a_string(path.c_str()), ui.action_st, ui.apm, ui.st.global, ui.st.game, md)) {
+			ui.replay_frame = ui.st.current_frame;
+			live_result_reported = false;
+			mission_result = {};
+			current_map_file = md.current_map_file.c_str();
+			ui.current_objectives_text = md.objectives_text;
+			ui.pending_next_scenario = md.pending_next_scenario;
+			ui.active_portrait.unit_type = md.portrait_unit_type;
+			ui.active_portrait.end_frame = md.portrait_end_frame;
+			pending_next_map_file.clear();
+			ui.is_paused = false;
+			log("load: restored from %s to frame %d\n", path.c_str(), ui.st.current_frame);
+			ui.push_hud_message("Loaded.", 3 * 24);
+		} else {
+			log("load: no save at %s or incompatible version\n", path.c_str());
+			ui.push_hud_message("No save.", 3 * 24);
+		}
+	}
+
+	void handle_save_load() {
 		if (ui.quicksave_pending) {
 			ui.quicksave_pending = false;
-			serialization::state_serializer serializer{ui.st};
-			serialization::state_serializer::save_metadata_t md;
-			md.current_map_file = a_string(current_map_file.c_str());
-			md.objectives_text = ui.current_objectives_text;
-			md.pending_next_scenario = ui.pending_next_scenario;
-			md.portrait_unit_type = ui.active_portrait.unit_type;
-			md.portrait_end_frame = ui.active_portrait.end_frame;
-			create_directory_if_not_exists("saves");
-			serializer.save_full("saves/quicksave.osv", ui.action_st, ui.apm, md);
-			log("quicksave: saved to saves/quicksave.osv at frame %d\n", ui.st.current_frame);
-			ui.push_hud_message("Saved.", 3 * 24);
+			do_save(save_slot_path(0));
 		}
 		if (ui.quickload_pending) {
 			ui.quickload_pending = false;
-			serialization::state_serializer serializer{ui.st};
-			serialization::state_serializer::save_metadata_t md;
-			if (serializer.load_full("saves/quicksave.osv", ui.action_st, ui.apm, ui.st.global, ui.st.game, md)) {
-				ui.replay_frame = ui.st.current_frame;
-				live_result_reported = false;
-				mission_result = {};
-				current_map_file = md.current_map_file.c_str();
-				ui.current_objectives_text = md.objectives_text;
-				ui.pending_next_scenario = md.pending_next_scenario;
-				ui.active_portrait.unit_type = md.portrait_unit_type;
-				ui.active_portrait.end_frame = md.portrait_end_frame;
-				pending_next_map_file.clear();
-				if (true) ui.is_paused = false;
-				log("quickload: restored from saves/quicksave.osv to frame %d\n", ui.st.current_frame);
-				ui.push_hud_message("Loaded.", 3 * 24);
-			} else {
-				log("quickload: no save available or incompatible version\n");
-				ui.push_hud_message("No save.", 3 * 24);
-			}
+			do_load(save_slot_path(0));
 		}
-
-		service_client_requests();
+		if (ui.save_slot_save_pending > 0) {
+			int slot = ui.save_slot_save_pending;
+			ui.save_slot_save_pending = -1;
+			do_save(save_slot_path(slot));
+		}
+		if (ui.save_slot_load_pending > 0) {
+			int slot = ui.save_slot_load_pending;
+			ui.save_slot_load_pending = -1;
+			do_load(save_slot_path(slot));
+		}
 	}
 
 	// Overlays render on top of the engine's RGBA framebuffer via
@@ -2086,7 +2113,7 @@ struct main_t {
 			"PAUSED",
 			"",
 			"SPACE OR P   RESUME",
-			"F5 SAVE      F8 LOAD",
+			"F5 SAVE  F6 SLOT-SAVE  F8 LOAD  F9 SLOT-LOAD",
 			"F7 RESTART   F10 MENU",
 			"ESC          MENU",
 		};
@@ -2327,11 +2354,27 @@ struct main_t {
 		draw_rgba_text(pixels, pitch, width, height, (width - text_pixel_width("PRESS SPACE TO BEGIN", 2)) / 2, bottom_y, "PRESS SPACE TO BEGIN", 2, rgba32(255, 210, 96, 255));
 	}
 
+	void draw_save_slot_indicator(uint32_t* pixels, int pitch, int width, int height) {
+		if (frontend_active || !ui.is_live_game_mode) return;
+		char buf[32];
+		sprintf(buf, "SLOT %d", ui.current_save_slot);
+		std::string label(buf);
+		int scale = 1;
+		int w = text_pixel_width(label, scale) + 12;
+		int h = 16;
+		int x = width - w - 16;
+		int y = 16 + 16 + 8 + 16 + 4;
+		fill_rgba_rect(pixels, pitch, width, height, x, y, w, h, rgba32(8, 12, 22, 200));
+		draw_rgba_frame(pixels, pitch, width, height, x, y, w, h, 1, rgba32(171, 124, 48, 200));
+		draw_rgba_text(pixels, pitch, width, height, x + 6, y + 4, label, scale, rgba32(200, 220, 240, 255));
+	}
+
 	void draw_client_overlays(uint32_t* pixels, int pitch, int width, int height) {
 		draw_briefing_bg_overlay(pixels, pitch, width, height);
 		draw_portrait_overlay(pixels, pitch, width, height);
 		draw_objectives_overlay(pixels, pitch, width, height);
 		draw_speed_indicator(pixels, pitch, width, height);
+		draw_save_slot_indicator(pixels, pitch, width, height);
 		draw_mission_timer(pixels, pitch, width, height);
 		draw_pause_overlay(pixels, pitch, width, height);
 		draw_debrief_overlay(pixels, pitch, width, height);
@@ -3476,8 +3519,8 @@ static void print_usage(const char* argv0) {
 		"  esc cancel armed building/landing/spell targeting; when paused returns to startup shell\n"
 		"  f toggle fog of war\n"
 		"  F3 toggle debug overlay (frame counter, draw fps, game speed)\n"
-		"  F5 quicksave (in-memory)   F8 quickload (restores last quicksave)\n"
-		"  F7 restart mission   F10 return to startup shell\n"
+		"  F5 quicksave   F6 save to slot   F8 quickload   F9 load from slot\n"
+		"  Ctrl+1-9 select save slot   F7 restart   F10 return to shell\n"
 		"  enter dismiss post-mission debrief (continue / retry / return to shell)\n"
 		"  space/p pause       u speed up                 z/d speed down\n"
 		"\n"

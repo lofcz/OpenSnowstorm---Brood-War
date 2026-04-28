@@ -740,6 +740,9 @@ struct ui_functions : ui_util_functions {
 
   bool quicksave_pending = false;
   bool quickload_pending = false;
+  int save_slot_save_pending = -1;
+  int save_slot_load_pending = -1;
+  int current_save_slot = 1;
 
   // Single-player client transition requests.  Set by input handling, polled
   // and cleared by main_t once serviced.
@@ -4735,11 +4738,15 @@ struct ui_functions : ui_util_functions {
             bool ctrl = wnd.get_key_state(224) || wnd.get_key_state(228);
             bool shift = wnd.get_key_state(225) || wnd.get_key_state(229);
 
-            constexpr int k_scan_f5 = 62, k_scan_f7 = 64, k_scan_f8 = 65, k_scan_f10 = 67;
+            constexpr int k_scan_f5 = 62, k_scan_f6 = 63, k_scan_f7 = 64, k_scan_f8 = 65, k_scan_f9 = 66, k_scan_f10 = 67;
             if (e.scancode == k_scan_f5) {
               quicksave_pending = true;
+            } else if (e.scancode == k_scan_f6) {
+              save_slot_save_pending = current_save_slot;
             } else if (e.scancode == k_scan_f8) {
               quickload_pending = true;
+            } else if (e.scancode == k_scan_f9) {
+              save_slot_load_pending = current_save_slot;
             } else if (e.scancode == k_scan_f10) {
               request_quit_to_menu = true;
             } else if (e.scancode == k_scan_f7) {
@@ -4790,11 +4797,16 @@ struct ui_functions : ui_util_functions {
                 }
               }
             } else if (e.sym >= '0' && e.sym <= '9') {
-              size_t group_n = e.sym == '0' ? 9 : (size_t)(e.sym - '1');
-              int subaction = ctrl ? 0 : (shift ? 2 : 1);
-              sync_action_selection_from_current();
-              bool changed = action_control_group(local_player_id, group_n, subaction);
-              if (subaction == 1 && changed) sync_current_selection_from_action();
+              if (ctrl && e.sym >= '1' && e.sym <= '9') {
+                current_save_slot = (int)(e.sym - '0');
+                ui::log("save slot set to %d\n", current_save_slot);
+              } else {
+                size_t group_n = e.sym == '0' ? 9 : (size_t)(e.sym - '1');
+                int subaction = ctrl ? 0 : (shift ? 2 : 1);
+                sync_action_selection_from_current();
+                bool changed = action_control_group(local_player_id, group_n, subaction);
+                if (subaction == 1 && changed) sync_current_selection_from_action();
+              }
             } else if (e.sym == hotkeys.cancel) {
               issue_live_ability_hotkey(live_command_kind_t::ability_cancel, shift);
             } else if (e.sym == hotkeys.burrow) {
@@ -5058,6 +5070,8 @@ struct ui_functions : ui_util_functions {
     enemy_player_id = -1;
     quicksave_pending = false;
     quickload_pending = false;
+    save_slot_save_pending = -1;
+    save_slot_load_pending = -1;
     request_quit_to_menu = false;
     request_restart_mission = false;
     request_continue_after_debrief = false;
