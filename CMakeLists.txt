@@ -72,6 +72,23 @@ if(OPENSNOWSTORM_BUILD_UI)
     if(NOT EMSCRIPTEN)
         find_package(SDL2 REQUIRED)
         find_package(SDL2_mixer REQUIRED)
+
+        # Normalize SDL2 link targets across config-package versions.
+        # Modern SDL2 / SDL2_mixer config packages only export the imported
+        # targets (SDL2::SDL2, SDL2_mixer::SDL2_mixer) and do NOT set the
+        # ${SDL2_LIBRARY} / ${SDL2_MIXER_LIBRARIES} variables this project used
+        # to reference, which left SDL2_mixer unlinked (undefined Mix_* refs).
+        # Prefer the imported targets when present, falling back to variables.
+        if(TARGET SDL2::SDL2)
+            set(OPENSNOWSTORM_SDL2_LIB SDL2::SDL2)
+        else()
+            set(OPENSNOWSTORM_SDL2_LIB ${SDL2_LIBRARIES})
+        endif()
+        if(TARGET SDL2_mixer::SDL2_mixer)
+            set(OPENSNOWSTORM_SDL2_MIXER_LIB SDL2_mixer::SDL2_mixer)
+        else()
+            set(OPENSNOWSTORM_SDL2_MIXER_LIB ${SDL2_MIXER_LIBRARIES})
+        endif()
     endif()
 
     add_definitions(-DOPENBW_NO_SDL_IMAGE)
@@ -81,7 +98,7 @@ if(OPENSNOWSTORM_BUILD_UI)
     if(EMSCRIPTEN OR 1 OR SDL2_FOUND)
         add_library(openbw_ui ui/sdl2.cpp)
         if(NOT EMSCRIPTEN)
-            target_link_libraries(openbw_ui "${SDL2_LIBRARY}" "${SDL2_MIXER_LIBRARY}")
+            target_link_libraries(openbw_ui PUBLIC ${OPENSNOWSTORM_SDL2_LIB} ${OPENSNOWSTORM_SDL2_MIXER_LIB})
             target_include_directories(openbw_ui PUBLIC "${SDL2_INCLUDE_DIR}" "${SDL2_MIXER_INCLUDE_DIR}")
         else()
             opensnowstorm_apply_emscripten_sdl_flags(openbw_ui)
@@ -108,7 +125,7 @@ if(OPENSNOWSTORM_BUILD_UI)
         ${SDL2_MIXER_INCLUDE_DIRS}
     )
     if(NOT EMSCRIPTEN)
-        target_link_libraries(gfxtest openbw_ui ${SDL2_LIBRARIES} ${SDL2_MIXER_LIBRARIES})
+        target_link_libraries(gfxtest openbw_ui ${OPENSNOWSTORM_SDL2_LIB} ${OPENSNOWSTORM_SDL2_MIXER_LIB})
     else()
         target_link_libraries(gfxtest openbw_ui)
         opensnowstorm_apply_emscripten_executable_defaults(gfxtest)
